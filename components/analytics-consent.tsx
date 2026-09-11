@@ -1,28 +1,38 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-type Consent = "accepted" | "declined" | null;
+type Consent = "accepted" | "declined" | "unset" | "loading";
 
 const storageKey = "devsmith-analytics-consent";
+const consentEvent = "devsmith-consent-change";
+
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(consentEvent, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(consentEvent, callback);
+  };
+}
+
+function getConsentSnapshot(): Consent {
+  const stored = localStorage.getItem(storageKey);
+  return stored === "accepted" || stored === "declined" ? stored : "unset";
+}
 
 export function AnalyticsConsent() {
-  const [consent, setConsent] = useState<Consent>(null);
-  const [ready, setReady] = useState(false);
+  const consent = useSyncExternalStore(
+    subscribe,
+    getConsentSnapshot,
+    () => "loading",
+  );
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey);
-    setConsent(
-      stored === "accepted" || stored === "declined" ? stored : null,
-    );
-    setReady(true);
-  }, []);
-
-  const choose = (value: Exclude<Consent, null>) => {
+  const choose = (value: "accepted" | "declined") => {
     localStorage.setItem(storageKey, value);
-    setConsent(value);
+    window.dispatchEvent(new Event(consentEvent));
   };
 
   return (
@@ -52,7 +62,7 @@ export function AnalyticsConsent() {
           </Script>
         </>
       )}
-      {ready && consent === null && (
+      {consent === "unset" && (
         <aside className="consent-banner" aria-label="アクセス解析の設定">
           <div>
             <strong>アクセス解析について</strong>
