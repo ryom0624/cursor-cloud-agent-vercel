@@ -891,6 +891,15 @@ kbd {
   font-size: 8px;
 }
 
+.command-empty {
+  min-height: 90px;
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+
 /* Workbench */
 .workbench-shell {
   min-height: calc(100vh - 65px);
@@ -1087,6 +1096,15 @@ kbd {
 
 .editor-file-button input {
   display: none;
+}
+
+.editor-toolbar .select-button {
+  height: 30px;
+  padding: 0 25px 0 9px;
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
 }
 
 .editor-toolbar label {
@@ -1345,6 +1363,11 @@ kbd {
   background: var(--ink);
 }
 
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .text-button {
   border-color: transparent;
   background: transparent;
@@ -1598,6 +1621,87 @@ kbd {
   color: var(--rust-dark);
   font-family: var(--mono);
   font-size: 18px;
+}
+
+.password-basic-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.password-count {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.password-count input {
+  width: 110px;
+}
+
+.password-list {
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.password-list header {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.password-list header button,
+.password-list > div button {
+  min-height: 27px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.password-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.password-list > div {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 45px 1fr 70px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.password-list > div:last-child {
+  border-bottom: 0;
+}
+
+.password-list > div span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 9px;
+  text-align: center;
+}
+
+.password-list code {
+  overflow-wrap: anywhere;
+  color: var(--rust-dark);
+  font-family: var(--mono);
+}
+
+.password-list > p {
+  margin: 0;
+  padding: 36px 18px;
+  color: var(--ink-soft);
+  text-align: center;
+  font-size: 11px;
 }
 
 .settings-grid {
@@ -2070,6 +2174,80 @@ kbd {
   line-height: 1.9;
 }
 
+/* Readability pass */
+.quick-start-list strong,
+.tool-main strong {
+  font-size: 13px;
+}
+
+.quick-start-list small,
+.tool-main small,
+.tool-category,
+.principles p,
+.trust-strip span {
+  font-size: 11px;
+}
+
+.category-nav > button,
+.section-heading p {
+  font-size: 13px;
+}
+
+.workbench-sidebar > a {
+  font-size: 11px;
+}
+
+.breadcrumb,
+.workbench-heading p,
+.mode-tabs button,
+.editor-toolbar button,
+.editor-file-button {
+  font-size: 11px;
+}
+
+.workbench-kicker,
+.local-badge,
+.pane-heading,
+.suite-editor header,
+.diff-result header,
+.next-runs header {
+  font-size: 9px;
+}
+
+.textarea-wrap textarea,
+.suite-editor textarea,
+.diff-inputs textarea,
+.large-text-input {
+  font-size: 13px;
+}
+
+.validation-bar,
+.tool-status,
+.control-label,
+.range-control,
+.check-controls label,
+.date-results strong,
+.timezone-list strong,
+.next-runs > div strong {
+  font-size: 11px;
+}
+
+.primary-button,
+.text-button,
+.compact-button,
+.suite-toolbar button,
+.generator-controls button,
+.password-output button,
+.single-input-bar button,
+.generated-list button {
+  font-size: 11px;
+}
+
+.generated-list code,
+.password-list code {
+  font-size: 13px;
+}
+
 @media (max-width: 1000px) {
   .global-nav {
     display: none;
@@ -2342,6 +2520,14 @@ kbd {
 
   .password-output code {
     font-size: 14px;
+  }
+
+  .password-list > div {
+    grid-template-columns: 32px 1fr 55px;
+  }
+
+  .password-list code {
+    font-size: 10px;
   }
 
   .check-controls {

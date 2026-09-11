@@ -31,6 +31,12 @@ function securePassword(
   groups.forEach((group, index) => {
     if (index < output.length) output[index] = group[random[index] % group.length];
   });
+  const shuffle = new Uint32Array(length);
+  crypto.getRandomValues(shuffle);
+  for (let index = output.length - 1; index > 0; index -= 1) {
+    const target = shuffle[index] % (index + 1);
+    [output[index], output[target]] = [output[target], output[index]];
+  }
   return output.join("");
 }
 
@@ -42,9 +48,14 @@ export function PasswordSuite() {
     numbers: true,
     symbols: true,
   });
-  const [password, setPassword] = useState("");
+  const [count, setCount] = useState(5);
+  const [passwords, setPasswords] = useState<string[]>([]);
+  const hasCharset = Object.values(options).some(Boolean);
 
-  const generate = () => setPassword(securePassword(length, options));
+  const generate = () =>
+    setPasswords(
+      Array.from({ length: count }, () => securePassword(length, options)),
+    );
 
   return (
     <ToolShell
@@ -54,27 +65,31 @@ export function PasswordSuite() {
       description="Web Crypto APIを使って、推測されにくいパスワードを生成します。"
       functionCount={1}
     >
-      <div className="password-output">
-        <code>{password || "「生成する」を押してください"}</code>
-        <button
-          type="button"
-          onClick={() => navigator.clipboard.writeText(password)}
-          disabled={!password}
-        >
-          コピー
-        </button>
-      </div>
       <div className="settings-grid">
-        <label className="range-control">
-          <span>長さ <strong>{length}</strong></span>
-          <input
-            type="range"
-            min={8}
-            max={128}
-            value={length}
-            onChange={(event) => setLength(Number(event.target.value))}
-          />
-        </label>
+        <div className="password-basic-settings">
+          <label className="range-control">
+            <span>長さ <strong>{length}</strong></span>
+            <input
+              type="range"
+              min={8}
+              max={128}
+              value={length}
+              onChange={(event) => setLength(Number(event.target.value))}
+            />
+          </label>
+          <label className="control-label password-count">
+            生成する個数
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={count}
+              onChange={(event) =>
+                setCount(Math.max(1, Math.min(100, Number(event.target.value))))
+              }
+            />
+          </label>
+        </div>
         <div className="check-controls">
           {[
             ["lower", "小文字", "a–z"],
@@ -99,12 +114,40 @@ export function PasswordSuite() {
           ))}
         </div>
       </div>
-      <button type="button" className="primary-button large-action" onClick={generate}>
-        新しいパスワードを生成
+      <button type="button" className="primary-button large-action" onClick={generate} disabled={!hasCharset}>
+        {count}個のパスワードを生成
       </button>
-      <ToolStatus>
-        {password
-          ? `${password.length}文字・ブラウザ内で生成済み`
+      <div className="password-list">
+        <header>
+          <span>GENERATED PASSWORDS</span>
+          <button
+            type="button"
+            onClick={() => navigator.clipboard.writeText(passwords.join("\n"))}
+            disabled={!passwords.length}
+          >
+            すべてコピー
+          </button>
+        </header>
+        {passwords.length ? (
+          passwords.map((password, index) => (
+            <div key={`${password}-${index}`}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <code>{password}</code>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(password)}
+              >
+                コピー
+              </button>
+            </div>
+          ))
+        ) : (
+          <p>条件を選び、「生成」ボタンを押してください。</p>
+        )}
+      </div>
+      <ToolStatus error={hasCharset ? "" : "少なくとも1種類の文字を選択してください"}>
+        {passwords.length
+          ? `${passwords.length}個・各${length}文字をブラウザ内で生成済み`
           : "生成結果は保存されません"}
       </ToolStatus>
     </ToolShell>

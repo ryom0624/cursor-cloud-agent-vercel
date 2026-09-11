@@ -3,7 +3,6 @@
 import {
   Braces,
   Check,
-  ChevronDown,
   Clock3,
   Copy,
   Download,
@@ -15,7 +14,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { tools } from "@/lib/tools";
 
 const sample = `{"project":"devsmith","version":"0.1.0","private":true,"tools":["format","validate","minify"],"settings":{"theme":"paper","localOnly":true}}`;
@@ -55,6 +54,7 @@ export function JsonWorkbench() {
   const [input, setInput] = useState(sample);
   const [copied, setCopied] = useState(false);
   const [inputExpanded, setInputExpanded] = useState(false);
+  const [indent, setIndent] = useState(2);
 
   const parsed = useMemo(() => {
     try {
@@ -71,7 +71,7 @@ export function JsonWorkbench() {
   const result = valid
     ? mode === "minify"
       ? JSON.stringify(parsed.value)
-      : JSON.stringify(parsed.value, null, 2)
+      : JSON.stringify(parsed.value, null, indent)
     : "";
 
   const copy = async () => {
@@ -79,6 +79,24 @@ export function JsonWorkbench() {
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1400);
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        setMode("format");
+      }
+      if (event.shiftKey && event.key.toLowerCase() === "c" && result) {
+        event.preventDefault();
+        void navigator.clipboard.writeText(result);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [result]);
 
   const download = () => {
     const url = URL.createObjectURL(
@@ -169,7 +187,15 @@ export function JsonWorkbench() {
           </div>
           <div>
             <label>インデント</label>
-            <button type="button" className="select-button">2 spaces <ChevronDown size={13} /></button>
+            <select
+              className="select-button"
+              value={indent}
+              onChange={(event) => setIndent(Number(event.target.value))}
+              aria-label="JSONのインデント幅"
+            >
+              <option value={2}>2 spaces</option>
+              <option value={4}>4 spaces</option>
+            </select>
             <button type="button" className="clear-button" onClick={() => setInput("")}>すべて消去</button>
           </div>
         </div>

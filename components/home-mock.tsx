@@ -12,37 +12,12 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { categories, tools } from "@/lib/tools";
 
 export function HomeMock() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("すべて");
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const paletteInput = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const openPalette = () => setPaletteOpen(true);
-    const headerButton = document.querySelector(".header-search");
-    headerButton?.addEventListener("click", openPalette);
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setPaletteOpen((open) => !open);
-      }
-      if (event.key === "Escape") setPaletteOpen(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      headerButton?.removeEventListener("click", openPalette);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (paletteOpen) window.setTimeout(() => paletteInput.current?.focus(), 50);
-  }, [paletteOpen]);
 
   const filteredTools = useMemo(() => {
     const normalized = query.toLowerCase().trim();
@@ -57,11 +32,6 @@ export function HomeMock() {
       return categoryMatches && queryMatches;
     });
   }, [category, query]);
-
-  const paletteTools = useMemo(() => {
-    if (!query) return tools.filter((tool) => tool.featured).slice(0, 5);
-    return filteredTools.slice(0, 6);
-  }, [filteredTools, query]);
 
   return (
     <main>
@@ -222,36 +192,6 @@ export function HomeMock() {
           JSON Toolsを試す <ArrowRight size={16} />
         </Link>
       </section>
-
-      {paletteOpen && (
-        <div className="command-overlay" role="presentation" onMouseDown={() => setPaletteOpen(false)}>
-          <div className="command-dialog" role="dialog" aria-modal="true" aria-label="ツール検索" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="command-input">
-              <Search size={19} />
-              <input
-                id="command-tool-search"
-                name="command-tool-search"
-                ref={paletteInput}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="ツール名や、やりたいことを入力"
-              />
-              <kbd>ESC</kbd>
-            </div>
-            <div className="command-results">
-              <span className="command-label">{query ? "検索結果" : "よく使う道具"}</span>
-              {paletteTools.map((tool) => (
-                <Link href={tool.href} key={tool.index} onClick={() => setPaletteOpen(false)}>
-                  <span className={`command-icon accent-${tool.accent}`}>{tool.index}</span>
-                  <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
-                  <ArrowRight size={15} />
-                </Link>
-              ))}
-            </div>
-            <div className="command-help"><span>↑↓ 移動</span><span>↵ 開く</span><span>esc 閉じる</span></div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
