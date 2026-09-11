@@ -138,6 +138,46 @@ function savePasswordSettings(settings: PasswordSettings) {
   window.dispatchEvent(new Event(passwordStorageEvent));
 }
 
+function PasswordNumberInput({
+  id,
+  value,
+  min,
+  max,
+  onCommit,
+}: {
+  id: string;
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  const commit = () => {
+    const next = Math.max(min, Math.min(max, Number(draft) || min));
+    setDraft(String(next));
+    onCommit(next);
+  };
+
+  return (
+    <input
+      id={id}
+      name={id}
+      type="number"
+      inputMode="numeric"
+      min={min}
+      max={max}
+      value={draft}
+      onFocus={(event) => event.currentTarget.select()}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+      }}
+    />
+  );
+}
+
 export function PasswordSuite() {
   const [preset, setPreset] = useState<PasswordPreset>("custom");
   const [options, setOptions] = useState<PasswordOptions>({
@@ -224,19 +264,16 @@ export function PasswordSuite() {
         <div className="password-basic-settings">
           <label className="password-number-control">
             <span>生成文字列の長さ</span>
-            <input
+            <PasswordNumberInput
+              key={`password-length-${length}`}
               id="password-length"
-              name="password-length"
-              type="number"
-              inputMode="numeric"
               min={8}
               max={4096}
               value={length}
-              onFocus={(event) => event.currentTarget.select()}
-              onChange={(event) =>
+              onCommit={(nextLength) =>
                 savePasswordSettings({
                   ...settings,
-                  length: Math.max(8, Math.min(4096, Number(event.target.value) || 8)),
+                  length: nextLength,
                 })
               }
             />
@@ -244,19 +281,16 @@ export function PasswordSuite() {
           </label>
           <label className="password-number-control">
             <span>生成する個数</span>
-            <input
+            <PasswordNumberInput
+              key={`password-count-${count}`}
               id="password-count"
-              name="password-count"
-              type="number"
-              inputMode="numeric"
               min={1}
               max={100}
               value={count}
-              onFocus={(event) => event.currentTarget.select()}
-              onChange={(event) =>
+              onCommit={(nextCount) =>
                 savePasswordSettings({
                   ...settings,
-                  count: Math.max(1, Math.min(100, Number(event.target.value) || 1)),
+                  count: nextCount,
                 })
               }
             />
