@@ -7,7 +7,6 @@ import {
   Braces,
   Check,
   ChevronRight,
-  Clock3,
   Command,
   LockKeyhole,
   Search,

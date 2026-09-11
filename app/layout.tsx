@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Brackets, Github, Search } from "lucide-react";
+import { Brackets, Code2, Search } from "lucide-react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,7 +39,7 @@ export default function RootLayout({
               target="_blank"
               rel="noreferrer"
             >
-              <Github size={18} />
+              <Code2 size={18} />
             </a>
           </div>
         </header>
