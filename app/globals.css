@@ -2706,3 +2706,7 @@ kbd {
 .document-page section > span {
   font-size: 10px;
 }
+
+small {
+  font-size: max(10px, 0.833em) !important;
+}
