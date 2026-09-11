@@ -1,5 +1,6 @@
 "use client";
 
+import { Copy, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   ToolShell,
@@ -121,6 +122,7 @@ export function PasswordSuite() {
         </div>
       </div>
       <button type="button" className="primary-button large-action" onClick={generate} disabled={!hasCharset}>
+        <RefreshCw size={15} aria-hidden="true" />
         {count}個のパスワードを生成
       </button>
       <div className="password-list">
@@ -131,6 +133,7 @@ export function PasswordSuite() {
             onClick={() => navigator.clipboard.writeText(passwords.join("\n"))}
             disabled={!passwords.length}
           >
+            <Copy size={14} aria-hidden="true" />
             すべてコピー
           </button>
         </header>
@@ -138,13 +141,15 @@ export function PasswordSuite() {
           passwords.map((password, index) => (
             <div key={`${password}-${index}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <code>{password}</code>
               <button
                 type="button"
                 onClick={() => navigator.clipboard.writeText(password)}
+                aria-label={`${index + 1}件目のパスワードをコピー`}
+                title="コピー"
               >
-                コピー
+                <Copy size={15} aria-hidden="true" />
               </button>
+              <code>{password}</code>
             </div>
           ))
         ) : (

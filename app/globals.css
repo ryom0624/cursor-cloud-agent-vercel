@@ -1671,6 +1671,10 @@ kbd {
 .password-list header button,
 .password-list > div button {
   min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 8px;
   border: 0;
   background: transparent;
@@ -1686,7 +1690,7 @@ kbd {
 .password-list > div {
   min-height: 46px;
   display: grid;
-  grid-template-columns: 45px 1fr 70px;
+  grid-template-columns: 38px 38px minmax(0, 1fr);
   align-items: center;
   border-bottom: 1px solid var(--line);
 }
@@ -1704,6 +1708,7 @@ kbd {
 
 .password-list code {
   overflow-wrap: anywhere;
+  padding: 0 12px 0 4px;
   color: var(--rust-dark);
   font-family: var(--mono);
 }
@@ -1765,6 +1770,9 @@ kbd {
 
 .large-action {
   min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 14px;
 }
 
@@ -2535,7 +2543,7 @@ kbd {
   }
 
   .password-list > div {
-    grid-template-columns: 32px 1fr 55px;
+    grid-template-columns: 30px 36px minmax(0, 1fr);
   }
 
   .password-list code {
@@ -2628,4 +2636,73 @@ kbd {
   .document-page section {
     grid-template-columns: 35px 1fr;
   }
+}
+
+/* Hard readability floor: no rendered interface text below 10px. */
+.quick-links span,
+.quick-start-head,
+.quick-start-head small,
+.quick-start-list a > span,
+.quick-start-list small,
+.quick-start-foot,
+.quick-start-foot strong,
+.console-topline,
+.console-footer,
+.section-number,
+.category-label,
+.command-label,
+.function-count span,
+.roadmap-note > span,
+.roadmap-note p,
+.list-labels,
+.tool-index,
+.command-icon,
+.principles span,
+.command-help,
+.sidebar-title,
+.workbench-sidebar > a span,
+.sidebar-foot,
+.breadcrumb,
+.workbench-kicker,
+.local-badge,
+.editor-toolbar button,
+.editor-file-button,
+.editor-toolbar label,
+.pane-heading,
+.pane-heading small,
+.pane-heading button span,
+.editor-lines,
+.validation-bar,
+.validation-bar strong,
+.validation-bar em,
+.shortcut-row,
+.shortcut-row kbd,
+.suite-editor header,
+.suite-editor header small,
+.suite-editor header button,
+.tool-status,
+.tool-status strong,
+.control-label,
+.inline-metric,
+.generated-list span,
+.generated-list button,
+.password-list header,
+.password-list > div span,
+.check-controls label,
+.diff-inputs label > span,
+.metric-grid span,
+.single-input-bar label,
+.date-results span,
+.timezone-list span,
+.timezone-output span,
+.cron-expression span,
+.cron-builder label,
+.cron-builder small,
+.next-runs > div span,
+.next-runs > div small,
+.consent-banner p,
+.consent-banner button,
+.document-kicker,
+.document-page section > span {
+  font-size: 10px;
 }
