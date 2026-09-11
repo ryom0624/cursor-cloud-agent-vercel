@@ -1,0 +1,267 @@
+"use client";
+
+import Link from "next/link";
+import {
+  ArrowRight,
+  Asterisk,
+  Braces,
+  Check,
+  ChevronRight,
+  Clock3,
+  Command,
+  LockKeyhole,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { categories, tools } from "@/lib/tools";
+
+export function HomeMock() {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("すべて");
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const paletteInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const openPalette = () => setPaletteOpen(true);
+    const headerButton = document.querySelector(".header-search");
+    headerButton?.addEventListener("click", openPalette);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+      if (event.key === "Escape") setPaletteOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      headerButton?.removeEventListener("click", openPalette);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (paletteOpen) window.setTimeout(() => paletteInput.current?.focus(), 50);
+  }, [paletteOpen]);
+
+  const filteredTools = useMemo(() => {
+    const normalized = query.toLowerCase().trim();
+    return tools.filter((tool) => {
+      const categoryMatches =
+        category === "すべて" || tool.category === category;
+      const queryMatches =
+        !normalized ||
+        `${tool.name} ${tool.description} ${tool.category}`
+          .toLowerCase()
+          .includes(normalized);
+      return categoryMatches && queryMatches;
+    });
+  }, [category, query]);
+
+  const paletteTools = useMemo(() => {
+    if (!query) return tools.filter((tool) => tool.featured).slice(0, 5);
+    return filteredTools.slice(0, 6);
+  }, [filteredTools, query]);
+
+  return (
+    <main>
+      <section className="hero">
+        <div className="hero-copy">
+          <div className="eyebrow">
+            <Asterisk size={15} />
+            ENGINEER&apos;S EVERYDAY WORKBENCH
+          </div>
+          <h1>
+            開発に必要な道具を、
+            <br />
+            <span>ひとつの場所に。</span>
+          </h1>
+          <p>
+            整形、変換、検証、生成。日々の小さな作業を、
+            <br className="desktop-only" />
+            広告もログインもない静かな作業台で。
+          </p>
+          <div className="hero-search-wrap">
+            <Search size={19} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="何をしたいですか？  例：JSONを整形"
+              aria-label="ツールを検索"
+            />
+            <kbd>/</kbd>
+          </div>
+          <div className="quick-links">
+            <span>よく使われています</span>
+            <Link href="/tools/json">JSON整形</Link>
+            <Link href="/tools/json?tab=encode">Base64</Link>
+            <Link href="/tools/json?tab=id">UUID生成</Link>
+          </div>
+        </div>
+
+        <div className="hero-console" aria-label="JSON整形のプレビュー">
+          <div className="console-topline">
+            <div>
+              <span className="status-dot" />
+              JSON / FORMAT
+            </div>
+            <span>LOCAL PROCESSING</span>
+          </div>
+          <div className="console-body">
+            <div className="line-numbers">1<br />2<br />3<br />4<br />5<br />6</div>
+            <pre>
+              <span className="punctuation">{"{"}</span>
+              {"\n  "}
+              <span className="json-key">&quot;project&quot;</span>
+              <span className="punctuation">: </span>
+              <span className="json-string">&quot;devsmith&quot;</span>
+              <span className="punctuation">,</span>
+              {"\n  "}
+              <span className="json-key">&quot;tools&quot;</span>
+              <span className="punctuation">: [</span>
+              {"\n    "}
+              <span className="json-string">&quot;format&quot;</span>
+              <span className="punctuation">,</span>
+              {"\n    "}
+              <span className="json-string">&quot;validate&quot;</span>
+              {"\n  "}
+              <span className="punctuation">]{"\n}"}</span>
+            </pre>
+          </div>
+          <div className="console-footer">
+            <span><Check size={13} /> VALID JSON</span>
+            <span>6 LINES · 82 BYTES</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="trust-strip" aria-label="サービスの特徴">
+        <div><LockKeyhole size={17} /><span><strong>ブラウザ内で処理</strong>データを外部送信しません</span></div>
+        <div><Command size={17} /><span><strong>すぐに使える</strong>登録もインストールも不要</span></div>
+        <div><Sparkles size={17} /><span><strong>広告なし</strong>作業を邪魔するものは置きません</span></div>
+      </section>
+
+      <section className="tools-section" id="tools">
+        <div className="section-heading">
+          <div>
+            <span className="section-number">01</span>
+            <h2>道具箱</h2>
+            <p>13ワークスペース・24機能。すべて無料です。</p>
+          </div>
+          <div className="function-count"><strong>24</strong><span>FUNCTIONS<br />AVAILABLE</span></div>
+        </div>
+
+        <div className="tool-browser">
+          <aside className="category-nav" aria-label="カテゴリ">
+            <span className="category-label">CATEGORY</span>
+            {categories.map((item) => (
+              <button
+                key={item.name}
+                className={category === item.name ? "active" : ""}
+                onClick={() => setCategory(item.name)}
+                type="button"
+              >
+                <span>{item.name}</span>
+                <small>{String(item.count).padStart(2, "0")}</small>
+              </button>
+            ))}
+            <div className="roadmap-note">
+              <span>NEXT</span>
+              <strong>100機能まで拡張予定</strong>
+              <p>必要な道具を、丁寧に追加していきます。</p>
+            </div>
+          </aside>
+
+          <div className="tool-list">
+            <div className="list-search">
+              <Search size={16} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="一覧を絞り込む"
+                aria-label="一覧を絞り込む"
+              />
+              {query && (
+                <button onClick={() => setQuery("")} aria-label="検索をクリア">
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            <div className="list-labels">
+              <span>TOOL</span><span>CATEGORY</span><span>FUNCTIONS</span>
+            </div>
+            {filteredTools.length ? (
+              filteredTools.map((tool) => (
+                <Link className="tool-row" href={tool.href} key={tool.index}>
+                  <span className={`tool-index accent-${tool.accent}`}>{tool.index}</span>
+                  <span className="tool-main">
+                    <strong>{tool.name}</strong>
+                    <small>{tool.description}</small>
+                  </span>
+                  <span className="tool-category">{tool.category}</span>
+                  <span className="tool-functions">{tool.functions}</span>
+                  <ChevronRight className="tool-arrow" size={18} />
+                </Link>
+              ))
+            ) : (
+              <div className="empty-state">
+                <Braces size={26} />
+                <strong>該当する道具がありません</strong>
+                <button onClick={() => { setQuery(""); setCategory("すべて"); }}>
+                  条件をクリア
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="about-section" id="about">
+        <div className="section-heading">
+          <div>
+            <span className="section-number">02</span>
+            <h2>静かな作業台であること。</h2>
+          </div>
+        </div>
+        <div className="principles">
+          <article><span>01</span><h3>速い</h3><p>ページを開いたらすぐに入力。余計な手順を挟みません。</p></article>
+          <article><span>02</span><h3>安全</h3><p>処理は原則ローカルで完結。入力内容を保存しません。</p></article>
+          <article><span>03</span><h3>正直</h3><p>できることと、データの扱いを明確に伝えます。</p></article>
+        </div>
+        <Link className="text-link" href="/tools/json">
+          JSON Toolsを試す <ArrowRight size={16} />
+        </Link>
+      </section>
+
+      {paletteOpen && (
+        <div className="command-overlay" role="presentation" onMouseDown={() => setPaletteOpen(false)}>
+          <div className="command-dialog" role="dialog" aria-modal="true" aria-label="ツール検索" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="command-input">
+              <Search size={19} />
+              <input
+                ref={paletteInput}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="ツール名や、やりたいことを入力"
+              />
+              <kbd>ESC</kbd>
+            </div>
+            <div className="command-results">
+              <span className="command-label">{query ? "検索結果" : "よく使う道具"}</span>
+              {paletteTools.map((tool) => (
+                <Link href={tool.href} key={tool.index} onClick={() => setPaletteOpen(false)}>
+                  <span className={`command-icon accent-${tool.accent}`}>{tool.index}</span>
+                  <span><strong>{tool.name}</strong><small>{tool.description}</small></span>
+                  <ArrowRight size={15} />
+                </Link>
+              ))}
+            </div>
+            <div className="command-help"><span>↑↓ 移動</span><span>↵ 開く</span><span>esc 閉じる</span></div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
