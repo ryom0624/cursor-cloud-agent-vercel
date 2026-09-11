@@ -2680,6 +2680,7 @@ kbd {
 .suite-editor header,
 .suite-editor header small,
 .suite-editor header button,
+.diff-result header span,
 .tool-status,
 .tool-status strong,
 .control-label,
