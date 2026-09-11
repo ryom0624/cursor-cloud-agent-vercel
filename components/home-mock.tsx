@@ -96,8 +96,8 @@ export function HomeMock() {
           <div className="quick-links">
             <span>QUICK COMMAND</span>
             <Link href="/tools/json">JSON整形</Link>
-            <Link href="/tools/json?tab=encode">Base64</Link>
-            <Link href="/tools/json?tab=id">UUID生成</Link>
+            <Link href="/tools/encoder">Base64</Link>
+            <Link href="/tools/id-generator">UUID生成</Link>
           </div>
         </div>
 

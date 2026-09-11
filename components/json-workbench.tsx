@@ -22,36 +22,73 @@ const sample = `{"project":"devsmith","version":"0.1.0","private":true,"tools":[
 
 type Mode = "format" | "validate" | "minify" | "tree";
 
+function JsonTreeNode({ value, name }: { value: unknown; name?: string }) {
+  if (typeof value !== "object" || value === null) {
+    return (
+      <div className="json-tree-leaf">
+        {name !== undefined && <span className="json-tree-key">{name}: </span>}
+        <span className={`json-tree-${value === null ? "null" : typeof value}`}>
+          {typeof value === "string" ? `"${value}"` : String(value)}
+        </span>
+      </div>
+    );
+  }
+
+  const entries = Object.entries(value);
+  return (
+    <details open className="json-tree-branch">
+      <summary>
+        {name !== undefined && <span className="json-tree-key">{name} </span>}
+        <small>{Array.isArray(value) ? `[${entries.length}]` : `{${entries.length}}`}</small>
+      </summary>
+      <div>
+        {entries.map(([key, child]) => (
+          <JsonTreeNode key={key} name={key} value={child} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export function JsonWorkbench() {
   const [mode, setMode] = useState<Mode>("format");
   const [input, setInput] = useState(sample);
   const [copied, setCopied] = useState(false);
   const [inputExpanded, setInputExpanded] = useState(false);
 
-  const result = useMemo(() => {
+  const parsed = useMemo(() => {
     try {
-      const parsed = JSON.parse(input);
-      if (mode === "minify") return JSON.stringify(parsed);
-      if (mode === "tree") return JSON.stringify(parsed, null, 2);
-      return JSON.stringify(parsed, null, 2);
-    } catch {
-      return "";
-    }
-  }, [input, mode]);
-
-  const valid = useMemo(() => {
-    try {
-      JSON.parse(input);
-      return true;
-    } catch {
-      return false;
+      return { value: JSON.parse(input) as unknown, error: "" };
+    } catch (error) {
+      return {
+        value: null,
+        error: error instanceof Error ? error.message : "JSONを解析できません。",
+      };
     }
   }, [input]);
+
+  const valid = !parsed.error;
+  const result = valid
+    ? mode === "minify"
+      ? JSON.stringify(parsed.value)
+      : JSON.stringify(parsed.value, null, 2)
+    : "";
 
   const copy = async () => {
     await navigator.clipboard.writeText(result);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1400);
+  };
+
+  const download = () => {
+    const url = URL.createObjectURL(
+      new Blob([result], { type: "application/json;charset=utf-8" }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "devsmith-output.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -117,7 +154,17 @@ export function JsonWorkbench() {
 
         <div className="editor-toolbar">
           <div>
-            <button type="button"><FileJson size={15} />ファイルを開く</button>
+            <label className="editor-file-button">
+              <FileJson size={15} />ファイルを開く
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (file) setInput(await file.text());
+                }}
+              />
+            </label>
             <button type="button" onClick={() => setInput(sample)}><RotateCcw size={15} />サンプル</button>
           </div>
           <div>
@@ -161,20 +208,26 @@ export function JsonWorkbench() {
               <span>OUTPUT</span>
               <div>
                 <button type="button" onClick={copy} disabled={!result}><Copy size={14} />{copied ? "コピー済み" : "コピー"}</button>
-                <button type="button" disabled={!result}><Download size={14} /></button>
+                <button type="button" disabled={!result} onClick={download} aria-label="JSONをダウンロード"><Download size={14} /></button>
               </div>
             </div>
-            <div className="textarea-wrap">
-              <div className="editor-lines">1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10</div>
-              <textarea id="json-output" name="json-output" value={result} readOnly spellCheck={false} aria-label="JSON出力" />
-            </div>
+            {mode === "tree" && valid ? (
+              <div className="json-tree" aria-label="JSONツリー">
+                <JsonTreeNode value={parsed.value} />
+              </div>
+            ) : (
+              <div className="textarea-wrap">
+                <div className="editor-lines">1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10</div>
+                <textarea id="json-output" name="json-output" value={result} readOnly spellCheck={false} aria-label="JSON出力" />
+              </div>
+            )}
           </div>
         </div>
 
         <div className={`validation-bar ${valid ? "valid" : "invalid"}`}>
           <span>{valid ? <Check size={15} /> : <WandSparkles size={15} />}</span>
           <strong>{valid ? "有効なJSONです" : "JSONを確認してください"}</strong>
-          <small>{valid ? "構文エラーは見つかりませんでした" : "入力に構文エラーがあります"}</small>
+          <small>{valid ? "構文エラーは見つかりませんでした" : parsed.error}</small>
           <em>{valid ? `${result.split("\n").length} LINES · ${new Blob([result]).size} BYTES` : "INVALID"}</em>
         </div>
 

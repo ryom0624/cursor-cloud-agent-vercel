@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Brackets, Code2, Search } from "lucide-react";
+import { AnalyticsConsent } from "@/components/analytics-consent";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -50,11 +51,12 @@ export default function RootLayout({
             <span>入力データは、あなたのブラウザから出ません。</span>
           </div>
           <div className="footer-links">
-            <a href="#">プライバシー</a>
-            <a href="#">更新履歴</a>
+            <Link href="/privacy">プライバシー</Link>
+            <Link href="/#tools">ツール一覧</Link>
             <span>© 2026</span>
           </div>
         </footer>
+        <AnalyticsConsent />
       </body>
     </html>
   );
