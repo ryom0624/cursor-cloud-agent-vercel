@@ -986,14 +986,39 @@ kbd {
   height: 43px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   border-bottom: 1px solid var(--line);
   color: var(--ink-soft);
-  font-size: 9px;
+  font-size: 10px;
 }
 
-.breadcrumb strong {
+.breadcrumb a {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-dark);
+  text-underline-offset: 4px;
+}
+
+.breadcrumb a:hover {
+  color: var(--rust-dark);
+  text-decoration-color: currentColor;
+}
+
+.breadcrumb > svg {
+  flex: 0 0 auto;
+  color: var(--line-dark);
+}
+
+.breadcrumb [aria-current="page"] {
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workbench-heading {

@@ -11,6 +11,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { CopyButton } from "@/components/copy-button";
+import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { tools } from "@/lib/tools";
 
 type ToolShellProps = {
@@ -64,13 +65,7 @@ export function ToolShell({
       </aside>
 
       <section className="workbench-main suite-main">
-        <div className="breadcrumb">
-          <Link href="/">道具箱</Link>
-          <span>/</span>
-          <span>{category}</span>
-          <span>/</span>
-          <strong>{title}</strong>
-        </div>
+        <ToolBreadcrumb title={title} />
 
         <div className="workbench-heading">
           <div className="workbench-icon" aria-hidden="true">

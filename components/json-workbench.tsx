@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
+import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { tools } from "@/lib/tools";
 
 const sample = `{"project":"devsmith","version":"0.1.0","private":true,"tools":["format","validate","minify"],"settings":{"theme":"paper","localOnly":true}}`;
@@ -141,13 +142,7 @@ export function JsonWorkbench() {
       </aside>
 
       <section className="workbench-main">
-        <div className="breadcrumb">
-          <Link href="/">道具箱</Link>
-          <span>/</span>
-          <span>データ</span>
-          <span>/</span>
-          <strong>JSON Tools</strong>
-        </div>
+        <ToolBreadcrumb title="JSON Tools" />
 
         <div className="workbench-heading">
           <div className="workbench-icon"><Braces size={25} /></div>
