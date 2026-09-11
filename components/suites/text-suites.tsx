@@ -70,6 +70,8 @@ export function PasswordSuite() {
           <label className="range-control">
             <span>長さ <strong>{length}</strong></span>
             <input
+              id="password-length"
+              name="password-length"
               type="range"
               min={8}
               max={128}
@@ -80,6 +82,8 @@ export function PasswordSuite() {
           <label className="control-label password-count">
             生成する個数
             <input
+              id="password-count"
+              name="password-count"
               type="number"
               min={1}
               max={100}
@@ -99,6 +103,8 @@ export function PasswordSuite() {
           ].map(([key, label, detail]) => (
             <label key={key}>
               <input
+                id={`password-option-${key}`}
+                name={`password-option-${key}`}
                 type="checkbox"
                 checked={options[key as keyof typeof options]}
                 onChange={(event) =>
@@ -255,10 +261,12 @@ export function RegexSuite() {
       functionCount={1}
     >
       <div className="regex-bar">
+        <label className="sr-only" htmlFor="regex-pattern">正規表現パターン</label>
         <span>/</span>
-        <input value={pattern} onChange={(event) => setPattern(event.target.value)} name="regex-pattern" />
+        <input id="regex-pattern" value={pattern} onChange={(event) => setPattern(event.target.value)} name="regex-pattern" />
         <span>/</span>
-        <input value={flags} onChange={(event) => setFlags(event.target.value)} name="regex-flags" aria-label="正規表現フラグ" />
+        <label className="sr-only" htmlFor="regex-flags">正規表現フラグ</label>
+        <input id="regex-flags" value={flags} onChange={(event) => setFlags(event.target.value)} name="regex-flags" aria-label="正規表現フラグ" />
       </div>
       <TextWorkspace
         input={input}
