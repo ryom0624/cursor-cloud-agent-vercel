@@ -147,6 +147,8 @@ export function JsonWorkbench() {
             <div className="textarea-wrap">
               <div className="editor-lines">1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10</div>
               <textarea
+                id="json-input"
+                name="json-input"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 spellCheck={false}
@@ -164,7 +166,7 @@ export function JsonWorkbench() {
             </div>
             <div className="textarea-wrap">
               <div className="editor-lines">1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10</div>
-              <textarea value={result} readOnly spellCheck={false} aria-label="JSON出力" />
+              <textarea id="json-output" name="json-output" value={result} readOnly spellCheck={false} aria-label="JSON出力" />
             </div>
           </div>
         </div>

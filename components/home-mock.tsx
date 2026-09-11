@@ -84,6 +84,8 @@ export function HomeMock() {
           <div className="hero-search-wrap">
             <Search size={19} />
             <input
+              id="hero-tool-search"
+              name="hero-tool-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="何をしたいですか？  例：JSONを整形"
@@ -162,6 +164,8 @@ export function HomeMock() {
             <div className="list-search">
               <Search size={16} />
               <input
+                id="tool-list-search"
+                name="tool-list-search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="一覧を絞り込む"
@@ -225,6 +229,8 @@ export function HomeMock() {
             <div className="command-input">
               <Search size={19} />
               <input
+                id="command-tool-search"
+                name="command-tool-search"
                 ref={paletteInput}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
