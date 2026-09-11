@@ -107,7 +107,6 @@ function securePassword(
   if (
     preset === "custom"
     && options.startsWithLetter
-    && preset !== "pin"
     && output.length
     && !/[A-Za-z]/.test(output[0])
   ) {
