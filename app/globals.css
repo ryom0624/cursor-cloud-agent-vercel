@@ -2719,6 +2719,11 @@ small {
   background: var(--ink);
 }
 
+.next-runs header,
+.next-runs header span {
+  font-size: 10px;
+}
+
 .generator-controls button,
 .suite-toolbar button,
 .single-input-bar button,
