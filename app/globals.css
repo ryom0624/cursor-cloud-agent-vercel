@@ -2809,7 +2809,7 @@ small {
 
 .password-presets {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   border: 1px solid var(--ink);
   background: var(--white);
 }
@@ -2876,7 +2876,7 @@ small {
   font-weight: 400;
 }
 
-.check-controls.preset-locked label:nth-child(-n + 4) {
+.check-controls.preset-locked label {
   opacity: 0.55;
 }
 

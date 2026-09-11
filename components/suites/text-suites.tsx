@@ -1,7 +1,7 @@
 "use client";
 
-import { RefreshCw, Trash2 } from "lucide-react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { CopyButton } from "@/components/copy-button";
 import {
   ToolShell,
@@ -17,20 +17,22 @@ const symbols = "!@#$%^&*()-_=+[]{}";
 const readableLower = "abcdefghijkmnpqrstuvwxyz";
 const readableUpper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const urlSafeSymbols = "-._~";
-const passwordStorageKey = "devsmith-password-history";
-const passwordStorageEvent = "devsmith-password-history-change";
+const passwordStorageKey = "devsmith-password-settings";
+const legacyPasswordStorageKey = "devsmith-password-history";
+const passwordStorageEvent = "devsmith-password-settings-change";
+const defaultPasswordSettings = { length: 24, count: 5 };
 
 type PasswordOptions = {
   lower: boolean;
   upper: boolean;
   numbers: boolean;
   symbols: boolean;
+  excludeAmbiguous: boolean;
   avoidRepeats: boolean;
   startsWithLetter: boolean;
 };
 
 type PasswordPreset =
-  | "standard"
   | "alphanumeric"
   | "readable"
   | "pin"
@@ -38,12 +40,9 @@ type PasswordPreset =
   | "url-safe"
   | "custom";
 
-type PasswordHistory = {
-  passwords: string[];
-  generatedAt: string;
+type PasswordSettings = {
   length: number;
   count: number;
-  preset: PasswordPreset;
 };
 
 const passwordPresets: Array<{
@@ -51,13 +50,12 @@ const passwordPresets: Array<{
   label: string;
   detail: string;
 }> = [
-  { id: "standard", label: "標準", detail: "英大小・数字・記号" },
+  { id: "custom", label: "カスタム", detail: "文字種・条件を選択" },
   { id: "alphanumeric", label: "英数字", detail: "記号なし" },
   { id: "readable", label: "読み間違い防止", detail: "Il1O0oを除外" },
   { id: "pin", label: "PIN", detail: "数字のみ" },
   { id: "hex", label: "Hex", detail: "0–9 / a–f" },
   { id: "url-safe", label: "URL-safe", detail: "英数字・-._~" },
-  { id: "custom", label: "カスタム", detail: "文字種を選択" },
 ];
 
 function passwordGroups(preset: PasswordPreset, options: PasswordOptions) {
@@ -66,14 +64,13 @@ function passwordGroups(preset: PasswordPreset, options: PasswordOptions) {
   if (preset === "readable") return [readableLower, readableUpper, "23456789"];
   if (preset === "alphanumeric") return [lower, upper, numbers];
   if (preset === "url-safe") return [lower, upper, numbers, urlSafeSymbols];
-  const include = preset === "standard"
-    ? { lower: true, upper: true, numbers: true, symbols: true }
-    : options;
+  const removeAmbiguous = (characters: string) =>
+    options.excludeAmbiguous ? characters.replace(/[Il1O0o]/g, "") : characters;
   return [
-    include.lower ? lower : "",
-    include.upper ? upper : "",
-    include.numbers ? numbers : "",
-    include.symbols ? symbols : "",
+    options.lower ? removeAmbiguous(lower) : "",
+    options.upper ? removeAmbiguous(upper) : "",
+    options.numbers ? removeAmbiguous(numbers) : "",
+    options.symbols ? symbols : "",
   ].filter(Boolean);
 }
 
@@ -97,7 +94,7 @@ function securePassword(
     const target = shuffle[index] % (index + 1);
     [output[index], output[target]] = [output[target], output[index]];
   }
-  if (options.avoidRepeats && charset.length > 1) {
+  if (preset === "custom" && options.avoidRepeats && charset.length > 1) {
     for (let index = 1; index < output.length; index += 1) {
       if (output[index] === output[index - 1]) {
         const replacementIndex = (random[index] + 1) % charset.length;
@@ -108,7 +105,8 @@ function securePassword(
     }
   }
   if (
-    options.startsWithLetter
+    preset === "custom"
+    && options.startsWithLetter
     && preset !== "pin"
     && output.length
     && !/[A-Za-z]/.test(output[0])
@@ -119,7 +117,7 @@ function securePassword(
   return output.join("");
 }
 
-function subscribePasswordHistory(callback: () => void) {
+function subscribePasswordSettings(callback: () => void) {
   const onStorage = (event: StorageEvent) => {
     if (event.key === passwordStorageKey) callback();
   };
@@ -131,46 +129,63 @@ function subscribePasswordHistory(callback: () => void) {
   };
 }
 
-function passwordHistorySnapshot() {
+function passwordSettingsSnapshot() {
   return window.localStorage.getItem(passwordStorageKey) ?? "";
 }
 
-function savePasswordHistory(history: PasswordHistory | null) {
-  if (history) {
-    window.localStorage.setItem(passwordStorageKey, JSON.stringify(history));
-  } else {
-    window.localStorage.removeItem(passwordStorageKey);
-  }
+function savePasswordSettings(settings: PasswordSettings) {
+  window.localStorage.setItem(passwordStorageKey, JSON.stringify(settings));
   window.dispatchEvent(new Event(passwordStorageEvent));
 }
 
 export function PasswordSuite() {
-  const [length, setLength] = useState(24);
-  const [preset, setPreset] = useState<PasswordPreset>("standard");
+  const [preset, setPreset] = useState<PasswordPreset>("custom");
   const [options, setOptions] = useState<PasswordOptions>({
     lower: true,
     upper: true,
     numbers: true,
     symbols: true,
+    excludeAmbiguous: false,
     avoidRepeats: false,
     startsWithLetter: false,
   });
-  const [count, setCount] = useState(5);
-  const storedHistory = useSyncExternalStore(
-    subscribePasswordHistory,
-    passwordHistorySnapshot,
+  const [passwords, setPasswords] = useState<string[]>([]);
+  const storedSettings = useSyncExternalStore(
+    subscribePasswordSettings,
+    passwordSettingsSnapshot,
     () => "",
   );
-  const history = useMemo<PasswordHistory | null>(() => {
-    if (!storedHistory) return null;
+  const settings = useMemo<PasswordSettings>(() => {
+    if (!storedSettings) return defaultPasswordSettings;
     try {
-      const parsed = JSON.parse(storedHistory) as PasswordHistory;
-      return Array.isArray(parsed.passwords) ? parsed : null;
+      const parsed = JSON.parse(storedSettings) as Partial<PasswordSettings>;
+      return {
+        length: Math.max(8, Math.min(4096, Number(parsed.length) || 24)),
+        count: Math.max(1, Math.min(100, Number(parsed.count) || 5)),
+      };
     } catch {
-      return null;
+      return defaultPasswordSettings;
     }
-  }, [storedHistory]);
-  const passwords = history?.passwords ?? [];
+  }, [storedSettings]);
+  const { length, count } = settings;
+
+  useEffect(() => {
+    const legacy = window.localStorage.getItem(legacyPasswordStorageKey);
+    if (!legacy) return;
+    if (!window.localStorage.getItem(passwordStorageKey)) {
+      try {
+        const parsed = JSON.parse(legacy) as Partial<PasswordSettings>;
+        savePasswordSettings({
+          length: Math.max(8, Math.min(4096, Number(parsed.length) || 24)),
+          count: Math.max(1, Math.min(100, Number(parsed.count) || 5)),
+        });
+      } catch {
+        savePasswordSettings(defaultPasswordSettings);
+      }
+    }
+    window.localStorage.removeItem(legacyPasswordStorageKey);
+  }, []);
+
   const hasCharset = preset !== "custom"
     || options.lower
     || options.upper
@@ -178,17 +193,10 @@ export function PasswordSuite() {
     || options.symbols;
 
   const generate = () => {
-    const nextPasswords = Array.from(
+    setPasswords(Array.from(
       { length: count },
       () => securePassword(length, preset, options),
-    );
-    savePasswordHistory({
-      passwords: nextPasswords,
-      generatedAt: new Date().toISOString(),
-      length,
-      count,
-      preset,
-    });
+    ));
   };
 
   return (
@@ -224,7 +232,10 @@ export function PasswordSuite() {
               max={4096}
               value={length}
               onChange={(event) =>
-                setLength(Math.max(8, Math.min(4096, Number(event.target.value) || 8)))
+                savePasswordSettings({
+                  ...settings,
+                  length: Math.max(8, Math.min(4096, Number(event.target.value) || 8)),
+                })
               }
             />
             <small>8〜4,096文字。長さを優先すると強度を高めやすくなります。</small>
@@ -239,7 +250,10 @@ export function PasswordSuite() {
               max={100}
               value={count}
               onChange={(event) =>
-                setCount(Math.max(1, Math.min(100, Number(event.target.value))))
+                savePasswordSettings({
+                  ...settings,
+                  count: Math.max(1, Math.min(100, Number(event.target.value) || 1)),
+                })
               }
             />
             <small>一度に最大100個</small>
@@ -272,6 +286,7 @@ export function PasswordSuite() {
           ))}
           {[
             ["avoidRepeats", "連続重複を避ける", "aa等を抑制"],
+            ["excludeAmbiguous", "読み間違い文字を除外", "Il1O0oを除外"],
             ["startsWithLetter", "先頭を英字にする", "対応サービス向け"],
           ].map(([key, label, detail]) => (
             <label key={key}>
@@ -280,6 +295,7 @@ export function PasswordSuite() {
                 name={`password-option-${key}`}
                 type="checkbox"
                 checked={options[key as keyof PasswordOptions]}
+                disabled={preset !== "custom"}
                 onChange={(event) =>
                   setOptions((current) => ({ ...current, [key]: event.target.checked }))
                 }
@@ -298,12 +314,6 @@ export function PasswordSuite() {
         <header>
           <span>GENERATED PASSWORDS</span>
           <div>
-            {history && (
-              <button type="button" onClick={() => savePasswordHistory(null)}>
-                <Trash2 size={14} aria-hidden="true" />
-                履歴を削除
-              </button>
-            )}
             <CopyButton value={passwords.join("\n")} label="すべてコピー" />
           </div>
         </header>
@@ -327,8 +337,8 @@ export function PasswordSuite() {
       </div>
       <ToolStatus error={hasCharset ? "" : "少なくとも1種類の文字を選択してください"}>
         {passwords.length
-          ? `${passwords.length}個・各${history?.length ?? length}文字。前回結果をこの端末だけに保存しています`
-          : "生成結果はこの端末だけに保存されます"}
+          ? `${passwords.length}個・各${length}文字。生成結果は保存されません`
+          : "長さと個数だけをこの端末に保存します"}
       </ToolStatus>
     </ToolShell>
   );

@@ -37,7 +37,7 @@ export default function PrivacyPage() {
         <div>
           <h2>端末内の保存</h2>
           <p>
-            アクセス解析への同意状態など、表示に必要な設定をLocalStorageへ保存することがあります。Password Generatorは利便性のため、直前に生成した結果と生成条件をこの端末のLocalStorageへ保存します。結果画面の「履歴を削除」からいつでも消去できます。その他のツール入力は保存しません。
+            アクセス解析への同意状態など、表示に必要な設定をLocalStorageへ保存することがあります。Password Generatorは利便性のため、生成文字列の長さと生成個数だけをこの端末のLocalStorageへ保存します。生成されたパスワード自体は保存しません。その他のツール入力も保存しません。
           </p>
         </div>
       </section>
