@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AnalyticsConsent } from "@/components/analytics-consent";
+import { CopyToast } from "@/components/copy-button";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({
           </div>
         </footer>
         <AnalyticsConsent />
+        <CopyToast />
       </body>
     </html>
   );

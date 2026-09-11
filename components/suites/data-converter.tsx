@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeftRight, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import YAML from "yaml";
 import { ToolShell, TextWorkspace } from "@/components/tool-shell";
@@ -102,6 +103,7 @@ export function DataConverterSuite() {
         toolbar={
           <>
             <button type="button" className="primary-button" onClick={toggleDirection}>
+              <ArrowLeftRight size={14} aria-hidden="true" />
               {labels[0]} → {labels[1]}　入れ替える
             </button>
             <button
@@ -117,6 +119,7 @@ export function DataConverterSuite() {
                 )
               }
             >
+              <RotateCcw size={14} aria-hidden="true" />
               サンプルを読み込む
             </button>
           </>

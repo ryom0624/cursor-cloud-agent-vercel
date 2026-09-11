@@ -2,7 +2,6 @@
 
 import {
   Clock3,
-  Copy,
   Maximize2,
   Minimize2,
   PanelLeftClose,
@@ -11,6 +10,7 @@ import {
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { CopyButton } from "@/components/copy-button";
 import { tools } from "@/lib/tools";
 
 type ToolShellProps = {
@@ -112,14 +112,7 @@ export function ToolShell({
 }
 
 export function CopyAction({ value }: { value: string }) {
-  const copy = async () => {
-    await navigator.clipboard.writeText(value);
-  };
-  return (
-    <button type="button" className="compact-button" onClick={copy} disabled={!value}>
-      コピー
-    </button>
-  );
+  return <CopyButton value={value} className="compact-button" />;
 }
 
 export function ToolStatus({
@@ -163,9 +156,6 @@ export function TextWorkspace({
   readOnlyOutput = true,
 }: TextWorkspaceProps) {
   const [expanded, setExpanded] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(output);
-  };
 
   return (
     <>
@@ -197,10 +187,7 @@ export function TextWorkspace({
         <section className="suite-editor output-editor">
           <header>
             <span>{outputLabel}</span>
-            <button type="button" onClick={copy} disabled={!output}>
-              <Copy size={13} />
-              コピー
-            </button>
+            <CopyButton value={output} />
           </header>
           <textarea
             name="tool-output"

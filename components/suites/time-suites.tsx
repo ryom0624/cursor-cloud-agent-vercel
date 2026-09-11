@@ -1,11 +1,15 @@
 "use client";
 
 import { CronExpressionParser } from "cron-parser";
+import { ArrowLeftRight, Clock3 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CopyButton } from "@/components/copy-button";
 import { ToolShell, ToolStatus } from "@/components/tool-shell";
 import { describeCron } from "@/lib/tool-utils";
 
 type DateMode = "timestamp" | "timezone";
+type TimestampDirection = "to-date" | "to-timestamp";
+type TimestampUnit = "seconds" | "milliseconds";
 
 const zones = [
   "Asia/Tokyo",
@@ -23,14 +27,32 @@ export function DateTimeSuite() {
   const [timestamp, setTimestamp] = useState("1789099200");
   const [dateInput, setDateInput] = useState("2026-09-11T12:00");
   const [zone, setZone] = useState("Asia/Tokyo");
+  const [timestampDirection, setTimestampDirection] = useState<TimestampDirection>("to-date");
+  const [timestampUnit, setTimestampUnit] = useState<TimestampUnit>("seconds");
 
   const timestampResult = useMemo(() => {
     const numeric = Number(timestamp);
     if (!Number.isFinite(numeric)) return null;
-    const milliseconds = Math.abs(numeric) < 100_000_000_000 ? numeric * 1000 : numeric;
+    const milliseconds = timestampUnit === "seconds" ? numeric * 1000 : numeric;
     const date = new Date(milliseconds);
     return Number.isNaN(date.getTime()) ? null : date;
-  }, [timestamp]);
+  }, [timestamp, timestampUnit]);
+
+  const dateTimestampResult = useMemo(() => {
+    const date = new Date(dateInput);
+    if (Number.isNaN(date.getTime())) return "";
+    return String(
+      timestampUnit === "seconds"
+        ? Math.floor(date.getTime() / 1000)
+        : date.getTime(),
+    );
+  }, [dateInput, timestampUnit]);
+
+  const setCurrentDateInput = () => {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+    setDateInput(local.toISOString().slice(0, 16));
+  };
 
   const timezoneResult = useMemo(() => {
     const date = new Date(dateInput);
@@ -58,35 +80,100 @@ export function DateTimeSuite() {
     >
       {mode === "timestamp" ? (
         <>
-          <div className="single-input-bar">
-            <label htmlFor="timestamp-value">TIMESTAMP</label>
-            <input
-              id="timestamp-value"
-              name="timestamp-value"
-              value={timestamp}
-              onChange={(event) => setTimestamp(event.target.value)}
-              inputMode="numeric"
-            />
-            <button
-              type="button"
-              onClick={() => setTimestamp(String(Math.floor(Date.now() / 1000)))}
-            >
-              現在時刻
-            </button>
-          </div>
-          {timestampResult ? (
-            <div className="date-results">
-              <div><span>LOCAL</span><strong>{timestampResult.toLocaleString("ja-JP")}</strong></div>
-              <div><span>UTC</span><strong>{timestampResult.toUTCString()}</strong></div>
-              <div><span>ISO 8601</span><strong>{timestampResult.toISOString()}</strong></div>
-              <div><span>MILLISECONDS</span><strong>{timestampResult.getTime()}</strong></div>
+          <div className="timestamp-settings">
+            <div className="segmented-control" aria-label="変換方向">
+              <button
+                type="button"
+                className={timestampDirection === "to-date" ? "active" : ""}
+                onClick={() => setTimestampDirection("to-date")}
+              >
+                Timestamp → Datetime
+              </button>
+              <button
+                type="button"
+                className={timestampDirection === "to-timestamp" ? "active" : ""}
+                onClick={() => setTimestampDirection("to-timestamp")}
+              >
+                Datetime → Timestamp
+              </button>
             </div>
+            <ArrowLeftRight size={16} aria-hidden="true" />
+            <label className="control-label">
+              単位
+              <select
+                value={timestampUnit}
+                onChange={(event) => setTimestampUnit(event.target.value as TimestampUnit)}
+              >
+                <option value="seconds">秒（10桁）</option>
+                <option value="milliseconds">ミリ秒（13桁）</option>
+              </select>
+            </label>
+          </div>
+          {timestampDirection === "to-date" ? (
+            <>
+              <div className="single-input-bar">
+                <label htmlFor="timestamp-value">TIMESTAMP（{timestampUnit === "seconds" ? "秒" : "ミリ秒"}）</label>
+                <input
+                  id="timestamp-value"
+                  name="timestamp-value"
+                  value={timestamp}
+                  onChange={(event) => setTimestamp(event.target.value)}
+                  inputMode="numeric"
+                />
+                <button
+                  type="button"
+                  onClick={() => setTimestamp(String(
+                    timestampUnit === "seconds" ? Math.floor(Date.now() / 1000) : Date.now(),
+                  ))}
+                >
+                  <Clock3 size={14} aria-hidden="true" />
+                  現在時刻
+                </button>
+              </div>
+              {timestampResult ? (
+                <div className="date-results">
+                  <div><span>LOCAL</span><strong>{timestampResult.toLocaleString("ja-JP")}</strong></div>
+                  <div><span>UTC</span><strong>{timestampResult.toUTCString()}</strong></div>
+                  <div><span>ISO 8601</span><strong>{timestampResult.toISOString()}</strong></div>
+                  <div><span>MILLISECONDS</span><strong>{timestampResult.getTime()}</strong></div>
+                </div>
+              ) : (
+                <div className="empty-result">有効なTimestampを入力してください</div>
+              )}
+              <ToolStatus error={timestampResult ? "" : "日時へ変換できません"}>
+                入力単位を秒／ミリ秒から選択できます
+              </ToolStatus>
+            </>
           ) : (
-            <div className="empty-result">有効なTimestampを入力してください</div>
+            <>
+              <div className="single-input-bar">
+                <label htmlFor="datetime-value">DATETIME（端末のローカル時刻）</label>
+                <input
+                  id="datetime-value"
+                  name="datetime-value"
+                  type="datetime-local"
+                  value={dateInput}
+                  onChange={(event) => setDateInput(event.target.value)}
+                />
+                <button type="button" onClick={setCurrentDateInput}>
+                  <Clock3 size={14} aria-hidden="true" />
+                  現在日時
+                </button>
+              </div>
+              {dateTimestampResult ? (
+                <div className="timestamp-output">
+                  <span>TIMESTAMP（{timestampUnit === "seconds" ? "秒" : "ミリ秒"}）</span>
+                  <strong>{dateTimestampResult}</strong>
+                  <CopyButton value={dateTimestampResult} />
+                </div>
+              ) : (
+                <div className="empty-result">有効な日時を入力してください</div>
+              )}
+              <ToolStatus error={dateTimestampResult ? "" : "Timestampへ変換できません"}>
+                ローカル日時を{timestampUnit === "seconds" ? "秒" : "ミリ秒"}単位へ変換します
+              </ToolStatus>
+            </>
           )}
-          <ToolStatus error={timestampResult ? "" : "日時へ変換できません"}>
-            秒・ミリ秒を自動判定します
-          </ToolStatus>
         </>
       ) : (
         <>

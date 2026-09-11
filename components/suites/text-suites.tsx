@@ -1,7 +1,8 @@
 "use client";
 
-import { Copy, RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { RefreshCw, Trash2 } from "lucide-react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { CopyButton } from "@/components/copy-button";
 import {
   ToolShell,
   ToolStatus,
@@ -13,17 +14,75 @@ const lower = "abcdefghijklmnopqrstuvwxyz";
 const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const numbers = "0123456789";
 const symbols = "!@#$%^&*()-_=+[]{}";
+const readableLower = "abcdefghijkmnpqrstuvwxyz";
+const readableUpper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const urlSafeSymbols = "-._~";
+const passwordStorageKey = "devsmith-password-history";
+const passwordStorageEvent = "devsmith-password-history-change";
+
+type PasswordOptions = {
+  lower: boolean;
+  upper: boolean;
+  numbers: boolean;
+  symbols: boolean;
+  avoidRepeats: boolean;
+  startsWithLetter: boolean;
+};
+
+type PasswordPreset =
+  | "standard"
+  | "alphanumeric"
+  | "readable"
+  | "pin"
+  | "hex"
+  | "url-safe"
+  | "custom";
+
+type PasswordHistory = {
+  passwords: string[];
+  generatedAt: string;
+  length: number;
+  count: number;
+  preset: PasswordPreset;
+};
+
+const passwordPresets: Array<{
+  id: PasswordPreset;
+  label: string;
+  detail: string;
+}> = [
+  { id: "standard", label: "標準", detail: "英大小・数字・記号" },
+  { id: "alphanumeric", label: "英数字", detail: "記号なし" },
+  { id: "readable", label: "読み間違い防止", detail: "Il1O0oを除外" },
+  { id: "pin", label: "PIN", detail: "数字のみ" },
+  { id: "hex", label: "Hex", detail: "0–9 / a–f" },
+  { id: "url-safe", label: "URL-safe", detail: "英数字・-._~" },
+  { id: "custom", label: "カスタム", detail: "文字種を選択" },
+];
+
+function passwordGroups(preset: PasswordPreset, options: PasswordOptions) {
+  if (preset === "pin") return [numbers];
+  if (preset === "hex") return ["abcdef", numbers];
+  if (preset === "readable") return [readableLower, readableUpper, "23456789"];
+  if (preset === "alphanumeric") return [lower, upper, numbers];
+  if (preset === "url-safe") return [lower, upper, numbers, urlSafeSymbols];
+  const include = preset === "standard"
+    ? { lower: true, upper: true, numbers: true, symbols: true }
+    : options;
+  return [
+    include.lower ? lower : "",
+    include.upper ? upper : "",
+    include.numbers ? numbers : "",
+    include.symbols ? symbols : "",
+  ].filter(Boolean);
+}
 
 function securePassword(
   length: number,
-  enabled: { lower: boolean; upper: boolean; numbers: boolean; symbols: boolean },
+  preset: PasswordPreset,
+  options: PasswordOptions,
 ): string {
-  const groups = [
-    enabled.lower ? lower : "",
-    enabled.upper ? upper : "",
-    enabled.numbers ? numbers : "",
-    enabled.symbols ? symbols : "",
-  ].filter(Boolean);
+  const groups = passwordGroups(preset, options);
   if (!groups.length) return "";
   const charset = groups.join("");
   const random = new Uint32Array(length);
@@ -38,25 +97,99 @@ function securePassword(
     const target = shuffle[index] % (index + 1);
     [output[index], output[target]] = [output[target], output[index]];
   }
+  if (options.avoidRepeats && charset.length > 1) {
+    for (let index = 1; index < output.length; index += 1) {
+      if (output[index] === output[index - 1]) {
+        const replacementIndex = (random[index] + 1) % charset.length;
+        output[index] = charset[replacementIndex] === output[index - 1]
+          ? charset[(replacementIndex + 1) % charset.length]
+          : charset[replacementIndex];
+      }
+    }
+  }
+  if (
+    options.startsWithLetter
+    && preset !== "pin"
+    && output.length
+    && !/[A-Za-z]/.test(output[0])
+  ) {
+    const letterIndex = output.findIndex((character) => /[A-Za-z]/.test(character));
+    if (letterIndex >= 0) [output[0], output[letterIndex]] = [output[letterIndex], output[0]];
+  }
   return output.join("");
+}
+
+function subscribePasswordHistory(callback: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === passwordStorageKey) callback();
+  };
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(passwordStorageEvent, callback);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(passwordStorageEvent, callback);
+  };
+}
+
+function passwordHistorySnapshot() {
+  return window.localStorage.getItem(passwordStorageKey) ?? "";
+}
+
+function savePasswordHistory(history: PasswordHistory | null) {
+  if (history) {
+    window.localStorage.setItem(passwordStorageKey, JSON.stringify(history));
+  } else {
+    window.localStorage.removeItem(passwordStorageKey);
+  }
+  window.dispatchEvent(new Event(passwordStorageEvent));
 }
 
 export function PasswordSuite() {
   const [length, setLength] = useState(24);
-  const [options, setOptions] = useState({
+  const [preset, setPreset] = useState<PasswordPreset>("standard");
+  const [options, setOptions] = useState<PasswordOptions>({
     lower: true,
     upper: true,
     numbers: true,
     symbols: true,
+    avoidRepeats: false,
+    startsWithLetter: false,
   });
   const [count, setCount] = useState(5);
-  const [passwords, setPasswords] = useState<string[]>([]);
-  const hasCharset = Object.values(options).some(Boolean);
+  const storedHistory = useSyncExternalStore(
+    subscribePasswordHistory,
+    passwordHistorySnapshot,
+    () => "",
+  );
+  const history = useMemo<PasswordHistory | null>(() => {
+    if (!storedHistory) return null;
+    try {
+      const parsed = JSON.parse(storedHistory) as PasswordHistory;
+      return Array.isArray(parsed.passwords) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [storedHistory]);
+  const passwords = history?.passwords ?? [];
+  const hasCharset = preset !== "custom"
+    || options.lower
+    || options.upper
+    || options.numbers
+    || options.symbols;
 
-  const generate = () =>
-    setPasswords(
-      Array.from({ length: count }, () => securePassword(length, options)),
+  const generate = () => {
+    const nextPasswords = Array.from(
+      { length: count },
+      () => securePassword(length, preset, options),
     );
+    savePasswordHistory({
+      passwords: nextPasswords,
+      generatedAt: new Date().toISOString(),
+      length,
+      count,
+      preset,
+    });
+  };
 
   return (
     <ToolShell
@@ -66,22 +199,38 @@ export function PasswordSuite() {
       description="Web Crypto APIを使って、推測されにくいパスワードを生成します。"
       functionCount={1}
     >
+      <div className="password-presets" aria-label="生成パターン">
+        {passwordPresets.map((item) => (
+          <button
+            type="button"
+            key={item.id}
+            className={preset === item.id ? "active" : ""}
+            onClick={() => setPreset(item.id)}
+          >
+            <strong>{item.label}</strong>
+            <small>{item.detail}</small>
+          </button>
+        ))}
+      </div>
       <div className="settings-grid">
         <div className="password-basic-settings">
-          <label className="range-control">
-            <span>長さ <strong>{length}</strong></span>
+          <label className="password-number-control">
+            <span>生成文字列の長さ</span>
             <input
               id="password-length"
               name="password-length"
-              type="range"
+              type="number"
               min={8}
-              max={128}
+              max={4096}
               value={length}
-              onChange={(event) => setLength(Number(event.target.value))}
+              onChange={(event) =>
+                setLength(Math.max(8, Math.min(4096, Number(event.target.value) || 8)))
+              }
             />
+            <small>8〜4,096文字。長さを優先すると強度を高めやすくなります。</small>
           </label>
-          <label className="control-label password-count">
-            生成する個数
+          <label className="password-number-control">
+            <span>生成する個数</span>
             <input
               id="password-count"
               name="password-count"
@@ -93,9 +242,10 @@ export function PasswordSuite() {
                 setCount(Math.max(1, Math.min(100, Number(event.target.value))))
               }
             />
+            <small>一度に最大100個</small>
           </label>
         </div>
-        <div className="check-controls">
+        <div className={`check-controls ${preset !== "custom" ? "preset-locked" : ""}`}>
           {[
             ["lower", "小文字", "a–z"],
             ["upper", "大文字", "A–Z"],
@@ -108,11 +258,30 @@ export function PasswordSuite() {
                 name={`password-option-${key}`}
                 type="checkbox"
                 checked={options[key as keyof typeof options]}
+                disabled={preset !== "custom"}
                 onChange={(event) =>
                   setOptions((current) => ({
                     ...current,
                     [key]: event.target.checked,
                   }))
+                }
+              />
+              <span>{label}</span>
+              <small>{detail}</small>
+            </label>
+          ))}
+          {[
+            ["avoidRepeats", "連続重複を避ける", "aa等を抑制"],
+            ["startsWithLetter", "先頭を英字にする", "対応サービス向け"],
+          ].map(([key, label, detail]) => (
+            <label key={key}>
+              <input
+                id={`password-option-${key}`}
+                name={`password-option-${key}`}
+                type="checkbox"
+                checked={options[key as keyof PasswordOptions]}
+                onChange={(event) =>
+                  setOptions((current) => ({ ...current, [key]: event.target.checked }))
                 }
               />
               <span>{label}</span>
@@ -128,27 +297,25 @@ export function PasswordSuite() {
       <div className="password-list">
         <header>
           <span>GENERATED PASSWORDS</span>
-          <button
-            type="button"
-            onClick={() => navigator.clipboard.writeText(passwords.join("\n"))}
-            disabled={!passwords.length}
-          >
-            <Copy size={14} aria-hidden="true" />
-            すべてコピー
-          </button>
+          <div>
+            {history && (
+              <button type="button" onClick={() => savePasswordHistory(null)}>
+                <Trash2 size={14} aria-hidden="true" />
+                履歴を削除
+              </button>
+            )}
+            <CopyButton value={passwords.join("\n")} label="すべてコピー" />
+          </div>
         </header>
         {passwords.length ? (
           passwords.map((password, index) => (
             <div key={`${password}-${index}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(password)}
-                aria-label={`${index + 1}件目のパスワードをコピー`}
-                title="コピー"
-              >
-                <Copy size={15} aria-hidden="true" />
-              </button>
+              <CopyButton
+                value={password}
+                iconOnly
+                label={`${index + 1}件目のパスワードをコピー`}
+              />
               <code>{password}</code>
             </div>
           ))
@@ -158,8 +325,8 @@ export function PasswordSuite() {
       </div>
       <ToolStatus error={hasCharset ? "" : "少なくとも1種類の文字を選択してください"}>
         {passwords.length
-          ? `${passwords.length}個・各${length}文字をブラウザ内で生成済み`
-          : "生成結果は保存されません"}
+          ? `${passwords.length}個・各${history?.length ?? length}文字。前回結果をこの端末だけに保存しています`
+          : "生成結果はこの端末だけに保存されます"}
       </ToolStatus>
     </ToolShell>
   );
@@ -175,13 +342,19 @@ const loremParagraphs = [
 
 export function LoremSuite() {
   const [count, setCount] = useState(3);
-  const [unit, setUnit] = useState<"paragraph" | "sentence">("paragraph");
+  const [unit, setUnit] = useState<"paragraph" | "sentence" | "line">("paragraph");
   const output = useMemo(() => {
     if (unit === "paragraph") {
       return Array.from(
         { length: count },
         (_, index) => loremParagraphs[index % loremParagraphs.length],
       ).join("\n\n");
+    }
+    if (unit === "line") {
+      return Array.from(
+        { length: count },
+        (_, index) => loremParagraphs[index % loremParagraphs.length],
+      ).join("\n");
     }
     return Array.from(
       { length: count },
@@ -194,7 +367,7 @@ export function LoremSuite() {
       slug="lorem"
       category="テキスト"
       title="Lorem Ipsum"
-      description="日本語UIに馴染むダミーテキストを必要な量だけ生成します。"
+      description="日本語UIに馴染むダミーテキストを、最大100行まで生成します。"
       functionCount={1}
     >
       <div className="generator-controls">
@@ -203,24 +376,25 @@ export function LoremSuite() {
           <select value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}>
             <option value="paragraph">段落</option>
             <option value="sentence">文</option>
+            <option value="line">行</option>
           </select>
         </label>
         <label className="control-label">
-          生成数
+          生成数（最大100）
           <input
             type="number"
             min={1}
-            max={20}
+            max={100}
             value={count}
-            onChange={(event) => setCount(Math.max(1, Math.min(20, Number(event.target.value))))}
+            onChange={(event) => setCount(Math.max(1, Math.min(100, Number(event.target.value))))}
           />
         </label>
-        <button type="button" className="text-button" onClick={() => navigator.clipboard.writeText(output)}>
-          結果をコピー
-        </button>
+        <CopyButton value={output} label="結果をコピー" className="text-button" />
       </div>
       <textarea className="large-text-input" name="lorem-output" value={output} readOnly />
-      <ToolStatus>{count}{unit === "paragraph" ? "段落" : "文"}を生成しました</ToolStatus>
+      <ToolStatus>
+        {count}{unit === "paragraph" ? "段落" : unit === "sentence" ? "文" : "行"}を生成しました（最大100行）
+      </ToolStatus>
     </ToolShell>
   );
 }
@@ -229,6 +403,16 @@ export function RegexSuite() {
   const [pattern, setPattern] = useState("[A-Z][a-z]+");
   const [flags, setFlags] = useState("g");
   const [input, setInput] = useState("DevSmith helps Alice and Bob inspect text.");
+  const regexSamples = [
+    { name: "数字", pattern: String.raw`\d+`, flags: "g", input: "注文番号: 2048 / 数量: 12" },
+    { name: "日本の電話番号", pattern: String.raw`^(0([1-9]{1}-?[1-9]\d{3}|[1-9]{2}-?\d{3}|[1-9]{2}\d{1}-?\d{2}|[1-9]{2}\d{2}-?\d{1})-?\d{4}|0[789]0-?\d{4}-?\d{4}|050-?\d{4}-?\d{4})$`, flags: "gm", input: "090-1234-5678\n03-1234-5678\n123-456" },
+    { name: "メール", pattern: String.raw`[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}`, flags: "g", input: "連絡先: dev@example.com / support@devsmith.io" },
+    { name: "URL", pattern: String.raw`https?:\/\/[^\s]+`, flags: "g", input: "Docs: https://devsmith.io/docs?q=json" },
+    { name: "IPv4", pattern: String.raw`\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b`, flags: "g", input: "valid 192.168.1.1 / invalid 999.1.1.1" },
+    { name: "日付", pattern: String.raw`\b\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b`, flags: "g", input: "公開日 2026-09-11、更新日 2026-12-01" },
+    { name: "UUID", pattern: String.raw`\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b`, flags: "gi", input: "550e8400-e29b-41d4-a716-446655440000" },
+    { name: "HEXカラー", pattern: String.raw`#(?:[0-9a-fA-F]{3}){1,2}\b`, flags: "g", input: "color: #1c211e; accent: #d76a3b;" },
+  ];
 
   const result = useMemo(() => {
     try {
@@ -272,6 +456,27 @@ export function RegexSuite() {
         <span>/</span>
         <label className="sr-only" htmlFor="regex-flags">正規表現フラグ</label>
         <input id="regex-flags" value={flags} onChange={(event) => setFlags(event.target.value)} name="regex-flags" aria-label="正規表現フラグ" />
+      </div>
+      <div className="regex-samples">
+        <div>
+          <strong>よく使うサンプル</strong>
+          <span>選ぶとパターンとテスト文字列へ反映します</span>
+        </div>
+        <div>
+          {regexSamples.map((sample) => (
+            <button
+              type="button"
+              key={sample.name}
+              onClick={() => {
+                setPattern(sample.pattern);
+                setFlags(sample.flags);
+                setInput(sample.input);
+              }}
+            >
+              {sample.name}
+            </button>
+          ))}
+        </div>
       </div>
       <TextWorkspace
         input={input}

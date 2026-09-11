@@ -4,7 +4,6 @@ import {
   Braces,
   Check,
   Clock3,
-  Copy,
   Download,
   FileJson,
   Maximize2,
@@ -15,11 +14,19 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CopyButton, copyText } from "@/components/copy-button";
 import { tools } from "@/lib/tools";
 
 const sample = `{"project":"devsmith","version":"0.1.0","private":true,"tools":["format","validate","minify"],"settings":{"theme":"paper","localOnly":true}}`;
 
 type Mode = "format" | "validate" | "minify" | "tree";
+
+const modeDescriptions: Record<Mode, string> = {
+  format: "インデントと改行を付け、JSONを読みやすい形へ整えます。",
+  validate: "内容は書き換えず、構文エラーの有無とJSONの概要を確認します。",
+  minify: "不要な空白と改行を取り除き、データサイズを小さくします。",
+  tree: "オブジェクトと配列の階層を、開閉できるツリーで確認します。",
+};
 
 function JsonTreeNode({ value, name }: { value: unknown; name?: string }) {
   if (typeof value !== "object" || value === null) {
@@ -52,7 +59,6 @@ function JsonTreeNode({ value, name }: { value: unknown; name?: string }) {
 export function JsonWorkbench() {
   const [mode, setMode] = useState<Mode>("format");
   const [input, setInput] = useState(sample);
-  const [copied, setCopied] = useState(false);
   const [inputExpanded, setInputExpanded] = useState(false);
   const [indent, setIndent] = useState(2);
 
@@ -73,12 +79,16 @@ export function JsonWorkbench() {
       ? JSON.stringify(parsed.value)
       : JSON.stringify(parsed.value, null, indent)
     : "";
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(result);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  };
+  const rootType = Array.isArray(parsed.value)
+    ? "Array"
+    : parsed.value === null
+      ? "null"
+      : typeof parsed.value === "object"
+        ? "Object"
+        : typeof parsed.value;
+  const rootEntries = parsed.value && typeof parsed.value === "object"
+    ? Object.keys(parsed.value).length
+    : 0;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -89,9 +99,7 @@ export function JsonWorkbench() {
       }
       if (event.shiftKey && event.key.toLowerCase() === "c" && result) {
         event.preventDefault();
-        void navigator.clipboard.writeText(result);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1400);
+        void copyText(result);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -169,6 +177,10 @@ export function JsonWorkbench() {
             </button>
           ))}
         </div>
+        <div className="mode-description">
+          <strong>{mode === "format" ? "整形" : mode === "validate" ? "検証" : mode === "minify" ? "圧縮" : "ツリー表示"}</strong>
+          <span>{modeDescriptions[mode]}</span>
+        </div>
 
         <div className="editor-toolbar">
           <div>
@@ -231,13 +243,32 @@ export function JsonWorkbench() {
           </div>
           <div className="editor-pane output-pane">
             <div className="pane-heading">
-              <span>OUTPUT</span>
+              <span>{mode === "validate" ? "VALIDATION REPORT" : "OUTPUT"}</span>
               <div>
-                <button type="button" onClick={copy} disabled={!result}><Copy size={14} />{copied ? "コピー済み" : "コピー"}</button>
-                <button type="button" disabled={!result} onClick={download} aria-label="JSONをダウンロード"><Download size={14} /></button>
+                {mode !== "validate" && (
+                  <>
+                    <CopyButton value={result} />
+                    <button type="button" disabled={!result} onClick={download} aria-label="JSONをダウンロード"><Download size={14} /></button>
+                  </>
+                )}
               </div>
             </div>
-            {mode === "tree" && valid ? (
+            {mode === "validate" ? (
+              <div className={`json-validation-report ${valid ? "valid" : "invalid"}`}>
+                <span>{valid ? <Check size={22} /> : <WandSparkles size={22} />}</span>
+                <div>
+                  <strong>{valid ? "構文エラーはありません" : "構文エラーがあります"}</strong>
+                  <p>{valid ? "入力内容は有効なJSONとして解析できます。" : parsed.error}</p>
+                </div>
+                {valid && (
+                  <dl>
+                    <div><dt>ROOT TYPE</dt><dd>{rootType}</dd></div>
+                    <div><dt>ROOT ITEMS</dt><dd>{rootEntries}</dd></div>
+                    <div><dt>INPUT SIZE</dt><dd>{new Blob([input]).size} Bytes</dd></div>
+                  </dl>
+                )}
+              </div>
+            ) : mode === "tree" && valid ? (
               <div className="json-tree" aria-label="JSONツリー">
                 <JsonTreeNode value={parsed.value} />
               </div>

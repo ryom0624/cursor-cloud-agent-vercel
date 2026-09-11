@@ -2711,3 +2711,380 @@ kbd {
 small {
   font-size: max(10px, 0.833em) !important;
 }
+
+/* Interaction and readability refinements */
+.generator-controls .primary-button,
+.suite-toolbar .primary-button {
+  color: var(--white);
+  background: var(--ink);
+}
+
+.generator-controls button,
+.suite-toolbar button,
+.single-input-bar button,
+.timestamp-output button,
+.password-list button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.generator-controls .control-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.generator-controls input[type="number"] {
+  width: 100px;
+  min-height: 42px;
+  font-size: 14px;
+}
+
+.copy-toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 120;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  color: var(--white);
+  border: 1px solid #4f5752;
+  background: var(--ink);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.18);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.copy-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.password-presets {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.password-presets button {
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  color: var(--ink);
+  border: 0;
+  border-right: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  text-align: left;
+}
+
+.password-presets button:last-child {
+  border-right: 0;
+}
+
+.password-presets button.active {
+  color: var(--white);
+  background: var(--ink);
+}
+
+.password-presets strong {
+  font-size: 11px;
+}
+
+.password-presets small {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.password-number-control {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 150px;
+  align-items: center;
+  gap: 7px 14px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.password-number-control input {
+  width: 150px;
+  height: 48px;
+  padding: 0 13px;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.password-number-control small {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.check-controls.preset-locked label:nth-child(-n + 4) {
+  opacity: 0.55;
+}
+
+.password-list header > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.password-list code {
+  font-size: 12px;
+}
+
+.regex-samples {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--ink);
+  border-bottom: 0;
+  background: var(--white);
+}
+
+.regex-samples > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.regex-samples strong {
+  font-size: 11px;
+}
+
+.regex-samples span {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.regex-samples > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.regex-samples button {
+  min-height: 31px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.timestamp-settings {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 10px;
+}
+
+.timestamp-settings > svg {
+  color: var(--ink-soft);
+}
+
+.timestamp-output {
+  min-height: 135px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: center;
+  gap: 10px 16px;
+  padding: 22px;
+  color: var(--white);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+}
+
+.timestamp-output span {
+  grid-column: 1 / -1;
+  color: #b7bdb9;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.timestamp-output strong {
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 24px;
+}
+
+.timestamp-output button {
+  min-height: 38px;
+  padding: 0 12px;
+  color: var(--ink);
+  border: 1px solid var(--white);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mode-description {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 13px;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-dark);
+  border-top: 0;
+  background: var(--paper-deep);
+  font-size: 10px;
+}
+
+.mode-description strong {
+  flex: 0 0 auto;
+  color: var(--rust-dark);
+  font-size: 11px;
+}
+
+.json-validation-report {
+  height: 370px;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-content: center;
+  gap: 8px 12px;
+  padding: 28px;
+  background: var(--white);
+}
+
+.json-validation-report > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--white);
+  background: var(--moss);
+}
+
+.json-validation-report.invalid > span {
+  background: var(--rust);
+}
+
+.json-validation-report strong {
+  font-size: 15px;
+}
+
+.json-validation-report p {
+  margin: 5px 0 0;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.json-validation-report dl {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 20px 0 0;
+  border: 1px solid var(--line-dark);
+}
+
+.json-validation-report dl > div {
+  padding: 12px;
+  border-right: 1px solid var(--line-dark);
+}
+
+.json-validation-report dl > div:last-child {
+  border-right: 0;
+}
+
+.json-validation-report dt {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.json-validation-report dd {
+  margin: 7px 0 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .password-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .password-presets button,
+  .password-presets button:last-child {
+    border-right: 1px solid var(--line-dark);
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .password-number-control {
+    grid-template-columns: 1fr;
+  }
+
+  .password-number-control input {
+    width: 100%;
+  }
+
+  .regex-samples {
+    grid-template-columns: 1fr;
+  }
+
+  .timestamp-settings {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .timestamp-settings > svg {
+    display: none;
+  }
+
+  .timestamp-settings .segmented-control {
+    display: grid;
+  }
+
+  .timestamp-output {
+    grid-template-columns: 1fr;
+  }
+
+  .timestamp-output span {
+    grid-column: auto;
+  }
+
+  .json-validation-report {
+    height: 250px;
+    padding: 18px;
+  }
+
+  .json-validation-report dl {
+    grid-template-columns: 1fr;
+  }
+
+  .json-validation-report dl > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-dark);
+  }
+
+  .copy-toast {
+    right: 16px;
+    bottom: 16px;
+  }
+}

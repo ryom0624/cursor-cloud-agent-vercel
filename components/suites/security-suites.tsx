@@ -1,6 +1,8 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { CopyButton } from "@/components/copy-button";
 import {
   ToolShell,
   ToolStatus,
@@ -307,24 +309,21 @@ export function IdGeneratorSuite() {
           />
         </label>
         <button type="button" className="primary-button" onClick={() => generate()}>
+          <RefreshCw size={14} aria-hidden="true" />
           {mode === "uuid" ? "UUID" : "ULID"}を生成
         </button>
-        <button
-          type="button"
+        <CopyButton
+          value={values.join("\n")}
+          label="すべてコピー"
           className="text-button"
-          onClick={() => navigator.clipboard.writeText(values.join("\n"))}
-        >
-          すべてコピー
-        </button>
+        />
       </div>
       <div className="generated-list">
         {values.map((value, index) => (
           <div key={`${value}-${index}`}>
             <span>{String(index + 1).padStart(2, "0")}</span>
             <code>{value}</code>
-            <button type="button" onClick={() => navigator.clipboard.writeText(value)}>
-              コピー
-            </button>
+            <CopyButton value={value} />
           </div>
         ))}
       </div>
