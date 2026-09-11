@@ -308,17 +308,19 @@ export function PasswordSuite() {
           </div>
         </header>
         {passwords.length ? (
-          passwords.map((password, index) => (
-            <div key={`${password}-${index}`}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <CopyButton
-                value={password}
-                iconOnly
-                label={`${index + 1}件目のパスワードをコピー`}
-              />
-              <code>{password}</code>
-            </div>
-          ))
+          <div className="password-grid">
+            {passwords.map((password, index) => (
+              <div className="password-cell" key={`${password}-${index}`}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <CopyButton
+                  value={password}
+                  iconOnly
+                  label={`${index + 1}件目のパスワードをコピー`}
+                />
+                <code>{password}</code>
+              </div>
+            ))}
+          </div>
         ) : (
           <p>条件を選び、「生成」ボタンを押してください。</p>
         )}
