@@ -8,6 +8,8 @@ import {
   Copy,
   Download,
   FileJson,
+  Maximize2,
+  Minimize2,
   PanelLeftClose,
   RotateCcw,
   WandSparkles,
@@ -24,6 +26,7 @@ export function JsonWorkbench() {
   const [mode, setMode] = useState<Mode>("format");
   const [input, setInput] = useState(sample);
   const [copied, setCopied] = useState(false);
+  const [inputExpanded, setInputExpanded] = useState(false);
 
   const result = useMemo(() => {
     try {
@@ -124,11 +127,22 @@ export function JsonWorkbench() {
           </div>
         </div>
 
-        <div className="editors">
-          <div className="editor-pane">
+        <div className={`editors ${inputExpanded ? "input-expanded" : ""}`}>
+          <div className="editor-pane input-pane">
             <div className="pane-heading">
               <span>INPUT</span>
-              <small>{input.length} CHARACTERS</small>
+              <div>
+                <small>{input.length} CHARACTERS</small>
+                <button
+                  type="button"
+                  onClick={() => setInputExpanded((expanded) => !expanded)}
+                  aria-label={inputExpanded ? "入力欄を元の大きさに戻す" : "入力欄を広げる"}
+                  title={inputExpanded ? "元の大きさに戻す" : "入力欄を広げる"}
+                >
+                  {inputExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  <span>{inputExpanded ? "元に戻す" : "広げる"}</span>
+                </button>
+              </div>
             </div>
             <div className="textarea-wrap">
               <div className="editor-lines">1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10</div>

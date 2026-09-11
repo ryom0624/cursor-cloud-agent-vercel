@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Asterisk,
   Braces,
-  Check,
   ChevronRight,
   Command,
   LockKeyhole,
@@ -70,17 +69,17 @@ export function HomeMock() {
         <div className="hero-copy">
           <div className="eyebrow">
             <Asterisk size={15} />
-            ENGINEER&apos;S EVERYDAY WORKBENCH
+            PRIVATE BROWSER UTILITIES / DEFINED BY USE
           </div>
           <h1>
-            開発に必要な道具を、
+            小さな作業を、
             <br />
-            <span>ひとつの場所に。</span>
+            <span>素早く片づける。</span>
           </h1>
           <p>
-            整形、変換、検証、生成。日々の小さな作業を、
+            JSONを整える。文字列を変換する。IDを生成する。
             <br className="desktop-only" />
-            広告もログインもない静かな作業台で。
+            エンジニアが毎日使う道具だけを、ひとつの場所に。
           </p>
           <div className="hero-search-wrap">
             <Search size={19} />
@@ -93,45 +92,31 @@ export function HomeMock() {
             <kbd>/</kbd>
           </div>
           <div className="quick-links">
-            <span>よく使われています</span>
+            <span>QUICK COMMAND</span>
             <Link href="/tools/json">JSON整形</Link>
             <Link href="/tools/json?tab=encode">Base64</Link>
             <Link href="/tools/json?tab=id">UUID生成</Link>
           </div>
         </div>
 
-        <div className="hero-console" aria-label="JSON整形のプレビュー">
-          <div className="console-topline">
-            <div>
-              <span className="status-dot" />
-              JSON / FORMAT
-            </div>
-            <span>LOCAL PROCESSING</span>
+        <div className="quick-start" aria-label="よく使う道具">
+          <div className="quick-start-head">
+            <span>QUICK START</span>
+            <small>04 / MOST USED</small>
           </div>
-          <div className="console-body">
-            <div className="line-numbers">1<br />2<br />3<br />4<br />5<br />6</div>
-            <pre>
-              <span className="punctuation">{"{"}</span>
-              {"\n  "}
-              <span className="json-key">&quot;project&quot;</span>
-              <span className="punctuation">: </span>
-              <span className="json-string">&quot;devsmith&quot;</span>
-              <span className="punctuation">,</span>
-              {"\n  "}
-              <span className="json-key">&quot;tools&quot;</span>
-              <span className="punctuation">: [</span>
-              {"\n    "}
-              <span className="json-string">&quot;format&quot;</span>
-              <span className="punctuation">,</span>
-              {"\n    "}
-              <span className="json-string">&quot;validate&quot;</span>
-              {"\n  "}
-              <span className="punctuation">]{"\n}"}</span>
-            </pre>
+          <div className="quick-start-list">
+            {tools.filter((tool) => tool.featured).slice(0, 4).map((tool) => (
+              <Link href={tool.href} key={tool.index}>
+                <span>{tool.index}</span>
+                <strong>{tool.name}</strong>
+                <small>{tool.description}</small>
+                <ArrowRight size={16} />
+              </Link>
+            ))}
           </div>
-          <div className="console-footer">
-            <span><Check size={13} /> VALID JSON</span>
-            <span>6 LINES · 82 BYTES</span>
+          <div className="quick-start-foot">
+            <span><LockKeyhole size={13} /> 処理はこのブラウザ内だけで完結</span>
+            <strong>24 FUNCTIONS</strong>
           </div>
         </div>
       </section>
