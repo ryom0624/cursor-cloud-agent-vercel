@@ -228,9 +228,11 @@ export function PasswordSuite() {
               id="password-length"
               name="password-length"
               type="number"
+              inputMode="numeric"
               min={8}
               max={4096}
               value={length}
+              onFocus={(event) => event.currentTarget.select()}
               onChange={(event) =>
                 savePasswordSettings({
                   ...settings,
@@ -246,9 +248,11 @@ export function PasswordSuite() {
               id="password-count"
               name="password-count"
               type="number"
+              inputMode="numeric"
               min={1}
               max={100}
               value={count}
+              onFocus={(event) => event.currentTarget.select()}
               onChange={(event) =>
                 savePasswordSettings({
                   ...settings,
