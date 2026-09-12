@@ -16,6 +16,7 @@ import {
   RegexSuite,
   TextSuite,
 } from "@/components/suites/text-suites";
+import { NumberSuite } from "@/components/suites/number-suites";
 import { CronSuite, DateTimeSuite } from "@/components/suites/time-suites";
 
 export const suiteSlugs = [
@@ -34,6 +35,7 @@ export const suiteSlugs = [
   "lorem",
   "date-time",
   "cron",
+  "number",
 ] as const;
 
 export type SuiteSlug = (typeof suiteSlugs)[number];
@@ -70,5 +72,7 @@ export function ToolSuite({ slug }: { slug: SuiteSlug }) {
       return <DateTimeSuite />;
     case "cron":
       return <CronSuite />;
+    case "number":
+      return <NumberSuite />;
   }
 }

@@ -141,6 +141,16 @@ export const tools: Tool[] = [
     accent: "苔",
     index: "14",
   },
+  {
+    name: "Number Tools",
+    description: "基数・単位・式・浮動小数点・割合を計算",
+    category: "数値",
+    functions: 5,
+    href: "/tools/number",
+    accent: "藤",
+    index: "15",
+    featured: true,
+  },
 ];
 
 export const toolCount = tools.length;
