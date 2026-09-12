@@ -23,6 +23,12 @@ import {
   serializeCsv,
   standardCsvPreset,
 } from "./csv-utils";
+import {
+  countBlankRows,
+  describeRequiredColumnValidation,
+  describeUniqueKeyValidation,
+  isBlankGridValue,
+} from "./grid-validation";
 
 describe("CSV utilities", () => {
   it("parses quoted fields and line breaks", () => {
@@ -186,6 +192,25 @@ describe("text utilities", () => {
       { type: "removed", value: "b" },
       { type: "added", value: "c" },
     ]);
+  });
+});
+
+describe("grid validation", () => {
+  it("treats empty and whitespace unique-key values as blank", () => {
+    expect(isBlankGridValue("")).toBe(true);
+    expect(isBlankGridValue("   ")).toBe(true);
+    expect(isBlankGridValue(undefined)).toBe(true);
+    expect(isBlankGridValue("id-1")).toBe(false);
+    expect(countBlankRows([{ id: "1" }, { id: "" }, { id: "  " }], "id")).toBe(2);
+  });
+
+  it("summarizes unique key and required column blanks", () => {
+    expect(describeUniqueKeyValidation(0, 0)).toBe("空欄・重複はありません");
+    expect(describeUniqueKeyValidation(2, 3)).toBe("2行が空欄です · 3行が重複しています");
+    expect(describeRequiredColumnValidation([
+      { column: "name", blankRows: 1 },
+      { column: "team", blankRows: 0 },
+    ])).toBe("name: 1行が空欄");
   });
 });
 

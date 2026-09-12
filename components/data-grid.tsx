@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Asterisk,
   Download,
   GripVertical,
   KeyRound,
@@ -18,6 +19,12 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { parseCsv } from "@/lib/csv-utils";
+import {
+  countBlankRows,
+  describeRequiredColumnValidation,
+  describeUniqueKeyValidation,
+  isBlankGridValue,
+} from "@/lib/grid-validation";
 
 export type DataGridRecord = Record<string, unknown>;
 
@@ -93,6 +100,7 @@ export function DataGrid({
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<"grid" | "raw">("grid");
   const [uniqueKey, setUniqueKey] = useState("");
+  const [requiredColumns, setRequiredColumns] = useState<string[]>([]);
   const [duplicateColumns, setDuplicateColumns] = useState<string[]>([]);
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
@@ -303,9 +311,23 @@ export function DataGrid({
   const uniqueDuplicateRows = uniqueKey
     ? records.filter((record) => duplicateValues[uniqueKey]?.has(displayValue(record[uniqueKey]))).length
     : 0;
+  const uniqueBlankRows = uniqueKey ? countBlankRows(records, uniqueKey) : 0;
+  const requiredColumnStats = requiredColumns
+    .filter((column) => columns.includes(column))
+    .map((column) => ({ column, blankRows: countBlankRows(records, column) }));
+  const requiredBlankTotal = requiredColumnStats.reduce((total, item) => total + item.blankRows, 0);
   const duplicateSummary = duplicateColumns
     .filter((column) => columns.includes(column))
     .map((column) => `${column}: ${duplicateValues[column]?.size ?? 0}値`);
+  const validationHasError = uniqueBlankRows > 0 || uniqueDuplicateRows > 0 || requiredBlankTotal > 0;
+  const isRequiredColumn = (column: string) => requiredColumns.includes(column) || column === uniqueKey;
+  const isBlankValidatedCell = (column: string, value: unknown) =>
+    isRequiredColumn(column) && isBlankGridValue(value);
+  const toggleRequiredColumn = (column: string) => {
+    setRequiredColumns((current) =>
+      current.includes(column) ? current.filter((item) => item !== column) : [...current, column],
+    );
+  };
   const pinnedOffsets = useMemo(() => {
     let left = 58;
     const offsets: Record<string, number> = {};
@@ -361,6 +383,9 @@ export function DataGrid({
       Object.fromEntries(Object.entries(record).filter(([key]) => key !== column)),
     ));
     setColumnOrder(columns.filter((item) => item !== column));
+    if (uniqueKey === column) setUniqueKey("");
+    setRequiredColumns((current) => current.filter((item) => item !== column));
+    setDuplicateColumns((current) => current.filter((item) => item !== column));
   };
 
   const updateCell = (originalIndex: number, column: string, value: string) => {
@@ -437,14 +462,45 @@ export function DataGrid({
             <Plus size={14} />列を追加
           </button>
           {enableDuplicateValidation && (
-            <label>
-              <KeyRound size={14} />
-              UNIQUE KEY
-              <select value={uniqueKey} onChange={(event) => setUniqueKey(event.target.value)}>
-                <option value="">指定なし</option>
-                {columns.map((column) => <option value={column} key={column}>{column}</option>)}
-              </select>
-            </label>
+            <>
+              <label>
+                <KeyRound size={14} />
+                UNIQUE KEY
+                <select value={uniqueKey} onChange={(event) => setUniqueKey(event.target.value)}>
+                  <option value="">指定なし</option>
+                  {columns.map((column) => <option value={column} key={column}>{column}</option>)}
+                </select>
+              </label>
+              <label>
+                <Asterisk size={14} />
+                必須列
+                <select
+                  value=""
+                  onChange={(event) => {
+                    const column = event.target.value;
+                    if (column) toggleRequiredColumn(column);
+                  }}
+                  aria-label="必須列を追加"
+                >
+                  <option value="">列を追加</option>
+                  {columns.filter((column) => !requiredColumns.includes(column)).map((column) => (
+                    <option value={column} key={column}>{column}</option>
+                  ))}
+                </select>
+              </label>
+              {requiredColumns.filter((column) => columns.includes(column)).map((column) => (
+                <button
+                  type="button"
+                  className="data-grid-chip"
+                  key={column}
+                  onClick={() => toggleRequiredColumn(column)}
+                  title={`${column}を必須列から外す`}
+                >
+                  {column}
+                  <span aria-hidden="true">×</span>
+                </button>
+              ))}
+            </>
           )}
           <small>列のピンで横スクロール時に固定できます。</small>
         </div>
@@ -541,19 +597,30 @@ export function DataGrid({
                         {pinnedColumns.includes(column) ? <PinOff size={12} /> : <Pin size={12} />}
                       </button>
                       {enableDuplicateValidation && (
-                        <button
-                          type="button"
-                          className={duplicateColumns.includes(column) ? "active" : ""}
-                          onClick={() => setDuplicateColumns((current) =>
-                            current.includes(column)
-                              ? current.filter((item) => item !== column)
-                              : [...current, column]
-                          )}
-                          aria-label={`${column}列の重複チェック`}
-                          title="この列の重複を色付け"
-                        >
-                          <ScanSearch size={12} />
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className={requiredColumns.includes(column) ? "active" : ""}
+                            onClick={() => toggleRequiredColumn(column)}
+                            aria-label={`${column}列を${requiredColumns.includes(column) ? "必須解除" : "必須にする"}`}
+                            title={requiredColumns.includes(column) ? "必須列を解除" : "空欄チェックする必須列"}
+                          >
+                            <Asterisk size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className={duplicateColumns.includes(column) ? "active" : ""}
+                            onClick={() => setDuplicateColumns((current) =>
+                              current.includes(column)
+                                ? current.filter((item) => item !== column)
+                                : [...current, column]
+                            )}
+                            aria-label={`${column}列の重複チェック`}
+                            title="この列の重複を色付け"
+                          >
+                            <ScanSearch size={12} />
+                          </button>
+                        </>
                       )}
                       {editable && (
                         <button type="button" onClick={() => deleteColumn(column)} aria-label={`${column}列を削除`}>
@@ -612,10 +679,15 @@ export function DataGrid({
                       isSelected(rowIndex, columnIndex) ? "selected" : "",
                       displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") ? "multiline" : "",
                       duplicateValues[column]?.has(displayValue(record[column])) ? "duplicate-value" : "",
+                      isBlankValidatedCell(column, record[column]) ? "blank-value" : "",
                       pinnedOffsets[column] !== undefined ? "pinned" : "",
                     ].filter(Boolean).join(" ")}
                     style={columnStyle(column)}
-                    title={displayValue(record[column])}
+                    title={
+                      isBlankValidatedCell(column, record[column])
+                        ? column === uniqueKey ? "UNIQUE KEYが空欄です" : "必須列が空欄です"
+                        : displayValue(record[column])
+                    }
                     onMouseDown={(event) => {
                       if (editingCell?.row === rowIndex && editingCell.column === columnIndex) return;
                       event.preventDefault();
@@ -671,19 +743,23 @@ export function DataGrid({
             ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Ctrl/⌘+Cでコピー · Ctrl/⌘+Vで貼り付け`
             : "セルをドラッグして範囲選択 · 選択後にCtrl/⌘+Vで貼り付け"}
         </span>
-        <span>グリップ=列移動 · ピン=スクロール固定 · 虫眼鏡=重複チェック</span>
+        <span>グリップ=列移動 · ピン=スクロール固定 · ＊=必須列 · 虫眼鏡=重複チェック</span>
       </div>
-      {enableDuplicateValidation && (uniqueKey || duplicateColumns.length > 0) && (
-        <div className={`data-grid-duplicate-status ${uniqueDuplicateRows ? "error" : ""}`} role="status">
-          <strong>{uniqueKey ? `UNIQUE ${uniqueKey}` : "DUPLICATE CHECK"}</strong>
+      {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0) && (
+        <div className={`data-grid-duplicate-status ${validationHasError ? "error" : ""}`} role="status">
+          <strong>
+            {uniqueKey ? `UNIQUE ${uniqueKey}` : requiredColumns.length ? "REQUIRED" : "DUPLICATE CHECK"}
+          </strong>
           <span>
-            {uniqueKey
-              ? uniqueDuplicateRows
-                ? `${uniqueDuplicateRows}行が重複しています`
-                : "重複はありません"
-              : duplicateSummary.join(" · ")}
+            {[
+              uniqueKey ? describeUniqueKeyValidation(uniqueBlankRows, uniqueDuplicateRows) : "",
+              requiredColumnStats.length ? describeRequiredColumnValidation(requiredColumnStats) : "",
+              !uniqueKey && !requiredColumnStats.length ? duplicateSummary.join(" · ") : "",
+            ].filter(Boolean).join(" · ")}
           </span>
-          {uniqueKey && duplicateSummary.length > 0 && <small>{duplicateSummary.join(" · ")}</small>}
+          {(uniqueKey || requiredColumnStats.length > 0) && duplicateSummary.length > 0 && (
+            <small>{duplicateSummary.join(" · ")}</small>
+          )}
         </div>
       )}
     </div>

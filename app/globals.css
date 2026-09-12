@@ -3086,11 +3086,22 @@ kbd {
 .data-grid-column-editor {
   min-height: 42px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
   border-bottom: 1px solid var(--line-dark);
   background: #f3f0e8;
+}
+
+.data-grid-column-editor .data-grid-chip {
+  color: var(--ink);
+  border-color: var(--line-dark);
+  background: var(--white);
+}
+
+.data-grid-column-editor .data-grid-chip span {
+  margin-left: 2px;
 }
 
 .data-grid-column-editor label {
@@ -4248,6 +4259,18 @@ kbd {
 
 .json-grid-scroll tbody tr:nth-child(even) td.pinned {
   background: #f7f5ef;
+}
+
+.json-grid-scroll td.blank-value {
+  color: #6b4f12;
+  background: #f6e6c8;
+  box-shadow: inset 0 0 0 1px #c9a15b;
+}
+
+.json-grid-scroll tbody tr:nth-child(even) td.blank-value,
+.json-grid-scroll tr.duplicate-key-row td.blank-value.pinned,
+.json-grid-scroll td.blank-value.pinned {
+  background: #f6e6c8;
 }
 
 .json-grid-scroll td.duplicate-value,
