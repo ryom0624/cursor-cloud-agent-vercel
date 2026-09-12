@@ -251,6 +251,29 @@ export function DataGrid({
   }, [bounds, editingCell, selectionValue, viewMode]);
 
   useEffect(() => {
+    const clearWithDelete = (event: KeyboardEvent) => {
+      if (!editable || !bounds || !onRecordsChange || viewMode !== "grid") return;
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select")) return;
+      if (editingCell) return;
+      event.preventDefault();
+      const nextRecords = records.map((record) => ({ ...record }));
+      for (let row = bounds.rowStart; row <= bounds.rowEnd; row += 1) {
+        const targetRow = indexedRows[row];
+        if (!targetRow) continue;
+        for (let column = bounds.columnStart; column <= bounds.columnEnd; column += 1) {
+          const targetColumn = columns[column];
+          if (targetColumn) nextRecords[targetRow.originalIndex][targetColumn] = "";
+        }
+      }
+      onRecordsChange(nextRecords);
+    };
+    window.addEventListener("keydown", clearWithDelete);
+    return () => window.removeEventListener("keydown", clearWithDelete);
+  }, [bounds, columns, editable, editingCell, indexedRows, onRecordsChange, records, viewMode]);
+
+  useEffect(() => {
     const pasteSelection = (event: ClipboardEvent) => {
       if (!editable || !bounds || !onRecordsChange || viewMode !== "grid") return;
       const target = event.target as HTMLElement | null;
@@ -389,6 +412,33 @@ export function DataGrid({
     setNewColumn("new_column");
   };
 
+  const stopHeaderGesture = (event: { stopPropagation: () => void; preventDefault?: () => void }) => {
+    event.stopPropagation();
+  };
+
+  const startColumnDrag = (event: ReactPointerEvent<HTMLElement>, column: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragColumnRef.current = column;
+    setDraggedColumn(column);
+    const move = (pointerEvent: PointerEvent) => {
+      if (!dragColumnRef.current) return;
+      const target = document
+        .elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)
+        ?.closest<HTMLElement>("[data-grid-column]")
+        ?.dataset.gridColumn;
+      if (target) reorderColumn(dragColumnRef.current, target);
+    };
+    const stop = () => {
+      dragColumnRef.current = null;
+      setDraggedColumn(null);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+  };
+
   const deleteColumn = (column: string) => {
     onRecordsChange?.(records.map((record) =>
       Object.fromEntries(Object.entries(record).filter(([key]) => key !== column)),
@@ -405,6 +455,21 @@ export function DataGrid({
     ));
   };
 
+  const commitEditingCell = () => {
+    if (!editingCell || !editable) {
+      return;
+    }
+    const element = document.querySelector<HTMLElement>(
+      `td[data-grid-row="${editingCell.row}"][data-grid-col="${editingCell.column}"]`,
+    );
+    const targetRow = indexedRows[editingCell.row];
+    const targetColumn = columns[editingCell.column];
+    if (element && targetRow && targetColumn) {
+      updateCell(targetRow.originalIndex, targetColumn, element.textContent ?? "");
+    }
+    setEditingCell(null);
+  };
+
   if (!records.length || !columns.length) {
     return (
       <div className="json-grid-empty">
@@ -416,7 +481,19 @@ export function DataGrid({
   }
 
   return (
-    <div className="json-grid-panel">
+    <div
+      className="json-grid-panel"
+      onMouseDown={(event) => {
+        if (!editingCell) {
+          return;
+        }
+        const target = event.target as HTMLElement;
+        if (target.closest("[contenteditable='true']")) {
+          return;
+        }
+        commitEditingCell();
+      }}
+    >
       {rawPreview && (
         <div className="data-grid-view-tabs" role="tablist" aria-label="出力表示">
           <button type="button" role="tab" aria-selected={viewMode === "grid"} className={viewMode === "grid" ? "active" : ""} onClick={() => setViewMode("grid")}>
@@ -452,26 +529,45 @@ export function DataGrid({
           />
           <CopyButton value={selectionValue} label="選択セルをコピー" />
           {exportSplit && onDownloadAllCsv && (
-            <button type="button" onClick={() => onDownloadAllCsv(records, columns)}>
-              <Download size={14} />CSVを保存 {(allExportCount ?? records.length).toLocaleString()}件
+            <button
+              type="button"
+              title="編集済みの全行をCSVで保存します。filter / sort は反映しません。"
+              onClick={() => onDownloadAllCsv(records, columns)}
+            >
+              <Download size={14} />全件をCSV {allExportCount ?? records.length}件
             </button>
           )}
           {onDownloadCsv && (
-            <button type="button" onClick={() => onDownloadCsv(visibleRecords, columns)}>
+            <button
+              type="button"
+              title={exportSplit ? "いま見えている行だけをCSVで保存します。filter / sort 後の結果です。" : "CSV"}
+              onClick={() => onDownloadCsv(visibleRecords, columns)}
+            >
               <Download size={14} />
-              {exportSplit ? `表示中の${visibleRecords.length.toLocaleString()}件をエクスポート` : "CSV"}
+              {exportSplit ? `表示中をCSV ${visibleRecords.length}件` : "CSV"}
             </button>
           )}
           {exportSplit && onDownloadAllXlsx && (
-            <button type="button" onClick={() => onDownloadAllXlsx(records, columns)}>
-              <Download size={14} />XLSXを保存 {(allExportCount ?? records.length).toLocaleString()}件
+            <button
+              type="button"
+              title="編集済みの全行をXLSXで保存します。filter / sort は反映しません。"
+              onClick={() => onDownloadAllXlsx(records, columns)}
+            >
+              <Download size={14} />全件をXLSX {allExportCount ?? records.length}件
             </button>
           )}
           {onDownloadXlsx && (
-            <button type="button" onClick={() => onDownloadXlsx(visibleRecords, columns)}>
+            <button
+              type="button"
+              title={exportSplit ? "いま見えている行だけをXLSXで保存します。filter / sort 後の結果です。" : "XLSX"}
+              onClick={() => onDownloadXlsx(visibleRecords, columns)}
+            >
               <Download size={14} />
-              {exportSplit ? `表示中の${visibleRecords.length.toLocaleString()}件をXLSX` : "XLSX"}
+              {exportSplit ? `表示中をXLSX ${visibleRecords.length}件` : "XLSX"}
             </button>
+          )}
+          {exportSplit && (
+            <small className="data-grid-export-hint">全件=編集後の全行 / 表示中=filter・sort後</small>
           )}
         </div>
       </div>
@@ -507,7 +603,7 @@ export function DataGrid({
                 >
                   <option value="">列を追加</option>
                   {columns.filter((column) => !requiredColumns.includes(column)).map((column) => (
-                    <option value={column} key={column}>{column}</option>
+                    <option value={column} key={column}>{labelFor(column)}</option>
                   ))}
                 </select>
               </label>
@@ -569,37 +665,20 @@ export function DataGrid({
                   className={`${draggedColumn === column ? "dragging" : ""} ${pinnedOffsets[column] !== undefined ? "pinned" : ""}`.trim()}
                   style={columnStyle(column)}
                 >
-                  <div
-                    onPointerDown={(event) => {
-                      if ((event.target as HTMLElement).closest("button,input")) return;
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      dragColumnRef.current = column;
-                      setDraggedColumn(column);
-                    }}
-                    onPointerMove={(event) => {
-                      if (!dragColumnRef.current || event.buttons !== 1) return;
-                      const target = document
-                        .elementFromPoint(event.clientX, event.clientY)
-                        ?.closest<HTMLElement>("[data-grid-column]")
-                        ?.dataset.gridColumn;
-                      if (target) reorderColumn(dragColumnRef.current, target);
-                    }}
-                    onPointerUp={(event) => {
-                      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                        event.currentTarget.releasePointerCapture(event.pointerId);
-                      }
-                      dragColumnRef.current = null;
-                      setDraggedColumn(null);
-                    }}
-                    title="ドラッグして列を移動"
-                  >
+                  <div className="data-grid-column-heading">
                     <span
                       className="data-grid-drag-handle"
+                      title="ドラッグして列を移動"
+                      onPointerDown={(event) => startColumnDrag(event, column)}
                     >
                       <GripVertical size={12} />
                       <strong>{labelFor(column)}</strong>
                     </span>
-                    <span>
+                    <span
+                      className="data-grid-column-actions"
+                      onPointerDown={stopHeaderGesture}
+                      onMouseDown={stopHeaderGesture}
+                    >
                       <CopyButton
                         value={toCsv(visibleRecords, [column], includeHeader)}
                         label={`${labelFor(column)}列をコピー`}
@@ -646,7 +725,19 @@ export function DataGrid({
                         </>
                       )}
                       {editable && (
-                        <button type="button" onClick={() => deleteColumn(column)} aria-label={`${labelFor(column)}列を削除`}>
+                        <button
+                          type="button"
+                          className="data-grid-delete-column"
+                          onPointerDown={stopHeaderGesture}
+                          onMouseDown={stopHeaderGesture}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            deleteColumn(column);
+                          }}
+                          aria-label={`${labelFor(column)}列を削除`}
+                          title={`${labelFor(column)}列を削除`}
+                        >
                           <Trash2 size={12} />
                         </button>
                       )}
@@ -713,8 +804,8 @@ export function DataGrid({
                     }
                     onMouseDown={(event) => {
                       if (editingCell?.row === rowIndex && editingCell.column === columnIndex) return;
+                      commitEditingCell();
                       event.preventDefault();
-                      setEditingCell(null);
                       setSelectionStart({ row: rowIndex, column: columnIndex });
                       setSelectionEnd({ row: rowIndex, column: columnIndex });
                       setSelecting(true);
@@ -741,11 +832,19 @@ export function DataGrid({
                     }}
                     onDoubleClick={(event) => {
                       if (!editable) return;
+                      commitEditingCell();
                       setEditingCell({ row: rowIndex, column: columnIndex });
                       event.currentTarget.focus();
                     }}
                     contentEditable={editable && editingCell?.row === rowIndex && editingCell.column === columnIndex}
                     suppressContentEditableWarning
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" || event.shiftKey || !editingCell) {
+                        return;
+                      }
+                      event.preventDefault();
+                      commitEditingCell();
+                    }}
                     onBlur={(event) => {
                       if (editable) updateCell(originalIndex, column, event.currentTarget.textContent ?? "");
                       setEditingCell(null);
@@ -764,9 +863,9 @@ export function DataGrid({
         <span>
           {bounds
             ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Ctrl/⌘+Cでコピー · Ctrl/⌘+Vで貼り付け`
-            : "セルをドラッグして範囲選択 · 選択後にCtrl/⌘+Vで貼り付け"}
+            : "セルをドラッグして範囲選択 · Delete/Backspaceで空にする · 選択後にCtrl/⌘+Vで貼り付け"}
         </span>
-        <span>グリップ=列移動 · ピン=スクロール固定 · ＊=必須列 · 虫眼鏡=重複チェック</span>
+        <span>グリップ=列移動 · ゴミ箱=列削除 · ピン=固定 · ＊=必須列 · 虫眼鏡=重複チェック</span>
       </div>
       {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0) && (
         <div className={`data-grid-duplicate-status ${validationHasError ? "error" : ""}`} role="status">

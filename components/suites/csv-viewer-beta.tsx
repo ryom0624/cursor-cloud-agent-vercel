@@ -1132,7 +1132,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
           <article>
             <span>05</span>
             <h3>エクスポート対象</h3>
-            <p>Simpleの用途別ボタンは編集済み全件です。Gridの「CSVを保存 N件」も全件、「表示中のN件をエクスポート」はfilter/sort後です。sort/filterは表示中エクスポートにだけ反映します。先頭10,000行プレビュー中でも全件保存は切らず、隠れた行はstateに残します。</p>
+            <p>Simpleの用途別ボタンは編集済み全件です。Gridの「全件をCSV / 全件をXLSX」も全件、「表示中をCSV / 表示中をXLSX」はfilter/sort後です。sort/filterは表示中ボタンにだけ反映します。先頭10,000行プレビュー中でも全件保存は切らず、隠れた行はstateに残します。</p>
           </article>
           <article>
             <span>06</span>
