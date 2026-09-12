@@ -10,8 +10,8 @@ export type Tool = {
 };
 
 export const categories = [
-  { name: "すべて", count: 13 },
-  { name: "データ", count: 2 },
+  { name: "すべて", count: 14 },
+  { name: "データ", count: 3 },
   { name: "エンコード", count: 3 },
   { name: "テキスト", count: 4 },
   { name: "日時", count: 2 },
@@ -21,9 +21,9 @@ export const categories = [
 export const tools: Tool[] = [
   {
     name: "JSON Tools",
-    description: "整形、検証、圧縮、ツリー表示",
+    description: "整形、検証、圧縮、ツリー、Grid表示",
     category: "データ",
-    functions: 4,
+    functions: 5,
     href: "/tools/json",
     accent: "朱",
     index: "01",
@@ -31,12 +31,21 @@ export const tools: Tool[] = [
   },
   {
     name: "Data Converter",
-    description: "JSON、YAML、CSVを相互変換",
+    description: "JSON、YAML、CSV、JSONL、Queryを変換",
     category: "データ",
-    functions: 2,
+    functions: 4,
     href: "/tools/data-converter",
     accent: "藍",
     index: "02",
+  },
+  {
+    name: "CSV Viewer",
+    description: "CSVの閲覧、絞り込み、編集、ダウンロード",
+    category: "データ",
+    functions: 1,
+    href: "/tools/csv-viewer",
+    accent: "苔",
+    index: "03",
   },
   {
     name: "Encoder / Decoder",
@@ -45,7 +54,7 @@ export const tools: Tool[] = [
     functions: 3,
     href: "/tools/encoder",
     accent: "苔",
-    index: "03",
+    index: "04",
     featured: true,
   },
   {
@@ -55,7 +64,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/jwt",
     accent: "藤",
-    index: "04",
+    index: "05",
   },
   {
     name: "Hash Tools",
@@ -64,7 +73,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/hash",
     accent: "墨",
-    index: "05",
+    index: "06",
   },
   {
     name: "ID Generator",
@@ -73,7 +82,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/id-generator",
     accent: "藍",
-    index: "06",
+    index: "07",
     featured: true,
   },
   {
@@ -83,7 +92,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/password",
     accent: "朱",
-    index: "07",
+    index: "08",
   },
   {
     name: "Regex Tester",
@@ -92,7 +101,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/regex",
     accent: "苔",
-    index: "08",
+    index: "09",
     featured: true,
   },
   {
@@ -102,7 +111,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/diff",
     accent: "藤",
-    index: "09",
+    index: "10",
   },
   {
     name: "Text Tools",
@@ -111,7 +120,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/text",
     accent: "墨",
-    index: "10",
+    index: "11",
   },
   {
     name: "Lorem Ipsum",
@@ -120,7 +129,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/lorem",
     accent: "藍",
-    index: "11",
+    index: "12",
   },
   {
     name: "Date & Time",
@@ -129,7 +138,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/date-time",
     accent: "朱",
-    index: "12",
+    index: "13",
     featured: true,
   },
   {
@@ -139,6 +148,6 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/cron",
     accent: "苔",
-    index: "13",
+    index: "14",
   },
 ];

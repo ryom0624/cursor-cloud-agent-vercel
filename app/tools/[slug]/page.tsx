@@ -5,6 +5,7 @@ import { tools } from "@/lib/tools";
 
 const slugs: SuiteSlug[] = [
   "data-converter",
+  "csv-viewer",
   "encoder",
   "jwt",
   "hash",

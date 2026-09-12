@@ -88,7 +88,7 @@ export function HomeMock() {
           </div>
           <div className="quick-start-foot">
             <span><LockKeyhole size={13} /> 処理はこのブラウザ内だけで完結</span>
-            <strong>24 FUNCTIONS</strong>
+            <strong>28 FUNCTIONS</strong>
           </div>
         </div>
       </section>
@@ -104,7 +104,7 @@ export function HomeMock() {
           <div>
             <span className="section-number">01</span>
             <h2>道具箱</h2>
-            <p>13ワークスペース・24機能。すべて無料です。</p>
+            <p>14ワークスペース・28機能。すべて無料です。</p>
           </div>
           <div className="function-count"><strong>24</strong><span>FUNCTIONS<br />AVAILABLE</span></div>
         </div>
