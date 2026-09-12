@@ -221,10 +221,13 @@ export function CsvViewerSuite() {
     const storedValue = sessionStorage.getItem("devsmith:paste-anything:value");
     const storedType = sessionStorage.getItem("devsmith:paste-anything:type");
     if (storedValue && (storedType === "csv" || storedType === "tsv")) {
-      updateInput(storedValue);
-      if (storedType === "tsv") setSettings((current) => ({ ...current, delimiter: "\t" }));
       sessionStorage.removeItem("devsmith:paste-anything:value");
       sessionStorage.removeItem("devsmith:paste-anything:type");
+      const timer = window.setTimeout(() => {
+        updateInput(storedValue);
+        if (storedType === "tsv") setSettings((current) => ({ ...current, delimiter: "\t" }));
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -268,11 +271,11 @@ export function CsvViewerSuite() {
   };
 
   const loadExcelFile = async (file: File, previewOnly: boolean) => {
-    const module = await import("exceljs");
-    const ExcelJS = module.default;
+    const excelJsModule = await import("exceljs");
+    const ExcelJS = excelJsModule.default;
     const workbook = new ExcelJS.Workbook();
     const buffer = await file.arrayBuffer();
-    await workbook.xlsx.load(buffer as unknown as Buffer);
+    await workbook.xlsx.load(buffer);
     const sheets = workbook.worksheets.map((worksheet) => {
       const rows: string[][] = [];
       worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {

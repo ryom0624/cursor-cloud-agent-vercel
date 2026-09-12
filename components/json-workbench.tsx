@@ -114,9 +114,11 @@ export function JsonWorkbench() {
   useEffect(() => {
     if (sessionStorage.getItem(pasteAnythingStorageKeys.type) !== "json") return;
     const storedInput = sessionStorage.getItem(pasteAnythingStorageKeys.value);
-    if (storedInput !== null) setInput(storedInput);
     sessionStorage.removeItem(pasteAnythingStorageKeys.value);
     sessionStorage.removeItem(pasteAnythingStorageKeys.type);
+    if (storedInput === null) return;
+    const timer = window.setTimeout(() => setInput(storedInput), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const parsed = useMemo(() => {
