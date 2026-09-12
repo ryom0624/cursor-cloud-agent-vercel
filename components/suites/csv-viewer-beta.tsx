@@ -29,8 +29,10 @@ import {
   defaultViewerSettings,
   delimiterLabel,
   delimiterToken,
+  describeExcelRisks,
   diagnoseExcelRisks,
   encodeCsvText,
+  excelRiskLabel,
   encodingLabel,
   excelCellToText,
   excelOrientedCsvPreset,
@@ -51,6 +53,7 @@ import {
   summarizeExcelRisks,
   utf8CsvPreset,
   XLSX_MAX_ROWS,
+  type ExcelRiskHit,
   type CsvDelimiterSetting,
   type CsvDetectedEncoding,
   type CsvEscapeMode,
@@ -83,6 +86,11 @@ const csvViewerComplexSample = `id,name,note,address,amount,formula
 3,引用符,"彼は""確認済み""と回答","福岡県福岡市",00125,""
 4,空データ,,"  前後に空白  ",-450,"@external"
 5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`;
+
+const csvViewerExcelRiskSample = `id,zip,phone,amount
+1,00123,09012345678,1E10
+2,0000000001,0312345678,1.2e3
+3,1500001,08000000000,98`;
 
 type ViewerMode = "beta" | "official";
 
@@ -129,28 +137,33 @@ function validationTone(items: ValidationItem[]) {
   return "all-ok";
 }
 
+const VALIDATION_DETAIL_LIMIT = 8;
+
 function CsvValidationSummary({
   items,
   warnings,
-  excelRiskSummary,
+  excelRisks,
+  columnLabels,
   showDetails,
   onToggleDetails,
+  showHeading = true,
 }: {
   items: ValidationItem[];
   warnings: string[];
-  excelRiskSummary: {
-    kinds: number;
-    leadingZero: number;
-    longInteger: number;
-    dateLike: number;
-    scientific: number;
-  };
+  excelRisks: ExcelRiskHit[];
+  columnLabels: Record<string, string>;
   showDetails: boolean;
   onToggleDetails: () => void;
+  showHeading?: boolean;
 }) {
+  const examples = excelRisks.slice(0, VALIDATION_DETAIL_LIMIT);
+  const hiddenCount = Math.max(0, excelRisks.length - examples.length);
+  const detailCount = warnings.length + excelRisks.length;
+  const hasDetails = detailCount > 0;
+
   return (
     <div className={`csv-validation-summary ${validationTone(items)}`}>
-      <strong>CSV検証</strong>
+      {showHeading ? <strong>CSV検証</strong> : null}
       <ul>
         {items.map((item) => (
           <li key={item.label} className={item.ok ? "ok" : item.warn ? "warn" : "error"}>
@@ -160,22 +173,33 @@ function CsvValidationSummary({
           </li>
         ))}
       </ul>
-      <button type="button" onClick={onToggleDetails}>
-        {showDetails ? "詳細を閉じる" : "詳細を見る"}
-      </button>
-      {showDetails && (
-        <div className="csv-simple-warnings">
-          <ul>{warnings.length ? warnings.map((warning) => <li key={warning}>{warning}</li>) : <li>詳細な問題は見つかりませんでした。</li>}</ul>
-          {excelRiskSummary.kinds > 0 && (
+      {hasDetails ? (
+        <button type="button" onClick={onToggleDetails} aria-expanded={showDetails}>
+          {showDetails ? "内訳を閉じる" : `内訳を見る（${detailCount}件）`}
+        </button>
+      ) : null}
+      {showDetails && hasDetails ? (
+        <div className="csv-validation-details">
+          {warnings.length > 0 && (
             <ul>
-              <li>先頭ゼロ {excelRiskSummary.leadingZero}件</li>
-              <li>16桁以上の整数 {excelRiskSummary.longInteger}件</li>
-              <li>日付変換候補 {excelRiskSummary.dateLike}件</li>
-              <li>scientific notation候補 {excelRiskSummary.scientific}件</li>
+              {warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
             </ul>
           )}
+          {examples.length > 0 && (
+            <ul>
+              {examples.map((hit) => (
+                <li key={`${hit.kind}-${hit.row}-${hit.column}`}>
+                  {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}
+                  <code>{hit.value}</code>
+                </li>
+              ))}
+            </ul>
+          )}
+          {hiddenCount > 0 && <small>ほか{hiddenCount}件</small>}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -615,7 +639,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
   const validationSummary = [
     { ok: structureIssues.length === 0, label: "CSV構造", detail: structureIssues.length ? `${structureIssues.length}件` : "" },
     { ok: encodingIssues.length === 0, label: "文字コード", detail: encodingIssues.length ? `${encodingIssues.length}件` : "" },
-    { ok: excelRiskSummary.kinds === 0, label: "Excel変換リスク", detail: excelRiskSummary.kinds ? `${excelRiskSummary.kinds}種類` : "", warn: excelRiskSummary.kinds > 0 },
+    { ok: excelRiskSummary.kinds === 0, label: "Excel変換リスク", detail: describeExcelRisks(excelRisks), warn: excelRiskSummary.kinds > 0 },
     { ok: sjisUnmappable.length === 0, label: "Shift_JIS変換不可", detail: sjisUnmappable.length ? `${sjisUnmappable.length}セル` : "", warn: sjisUnmappable.length > 0 },
     { ok: injectionCount === 0, label: "CSV Injection", detail: injectionCount ? `${injectionCount}件` : "", warn: injectionCount > 0 },
   ];
@@ -777,6 +801,9 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
               <button type="button" onClick={() => loadSample(csvViewerComplexSample)}>
                 複雑
               </button>
+              <button type="button" onClick={() => loadSample(csvViewerExcelRiskSample)}>
+                先頭ゼロ・指数
+              </button>
             </div>
             {(viewerMode === "pro" || looksMojibake) && (
             <button type="button" onClick={repairMojibake} title="UTF-8のバイト列をShift_JISとして読んだ文字化けだけを修復します">
@@ -843,7 +870,8 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             <CsvValidationSummary
               items={validationSummary}
               warnings={uniqueWarnings}
-              excelRiskSummary={excelRiskSummary}
+              excelRisks={excelRisks}
+              columnLabels={columnLabels}
               showDetails={showValidationDetails}
               onToggleDetails={() => setShowValidationDetails((current) => !current)}
             />
@@ -883,7 +911,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             {excelRiskSummary.kinds > 0 && (
               <div className="csv-excel-risk">
                 <strong>⚠ Excelで値が変わる可能性があります</strong>
-                <p>先頭ゼロ: {excelRiskSummary.leadingZero}件 · 16桁以上の整数: {excelRiskSummary.longInteger}件 · 日付変換候補: {excelRiskSummary.dateLike}件 · 指数表記: {excelRiskSummary.scientific}件</p>
+                <p>{describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値として読むと、先頭ゼロや指数表記が消えることがあります。</p>
                 <button type="button" onClick={() => {
                   const full = recordsForFullExport();
                   void downloadXlsxSafe(full.records, full.columns);
@@ -991,7 +1019,8 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             <CsvValidationSummary
               items={validationSummary}
               warnings={uniqueWarnings}
-              excelRiskSummary={excelRiskSummary}
+              excelRisks={excelRisks}
+              columnLabels={columnLabels}
               showDetails={showValidationDetails}
               onToggleDetails={() => setShowValidationDetails((current) => !current)}
             />
@@ -1196,17 +1225,10 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             {validationTone(validationSummary) === "has-error"
               ? "壊れている箇所があります"
               : validationTone(validationSummary) === "has-warn"
-                ? `${uniqueWarnings.length || excelRiskSummary.kinds}件の注意`
+                ? describeExcelRisks(excelRisks) || `${uniqueWarnings.length}件の注意`
                 : "問題は見つかりませんでした"}
           </strong>
         </header>
-        <CsvValidationSummary
-          items={validationSummary}
-          warnings={uniqueWarnings}
-          excelRiskSummary={excelRiskSummary}
-          showDetails={showValidationDetails}
-          onToggleDetails={() => setShowValidationDetails((current) => !current)}
-        />
       </section>
 
       <section className="csv-guide" aria-labelledby="csv-guide-title-beta">

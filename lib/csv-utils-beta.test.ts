@@ -29,6 +29,7 @@ import {
   isLeadingZeroRisk,
   isLongIntegerRisk,
   isScientificRisk,
+  describeExcelRisks,
   locateReplacementCharacters,
   parseCsvTable,
   rowsToCsv,
@@ -236,6 +237,9 @@ describe("P0 Excel conversion risks", () => {
     expect(isLeadingZeroRisk("0")).toBe(false);
     expect(isLeadingZeroRisk("0.5")).toBe(false);
     expect(isLeadingZeroRisk("-01")).toBe(true);
+    expect(isLeadingZeroRisk("+01")).toBe(true);
+    expect(isLeadingZeroRisk("01.50")).toBe(true);
+    expect(isLeadingZeroRisk("00.5")).toBe(true);
   });
 
   it("detects long integers, conservative dates, and scientific values", () => {
@@ -247,6 +251,7 @@ describe("P0 Excel conversion risks", () => {
     expect(isDateLikeRisk("00123")).toBe(false);
     expect(isScientificRisk("1E10")).toBe(true);
     expect(isScientificRisk("1.2e-3")).toBe(true);
+    expect(isScientificRisk("+1E10")).toBe(true);
     expect(isScientificRisk("12")).toBe(false);
   });
 
@@ -257,6 +262,7 @@ describe("P0 Excel conversion risks", () => {
     expect(hits.filter((hit) => hit.kind === "longInteger")).toHaveLength(1);
     expect(hits.filter((hit) => hit.kind === "dateLike")).toHaveLength(1);
     expect(hits.filter((hit) => hit.kind === "scientific")).toHaveLength(1);
+    expect(describeExcelRisks(hits)).toBe("先頭ゼロ 1件 · 16桁以上の整数 1件 · 日付変換候補 1件 · 指数表記 1件");
   });
 });
 

@@ -874,16 +874,28 @@ export type ExcelRiskHit = {
   value: string;
 };
 
-const leadingZeroPattern = /^-?0\d+$/;
+const leadingZeroInteger = /^[+-]?0\d+$/;
+const leadingZeroDecimal = /^[+-]?0\d+\.\d+$/;
 const longIntegerPattern = /^-?\d{16,}$/;
-const scientificPattern = /^-?\d+(\.\d+)?[eE][+-]?\d+$/;
+const scientificPattern = /^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/;
+const excelRiskLabels: Record<ExcelRiskKind, string> = {
+  leadingZero: "先頭ゼロ",
+  longInteger: "16桁以上の整数",
+  dateLike: "日付変換候補",
+  scientific: "指数表記",
+};
 const dateLikePatterns = [
   /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/,
   /^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/,
 ];
 
 export function isLeadingZeroRisk(value: string) {
-  return leadingZeroPattern.test(value.trim());
+  const text = value.trim();
+  return leadingZeroInteger.test(text) || leadingZeroDecimal.test(text);
+}
+
+export function excelRiskLabel(kind: ExcelRiskKind) {
+  return excelRiskLabels[kind];
 }
 
 export function isLongIntegerRisk(value: string) {
@@ -938,6 +950,14 @@ export function summarizeExcelRisks(hits: ExcelRiskHit[]) {
     scientific: hits.filter((hit) => hit.kind === "scientific").length,
     kinds: Array.from(new Set(hits.map((hit) => hit.kind))).length,
   };
+}
+
+export function describeExcelRisks(hits: ExcelRiskHit[]) {
+  const summary = summarizeExcelRisks(hits);
+  return (Object.keys(excelRiskLabels) as ExcelRiskKind[])
+    .filter((kind) => summary[kind] > 0)
+    .map((kind) => `${excelRiskLabels[kind]} ${summary[kind]}件`)
+    .join(" · ");
 }
 
 export function locateReplacementCharacters(

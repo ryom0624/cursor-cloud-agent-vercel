@@ -3601,6 +3601,45 @@ kbd {
   list-style: none;
 }
 
+.csv-validation-details {
+  flex: 1 1 100%;
+}
+
+.csv-validation-details ul {
+  display: block;
+  margin: 4px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.csv-validation-details li {
+  min-height: 0;
+  display: list-item;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-validation-details code {
+  margin-left: 8px;
+  padding: 0 5px;
+  border: 1px solid #c9a15b;
+  background: #fff8e8;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-validation-details small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
 .csv-validation-summary button,
 .csv-excel-risk button,
 .csv-inherit-save button,
