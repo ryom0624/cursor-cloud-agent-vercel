@@ -3350,6 +3350,63 @@ kbd {
   font-size: 10px;
 }
 
+.csv-simple-summary {
+  margin-bottom: 15px;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.csv-simple-summary .csv-detection {
+  padding: 12px 14px;
+}
+
+.csv-simple-warnings {
+  padding: 0 14px 12px;
+  color: var(--ink);
+}
+
+.csv-simple-warnings strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.csv-simple-warnings ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.csv-simple-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line-dark);
+}
+
+.csv-simple-downloads span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-simple-downloads button {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.csv-simple-summary .csv-custom-flag {
+  color: var(--ink-soft);
+}
+
 .csv-viewer-input label,
 .csv-viewer-input button {
   min-height: 28px;
@@ -3839,7 +3896,8 @@ kbd {
 
   .csv-viewer-output > header > div,
   .csv-sheet-selector,
-  .csv-large-file-dialog > div > div {
+  .csv-large-file-dialog > div > div,
+  .csv-simple-downloads {
     align-items: stretch;
     flex-direction: column;
   }

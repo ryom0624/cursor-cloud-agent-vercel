@@ -7,7 +7,6 @@ export type CsvFileEncoding = "auto" | "utf-8" | "shift_jis";
 export type CsvOutputEncoding = "utf-8" | "shift_jis";
 export type CsvLineEnding = "\n" | "\r\n" | "\r";
 export type CsvEscapeMode = "double" | "backslash";
-
 export type CsvParseOptions = {
   delimiter?: CsvDelimiterSetting;
   quote?: CsvQuote;
@@ -300,6 +299,24 @@ export function serializeCsv(
   const output = rows.map((row) => row.join(delimiter)).join(lineEnding);
   return options.finalLineEnding ? `${output}${lineEnding}` : output;
 }
+
+export const standardCsvPreset = {
+  encoding: "utf-8" as CsvOutputEncoding,
+  lineEnding: "\n" as CsvLineEnding,
+  includeBom: false,
+  quoteAll: false,
+  quote: '"' as CsvQuote,
+  escapeMode: "double" as CsvEscapeMode,
+};
+
+export const excelCsvPreset = {
+  encoding: "utf-8" as CsvOutputEncoding,
+  lineEnding: "\r\n" as CsvLineEnding,
+  includeBom: true,
+  quoteAll: true,
+  quote: '"' as CsvQuote,
+  escapeMode: "double" as CsvEscapeMode,
+};
 
 export function formatCsvTimestamp(date = new Date()): string {
   const part = (value: number) => String(value).padStart(2, "0");

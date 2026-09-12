@@ -15,10 +15,12 @@ import {
 import {
   decodeCsvBytes,
   encodeCsvText,
+  excelCsvPreset,
   formatCsvTimestamp,
   inspectCsv,
   repairUtf8ReadAsShiftJis,
   serializeCsv,
+  standardCsvPreset,
 } from "./csv-utils";
 
 describe("CSV utilities", () => {
@@ -48,6 +50,26 @@ describe("CSV utilities", () => {
     expect(inspection.lineEnding).toBe("CRLF");
     expect(inspection.hasBom).toBe(true);
     expect(inspection.warnings[0]).toContain("列数");
+    expect(inspectCsv("id,name\n1,DevSmith").lineEnding).toBe("LF");
+    expect(inspectCsv('id,note\n1,"改行\nを含む"').rows[1]).toEqual(["1", "改行\nを含む"]);
+  });
+
+  it("round trips UTF-8 CSV with and without BOM", () => {
+    const source = "id,name\n1,開発";
+    const withBom = encodeCsvText(source, "utf-8", true);
+    const withoutBom = encodeCsvText(source, "utf-8", false);
+    expect(withBom[0]).toBe(0xef);
+    expect(withoutBom[0]).not.toBe(0xef);
+    expect(decodeCsvBytes(withBom, "auto")).toMatchObject({
+      text: source,
+      encoding: "utf-8",
+      hasBom: true,
+    });
+    expect(decodeCsvBytes(withoutBom, "auto")).toMatchObject({
+      text: source,
+      encoding: "utf-8",
+      hasBom: false,
+    });
   });
 
   it("encodes and decodes Shift_JIS files", () => {
@@ -99,6 +121,23 @@ describe("CSV utilities", () => {
       finalLineEnding: true,
     })).toBe('note\n"say \\"yes\\""\n');
     expect(inspectCsv('note\n"say \\"yes\\""', { escapeMode: "backslash" }).rows[1]).toEqual(['say "yes"']);
+  });
+
+  it("keeps standard and Excel download presets distinct", () => {
+    expect(standardCsvPreset).toMatchObject({
+      encoding: "utf-8",
+      includeBom: false,
+      lineEnding: "\n",
+    });
+    expect(excelCsvPreset).toMatchObject({
+      encoding: "utf-8",
+      includeBom: true,
+      lineEnding: "\r\n",
+      quoteAll: true,
+    });
+    const rows = serializeCsv([{ name: "DevSmith" }], ["name"], excelCsvPreset);
+    expect(rows.startsWith('"name"')).toBe(true);
+    expect(encodeCsvText("name", excelCsvPreset.encoding, excelCsvPreset.includeBom)[0]).toBe(0xef);
   });
 
   it("formats download timestamps as local calendar digits", () => {

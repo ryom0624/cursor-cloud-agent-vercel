@@ -22,10 +22,12 @@ import { ToolShell, ToolStatus } from "@/components/tool-shell";
 import {
   decodeCsvBytes,
   encodeCsvText,
+  excelCsvPreset,
   formatCsvTimestamp,
   inspectCsv,
   repairUtf8ReadAsShiftJis,
   serializeCsv,
+  standardCsvPreset,
   type CsvDelimiterSetting,
   type CsvEscapeMode,
   type CsvFileEncoding,
@@ -140,14 +142,23 @@ function parseRecords(input: string, settings: ViewerSettings) {
   };
 }
 
-const excelOpenCsvPreset = {
-  encoding: "utf-8" as CsvOutputEncoding,
-  lineEnding: "\r\n" as CsvLineEnding,
-  includeBom: true,
-  quoteAll: true,
-  quote: '"' as CsvQuote,
-  escapeMode: "double" as CsvEscapeMode,
-};
+function delimiterLabel(delimiter: string) {
+  if (delimiter === "\t") return "タブ区切り";
+  if (delimiter === ";") return "セミコロン区切り";
+  if (delimiter === "|") return "縦棒区切り";
+  if (delimiter === " ") return "スペース区切り";
+  return "カンマ区切り";
+}
+
+function encodingLabel(encoding: "utf-8" | "shift_jis" | null) {
+  if (encoding === "utf-8") return "UTF-8";
+  if (encoding === "shift_jis") return "Shift_JIS";
+  return "貼り付けテキスト";
+}
+
+function recordColumns(records: DataGridRecord[]) {
+  return Array.from(new Set(records.flatMap((record) => Object.keys(record))));
+}
 
 function triggerDownload(bytes: Uint8Array, filename: string, mimeType: string) {
   const content = new Uint8Array(bytes.length);
@@ -218,6 +229,7 @@ export function CsvViewerSuite() {
   const [outputQuote, setOutputQuote] = useState<CsvQuote>('"');
   const [outputEscapeMode, setOutputEscapeMode] = useState<CsvEscapeMode>("double");
   const [excelOpenPreset, setExcelOpenPreset] = useState(false);
+  const [viewerMode, setViewerMode] = useState<"simple" | "pro">("simple");
   const [repairError, setRepairError] = useState("");
   const [repairMessage, setRepairMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -229,6 +241,42 @@ export function CsvViewerSuite() {
   const fileBytesRef = useRef<Uint8Array | null>(null);
   const parsed = useMemo(() => parseRecords(input, settings), [input, settings]);
   const records = editedRecords ?? parsed.records;
+  const usingCustomSettings = settings.delimiter !== "auto"
+    || settings.quote !== '"'
+    || settings.escapeMode !== "double"
+    || settings.trimFields
+    || !settings.skipEmptyLines
+    || settings.headerRow !== 1
+    || settings.dataStartRow !== 2
+    || fileEncoding !== "auto"
+    || outputEncoding !== "utf-8"
+    || lineEnding !== "\r\n"
+    || !includeBom
+    || quoteAll
+    || outputQuote !== '"'
+    || outputEscapeMode !== "double"
+    || excelOpenPreset;
+  const looksMojibake = /[繧縺繝]/.test(input);
+  const columns = recordColumns(records);
+  const detectedItems = [
+    encodingLabel(detectedEncoding),
+    fileHasBom || parsed.inspection.hasBom ? "BOMあり" : "BOMなし",
+    delimiterLabel(parsed.inspection.delimiter),
+    parsed.inspection.lineEnding,
+    `${records.length.toLocaleString()} rows`,
+    `${columns.length} columns`,
+  ];
+  const downloadWithCurrentSettings = (targetRecords: DataGridRecord[], columns: string[]) =>
+    downloadCsv(targetRecords, columns, excelOpenPreset
+      ? excelCsvPreset
+      : {
+          encoding: outputEncoding,
+          lineEnding,
+          includeBom: outputEncoding === "utf-8" && includeBom,
+          quoteAll,
+          quote: outputQuote,
+          escapeMode: outputEscapeMode,
+        });
   const serializeOutput = (
     targetRecords: DataGridRecord[],
     columns: string[],
@@ -391,8 +439,15 @@ export function CsvViewerSuite() {
       title="CSV Viewer"
       description="CSVを貼り付けるかファイルで開き、表として絞り込み・並べ替え・編集します。"
       functionCount={1}
+      tabs={[
+        { id: "simple", label: "Simple" },
+        { id: "pro", label: "Pro" },
+      ]}
+      activeTab={viewerMode}
+      onTabChange={(tab) => setViewerMode(tab as "simple" | "pro")}
     >
       <div className="csv-viewer-flow">
+        {viewerMode === "pro" && (
         <details open className="csv-settings-group">
           <summary><span>INPUT SETTINGS</span><ChevronDown size={15} /></summary>
           <fieldset>
@@ -401,7 +456,7 @@ export function CsvViewerSuite() {
               <select value={fileEncoding} onChange={(event) => changeFileEncoding(event.target.value as CsvFileEncoding)}>
                 <option value="auto">自動判定</option>
                 <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS / Windows-31J</option>
+                <option value="shift_jis">Shift_JIS（SJIS）</option>
               </select>
             </label>
             <label>
@@ -481,6 +536,7 @@ export function CsvViewerSuite() {
             </label>
           </fieldset>
         </details>
+        )}
 
       <section className="csv-viewer-input">
         <header>
@@ -508,9 +564,11 @@ export function CsvViewerSuite() {
             <button type="button" onClick={() => loadSample(csvViewerComplexSample)}>
               複雑
             </button>
+            {(viewerMode === "pro" || looksMojibake) && (
             <button type="button" onClick={repairMojibake} title="UTF-8のバイト列をShift_JISとして読んだ文字化けだけを修復します">
               <Wrench size={14} />UTF-8→SJIS誤読を修復
             </button>
+            )}
           </div>
         </header>
         {excelSheets.length > 1 && (
@@ -543,12 +601,35 @@ export function CsvViewerSuite() {
           value={input}
           onChange={(event) => updateInput(event.target.value)}
           spellCheck={false}
-          placeholder="ヘッダーを含むCSVを貼り付け"
+          placeholder={viewerMode === "simple" ? "CSVを貼り付け" : "ヘッダーを含むCSVを貼り付け"}
           aria-label="CSV入力"
         />
         {(repairMessage || previewNotice) && <div className="csv-input-notice">{repairMessage || previewNotice}</div>}
       </section>
 
+        {viewerMode === "simple" && (
+          <section className="csv-simple-summary">
+            <div className="csv-detection">
+              <strong>DETECTED</strong>
+              {detectedItems.map((item) => <span key={item}>{item}</span>)}
+              {usingCustomSettings && <span className="csv-custom-flag">カスタム設定を使用中</span>}
+            </div>
+            {parsed.warnings.length > 0 && (
+              <div className="csv-simple-warnings">
+                <strong>⚠ {parsed.warnings.length}件の問題があります</strong>
+                <ul>{parsed.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+              </div>
+            )}
+            <div className="csv-simple-downloads">
+              <span>ダウンロード</span>
+              <button type="button" onClick={() => downloadCsv(records, columns, standardCsvPreset)}>標準CSV</button>
+              <button type="button" onClick={() => downloadCsv(records, columns, excelCsvPreset)}>Excel用CSV</button>
+              <button type="button" onClick={() => void downloadXlsx(records, columns)}>XLSX</button>
+            </div>
+          </section>
+        )}
+
+        {viewerMode === "pro" && (
         <details open className="csv-settings-group">
           <summary><span>OUTPUT / DOWNLOAD SETTINGS</span><ChevronDown size={15} /></summary>
           <fieldset>
@@ -556,7 +637,7 @@ export function CsvViewerSuite() {
               出力文字コード
               <select value={outputEncoding} onChange={(event) => setOutputEncoding(event.target.value as CsvOutputEncoding)}>
                 <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS / Windows-31J</option>
+                <option value="shift_jis">Shift_JIS（SJIS）</option>
               </select>
             </label>
             <label>
@@ -622,6 +703,7 @@ export function CsvViewerSuite() {
             </div>
           </fieldset>
         </details>
+        )}
 
       <div className={`csv-output-stage ${fullscreenMode !== "none" ? "fullscreen" : ""} ${fullscreenMode === "split" ? "split" : ""}`}>
         {fullscreenMode === "split" && (
@@ -662,18 +744,7 @@ export function CsvViewerSuite() {
             content: serializeOutput(targetRecords, columns),
             meta: `${outputEncoding.toUpperCase()} · ${lineEnding === "\r\n" ? "CRLF" : lineEnding === "\n" ? "LF" : "CR"} · ${outputEncoding === "utf-8" && includeBom ? "BOMあり" : "BOMなし"} · ${outputEscapeMode === "double" ? "引用符二重化" : "バックスラッシュ"}`,
           })}
-          onDownloadCsv={(downloadRecords, columns) =>
-            downloadCsv(downloadRecords, columns, excelOpenPreset
-              ? excelOpenCsvPreset
-              : {
-                  encoding: outputEncoding,
-                  lineEnding,
-                  includeBom: outputEncoding === "utf-8" && includeBom,
-                  quoteAll,
-                  quote: outputQuote,
-                  escapeMode: outputEscapeMode,
-                })
-          }
+          onDownloadCsv={downloadWithCurrentSettings}
           onDownloadXlsx={(downloadRecords, columns) => void downloadXlsx(downloadRecords, columns)}
           emptyMessage="CSVの行がありません"
           />
@@ -735,7 +806,7 @@ export function CsvViewerSuite() {
           <article>
             <span>01</span>
             <h3>文字コードと文字化け</h3>
-            <p>ファイルはバイト列を保持しているためUTF-8／Shift_JISを切り替えて再読込できます。貼り付け後の文字列には元の文字コード情報がありません。「縺薙」のようなUTF-8をShift_JISとして読んだ文字化けは可能な範囲で修復し、復元できない箇所は行・列で残します。「�」へ置換済みの文字は元バイトが失われているため復元できません。</p>
+            <p>Simpleではファイル読込時にUTF-8／BOM／区切り／改行を自動判定します。詳細な文字コード切替はProで行います。出力のShift_JISはencoding-japaneseのSJIS変換です。貼り付け後の文字列には元の文字コード情報がありません。「縺薙」のようなUTF-8をShift_JISとして読んだ文字化けは可能な範囲で修復し、復元できない箇所は行・列で残します。</p>
           </article>
           <article>
             <span>02</span>
@@ -750,7 +821,7 @@ export function CsvViewerSuite() {
           <article>
             <span>04</span>
             <h3>Excel互換とBOM</h3>
-            <p>日本語版ExcelでUTF-8を開く場合はBOM付きが安定します。古い業務システムにはShift_JISが必要な場合があります。機種依存文字や絵文字はShift_JISに存在せず、出力時に文字参照へ置き換わる可能性があります。</p>
+            <p>Simpleの「Excel用CSV」はUTF-8 BOMあり・CRLFです。ProではBOMを個別に切り替えられます。古い業務システム向けのShift_JIS出力はProから利用します。機種依存文字や絵文字はSJISに存在せず、出力時に文字参照へ置き換わる可能性があります。</p>
           </article>
           <article>
             <span>05</span>
