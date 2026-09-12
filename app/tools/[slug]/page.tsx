@@ -19,6 +19,7 @@ const slugs: SuiteSlug[] = [
   "lorem",
   "date-time",
   "cron",
+  "number",
 ];
 
 export const dynamicParams = false;
