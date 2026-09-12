@@ -140,6 +140,28 @@ function parseRecords(input: string, settings: ViewerSettings) {
   };
 }
 
+const excelOpenCsvPreset = {
+  encoding: "utf-8" as CsvOutputEncoding,
+  lineEnding: "\r\n" as CsvLineEnding,
+  includeBom: true,
+  quoteAll: true,
+  quote: '"' as CsvQuote,
+  escapeMode: "double" as CsvEscapeMode,
+};
+
+function triggerDownload(bytes: Uint8Array, filename: string, mimeType: string) {
+  const content = new Uint8Array(bytes.length);
+  content.set(bytes);
+  const url = URL.createObjectURL(new Blob([content.buffer], { type: mimeType }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function downloadCsv(
   records: DataGridRecord[],
   columns: string[],
@@ -160,17 +182,26 @@ function downloadCsv(
     finalLineEnding: true,
   });
   const bytes = encodeCsvText(output, options.encoding, options.includeBom);
-  const content = new Uint8Array(bytes.length);
-  content.set(bytes);
   const mimeEncoding = options.encoding === "shift_jis" ? "shift_jis" : "utf-8";
-  const url = URL.createObjectURL(new Blob([content.buffer], { type: `text/csv;charset=${mimeEncoding}` }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `devsmith-data_${formatCsvTimestamp()}.csv`;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  triggerDownload(bytes, `devsmith-data_${formatCsvTimestamp()}.csv`, `text/csv;charset=${mimeEncoding}`);
+}
+
+async function downloadXlsx(records: DataGridRecord[], columns: string[]) {
+  const excelJsModule = await import("exceljs");
+  const ExcelJS = excelJsModule.default;
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.columns = columns.map((column) => ({ header: column, key: column }));
+  records.forEach((record) => {
+    worksheet.addRow(Object.fromEntries(columns.map((column) => [column, String(record[column] ?? "")])));
+  });
+  worksheet.columns.forEach((column, index) => {
+    const header = columns[index] ?? "";
+    const longest = Math.max(header.length, ...records.map((record) => String(record[header] ?? "").length));
+    column.width = Math.min(60, Math.max(12, longest + 2));
+  });
+  const buffer = await workbook.xlsx.writeBuffer();
+  triggerDownload(new Uint8Array(buffer), `devsmith-data_${formatCsvTimestamp()}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
 export function CsvViewerSuite() {
@@ -186,6 +217,7 @@ export function CsvViewerSuite() {
   const [quoteAll, setQuoteAll] = useState(false);
   const [outputQuote, setOutputQuote] = useState<CsvQuote>('"');
   const [outputEscapeMode, setOutputEscapeMode] = useState<CsvEscapeMode>("double");
+  const [excelOpenPreset, setExcelOpenPreset] = useState(false);
   const [repairError, setRepairError] = useState("");
   const [repairMessage, setRepairMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -568,6 +600,19 @@ export function CsvViewerSuite() {
               />
               全フィールドを囲む
             </label>
+            <label className="csv-check">
+              <input
+                type="checkbox"
+                checked={excelOpenPreset}
+                onChange={(event) => setExcelOpenPreset(event.target.checked)}
+              />
+              Excelで開く推奨設定でダウンロード
+            </label>
+            {excelOpenPreset && (
+              <small className="csv-excel-preset-note">
+                CSVはUTF-8 BOM・CRLF・二重引用、XLSXは文字列として出力します。
+              </small>
+            )}
             <div className="csv-detection">
               <strong>DETECTED</strong>
               <span>{detectedEncoding ? detectedEncoding.toUpperCase() : "貼り付けテキスト"}</span>
@@ -618,15 +663,18 @@ export function CsvViewerSuite() {
             meta: `${outputEncoding.toUpperCase()} · ${lineEnding === "\r\n" ? "CRLF" : lineEnding === "\n" ? "LF" : "CR"} · ${outputEncoding === "utf-8" && includeBom ? "BOMあり" : "BOMなし"} · ${outputEscapeMode === "double" ? "引用符二重化" : "バックスラッシュ"}`,
           })}
           onDownloadCsv={(downloadRecords, columns) =>
-            downloadCsv(downloadRecords, columns, {
-              encoding: outputEncoding,
-              lineEnding,
-              includeBom: outputEncoding === "utf-8" && includeBom,
-              quoteAll,
-              quote: outputQuote,
-              escapeMode: outputEscapeMode,
-            })
+            downloadCsv(downloadRecords, columns, excelOpenPreset
+              ? excelOpenCsvPreset
+              : {
+                  encoding: outputEncoding,
+                  lineEnding,
+                  includeBom: outputEncoding === "utf-8" && includeBom,
+                  quoteAll,
+                  quote: outputQuote,
+                  escapeMode: outputEscapeMode,
+                })
           }
+          onDownloadXlsx={(downloadRecords, columns) => void downloadXlsx(downloadRecords, columns)}
           emptyMessage="CSVの行がありません"
           />
         </section>

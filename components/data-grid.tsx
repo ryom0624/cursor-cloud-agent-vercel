@@ -57,6 +57,7 @@ export type DataGridProps = {
   editable?: boolean;
   onRecordsChange?: (records: DataGridRecord[]) => void;
   onDownloadCsv?: (records: DataGridRecord[], columns: string[]) => void;
+  onDownloadXlsx?: (records: DataGridRecord[], columns: string[]) => void;
   csvSerializer?: (
     records: DataGridRecord[],
     columns: string[],
@@ -75,6 +76,7 @@ export function DataGrid({
   editable = false,
   onRecordsChange,
   onDownloadCsv,
+  onDownloadXlsx,
   csvSerializer,
   rawPreview,
   enableDuplicateValidation = false,
@@ -416,6 +418,11 @@ export function DataGrid({
           {onDownloadCsv && (
             <button type="button" onClick={() => onDownloadCsv(visibleRecords, columns)}>
               <Download size={14} />CSV
+            </button>
+          )}
+          {onDownloadXlsx && (
+            <button type="button" onClick={() => onDownloadXlsx(visibleRecords, columns)}>
+              <Download size={14} />XLSX
             </button>
           )}
         </div>
