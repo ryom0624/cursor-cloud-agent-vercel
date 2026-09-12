@@ -2,6 +2,7 @@
 
 import { DataConverterSuite } from "@/components/suites/data-converter";
 import { CsvViewerSuite } from "@/components/suites/csv-viewer";
+import { CsvViewerBetaSuite } from "@/components/suites/csv-viewer-beta";
 import {
   EncoderSuite,
   HashSuite,
@@ -20,6 +21,7 @@ import { CronSuite, DateTimeSuite } from "@/components/suites/time-suites";
 export const suiteSlugs = [
   "data-converter",
   "csv-viewer",
+  "csv-viewer-beta",
   "encoder",
   "jwt",
   "hash",
@@ -41,6 +43,8 @@ export function ToolSuite({ slug }: { slug: SuiteSlug }) {
       return <DataConverterSuite />;
     case "csv-viewer":
       return <CsvViewerSuite />;
+    case "csv-viewer-beta":
+      return <CsvViewerBetaSuite />;
     case "encoder":
       return <EncoderSuite />;
     case "jwt":

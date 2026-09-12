@@ -21,22 +21,42 @@ import { BoundedNumberInput } from "@/components/bounded-number-input";
 import { DataGrid, type DataGridRecord } from "@/components/data-grid";
 import { ToolShell, ToolStatus } from "@/components/tool-shell";
 import {
+  buildXlsxBuffer,
+  checkXlsxLimits,
+  countCsvInjectionValues,
   decodeCsvBytes,
+  defaultViewerSettings,
+  delimiterLabel,
+  delimiterToken,
+  diagnoseExcelRisks,
   encodeCsvText,
-  excelCsvPreset,
+  encodingLabel,
+  excelCellToText,
+  excelOrientedCsvPreset,
+  findSjisUnmappableInRecords,
   formatCsvOutputMeta,
   formatCsvTimestamp,
   inspectCsv,
+  lineEndingToken,
+  locateReplacementCharacters,
+  parseCsvTable,
   repairUtf8ReadAsShiftJis,
+  rowsToCsv,
   serializeCsv,
-  standardCsvPreset,
+  summarizeExcelRisks,
+  utf8CsvPreset,
+  XLSX_MAX_ROWS,
   type CsvDelimiterSetting,
+  type CsvDetectedEncoding,
   type CsvEscapeMode,
   type CsvFileEncoding,
+  type CsvInputSource,
   type CsvLineEnding,
   type CsvOutputEncoding,
   type CsvQuote,
-} from "@/lib/csv-utils";
+  type SjisUnmappable,
+  type ViewerSettings,
+} from "@/lib/csv-utils-beta";
 
 const csvViewerSample = `id,name,team,status,score,updated_at
 101,DevSmith,Platform,active,98,2026-09-11
@@ -57,105 +77,16 @@ const csvViewerComplexSample = `id,name,note,address,amount,formula
 2行目","大阪府大阪市",0,"+cmd"
 3,引用符,"彼は""確認済み""と回答","福岡県福岡市",00125,""
 4,空データ,,"  前後に空白  ",-450,"@external"
-5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`
+5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`;
 
 const LARGE_FILE_WARNING_BYTES = 10 * 1024 * 1024;
 const PREVIEW_ROW_LIMIT = 10_000;
 
 type ExcelSheet = { name: string; csv: string };
 
-function excelValueToText(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value !== "object") return String(value);
-  if ("result" in value) return excelValueToText((value as { result?: unknown }).result);
-  if ("text" in value) return String((value as { text?: unknown }).text ?? "");
-  if ("richText" in value && Array.isArray((value as { richText?: unknown[] }).richText)) {
-    return (value as { richText: { text?: string }[] }).richText.map((part) => part.text ?? "").join("");
-  }
-  return JSON.stringify(value);
-}
-
-function rowsToCsv(rows: string[][]): string {
-  if (!rows.length) return "";
-  const width = Math.max(...rows.map((row) => row.length));
-  const columns = Array.from({ length: width }, (_, index) => `column_${index}`);
-  const records = rows.map((row) => Object.fromEntries(columns.map((column, index) => [column, row[index] ?? ""])));
-  return serializeCsv(records, columns, { includeHeader: false });
-}
-
 function previewCsv(text: string, settings: ViewerSettings): string {
   const rows = inspectCsv(text, settings).rows.slice(0, PREVIEW_ROW_LIMIT + 1);
   return rowsToCsv(rows);
-}
-
-type ViewerSettings = {
-  delimiter: CsvDelimiterSetting;
-  quote: CsvQuote;
-  escapeMode: CsvEscapeMode;
-  trimFields: boolean;
-  skipEmptyLines: boolean;
-  headerRow: number;
-  dataStartRow: number;
-};
-
-const defaultSettings: ViewerSettings = {
-  delimiter: "auto",
-  quote: '"',
-  escapeMode: "double",
-  trimFields: false,
-  skipEmptyLines: true,
-  headerRow: 1,
-  dataStartRow: 2,
-};
-
-function parseRecords(input: string, settings: ViewerSettings) {
-  const inspection = inspectCsv(input, settings);
-  const headers = inspection.rows[settings.headerRow - 1];
-  if (!headers?.length || headers.every((header) => !header.trim())) {
-    return {
-      records: [] as DataGridRecord[],
-      error: "指定したヘッダー行にフィールドがありません。",
-      inspection,
-      warnings: inspection.warnings,
-    };
-  }
-  const normalizedHeaders = headers.map((header, index) => header.trim() || `column_${index + 1}`);
-  if (new Set(normalizedHeaders).size !== normalizedHeaders.length) {
-    return {
-      records: [] as DataGridRecord[],
-      error: "ヘッダー名が重複しています。",
-      inspection,
-      warnings: inspection.warnings,
-    };
-  }
-  const rows = inspection.rows.slice(Math.max(settings.dataStartRow - 1, settings.headerRow));
-  const formulaCells = rows.flat().filter((value) => /^[=+@]|^-(?!\d)/.test(value.trim())).length;
-  const warnings = [...inspection.warnings];
-  if (headers.some((header) => !header.trim())) warnings.push("空のヘッダー名をcolumn_Nへ補完しました。");
-  if (formulaCells) warnings.push(`表計算ソフトで数式として実行され得る値が${formulaCells}件あります。`);
-  return {
-    records: rows.map((row) =>
-      Object.fromEntries(normalizedHeaders.map((header, index) => [header, row[index] ?? ""])),
-    ),
-    error: "",
-    inspection,
-    warnings,
-  };
-}
-
-function delimiterLabel(delimiter: string) {
-  if (delimiter === "\t") return "タブ区切り";
-  if (delimiter === ";") return "セミコロン区切り";
-  if (delimiter === "|") return "縦棒区切り";
-  if (delimiter === " ") return "スペース区切り";
-  return "カンマ区切り";
-}
-
-function encodingLabel(encoding: "utf-8" | "shift_jis" | null) {
-  if (encoding === "utf-8") return "UTF-8";
-  if (encoding === "shift_jis") return "Shift_JIS";
-  return "貼り付けテキスト";
 }
 
 function recordColumns(records: DataGridRecord[]) {
@@ -175,55 +106,20 @@ function triggerDownload(bytes: Uint8Array, filename: string, mimeType: string) 
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function downloadCsv(
-  records: DataGridRecord[],
-  columns: string[],
-  options: {
-    encoding: CsvOutputEncoding;
-    lineEnding: CsvLineEnding;
-    includeBom: boolean;
-    quoteAll: boolean;
-    quote: CsvQuote;
-    escapeMode: CsvEscapeMode;
-  },
-) {
-  const output = serializeCsv(records, columns, {
-    lineEnding: options.lineEnding,
-    quoteAll: options.quoteAll,
-    quote: options.quote,
-    escapeMode: options.escapeMode,
-    finalLineEnding: true,
-  });
-  const bytes = encodeCsvText(output, options.encoding, options.includeBom);
-  const mimeEncoding = options.encoding === "shift_jis" ? "shift_jis" : "utf-8";
-  triggerDownload(bytes, `devsmith-data_${formatCsvTimestamp()}.csv`, `text/csv;charset=${mimeEncoding}`);
+function lineEndingFromInspection(lineEnding: "CRLF" | "LF" | "CR" | "なし"): CsvLineEnding {
+  if (lineEnding === "CRLF") return "\r\n";
+  if (lineEnding === "CR") return "\r";
+  return "\n";
 }
 
-async function downloadXlsx(records: DataGridRecord[], columns: string[]) {
-  const excelJsModule = await import("exceljs");
-  const ExcelJS = excelJsModule.default;
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.columns = columns.map((column) => ({ header: column, key: column }));
-  records.forEach((record) => {
-    worksheet.addRow(Object.fromEntries(columns.map((column) => [column, String(record[column] ?? "")])));
-  });
-  worksheet.columns.forEach((column, index) => {
-    const header = columns[index] ?? "";
-    const longest = Math.max(header.length, ...records.map((record) => String(record[header] ?? "").length));
-    column.width = Math.min(60, Math.max(12, longest + 2));
-  });
-  const buffer = await workbook.xlsx.writeBuffer();
-  triggerDownload(new Uint8Array(buffer), `devsmith-data_${formatCsvTimestamp()}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-}
-
-export function CsvViewerSuite() {
+export function CsvViewerBetaSuite() {
   const [input, setInput] = useState(csvViewerSample);
   const [editedRecords, setEditedRecords] = useState<DataGridRecord[] | null>(null);
-  const [settings, setSettings] = useState(defaultSettings);
+  const [settings, setSettings] = useState(defaultViewerSettings);
   const [fileEncoding, setFileEncoding] = useState<CsvFileEncoding>("auto");
-  const [detectedEncoding, setDetectedEncoding] = useState<"utf-8" | "shift_jis" | null>(null);
-  const [fileHasBom, setFileHasBom] = useState(false);
+  const [detectedEncoding, setDetectedEncoding] = useState<CsvDetectedEncoding | null>(null);
+  const [fileHasBom, setFileHasBom] = useState<boolean | null>(null);
+  const [inputSource, setInputSource] = useState<CsvInputSource>("paste");
   const [outputEncoding, setOutputEncoding] = useState<CsvOutputEncoding>("utf-8");
   const [lineEnding, setLineEnding] = useState<CsvLineEnding>("\r\n");
   const [includeBom, setIncludeBom] = useState(true);
@@ -239,9 +135,28 @@ export function CsvViewerSuite() {
   const [selectedSheet, setSelectedSheet] = useState("");
   const [fullscreenMode, setFullscreenMode] = useState<"none" | "output" | "split">("none");
   const [previewNotice, setPreviewNotice] = useState("");
+  const [replacementCount, setReplacementCount] = useState(0);
+  const [sjisDialog, setSjisDialog] = useState<{
+    unmappable: SjisUnmappable[];
+    records: DataGridRecord[];
+    columns: string[];
+  } | null>(null);
+  const [xlsxError, setXlsxError] = useState("");
+  const [showValidationDetails, setShowValidationDetails] = useState(false);
   const fileBytesRef = useRef<Uint8Array | null>(null);
-  const parsed = useMemo(() => parseRecords(input, settings), [input, settings]);
+  const parsed = useMemo(() => parseCsvTable(input, settings), [input, settings]);
   const records = editedRecords ?? parsed.records;
+  const columns = useMemo(() => {
+    const extraColumns = recordColumns(records).filter((column) => !parsed.columns.includes(column));
+    return [...parsed.columns, ...extraColumns];
+  }, [parsed.columns, records]);
+  const headerValues = columns.map((column, index) => parsed.headerValues[index] ?? column);
+  const columnLabels = useMemo(() => ({
+    ...parsed.columnLabels,
+    ...Object.fromEntries(
+      columns.filter((column) => !parsed.columns.includes(column)).map((column) => [column, column]),
+    ),
+  }), [columns, parsed.columnLabels, parsed.columns]);
   const usingCustomSettings = settings.delimiter !== "auto"
     || settings.quote !== '"'
     || settings.escapeMode !== "double"
@@ -257,17 +172,89 @@ export function CsvViewerSuite() {
     || outputQuote !== '"'
     || outputEscapeMode !== "double";
   const looksMojibake = /[繧縺繝]/.test(input);
-  const columns = recordColumns(records);
-  const detectedItems = [
-    encodingLabel(detectedEncoding),
-    fileHasBom || parsed.inspection.hasBom ? "BOMあり" : "BOMなし",
-    delimiterLabel(parsed.inspection.delimiter),
-    parsed.inspection.lineEnding,
-    `${records.length.toLocaleString()} rows`,
-    `${columns.length} columns`,
+  const excelRisks = useMemo(() => diagnoseExcelRisks(records, columns), [columns, records]);
+  const excelRiskSummary = summarizeExcelRisks(excelRisks);
+  const injectionCount = countCsvInjectionValues(records, columns);
+  const replacementHits = useMemo(() => locateReplacementCharacters(records, columns), [columns, records]);
+  const sjisUnmappable = useMemo(() => findSjisUnmappableInRecords(records, columns), [columns, records]);
+  const xlsxLimitErrors = useMemo(() => checkXlsxLimits(records, columns), [columns, records]);
+  const excelRowOverflow = records.length + 1 > XLSX_MAX_ROWS;
+  const structureIssues = parsed.inspection.warnings.filter((warning) =>
+    warning.includes("囲み") || warning.includes("列数") || warning.includes("NUL") || warning.includes("混在") || warning.includes("separator"),
+  );
+  const encodingIssues = [
+    ...replacementHits.map((hit) => `${hit.row}行 / ${hit.column}列にデコードできなかった文字（U+FFFD）があります`),
+    ...(replacementCount && !replacementHits.length ? [`デコードできなかったbyteが${replacementCount}件あります`] : []),
   ];
-  const downloadWithCurrentSettings = (targetRecords: DataGridRecord[], columns: string[]) =>
-    downloadCsv(targetRecords, columns, {
+  const extraWarnings = [
+    ...parsed.warnings,
+    ...(injectionCount ? [`表計算ソフトで数式として実行され得る値が${injectionCount}件あります。値は変更していません。`] : []),
+    ...encodingIssues,
+    ...(excelRowOverflow ? ["Excel向けCSVは1,048,576行を超えるとExcelで完全表示できない可能性があります。"] : []),
+    ...(xlsxLimitErrors.length ? xlsxLimitErrors : []),
+  ];
+  const uniqueWarnings = Array.from(new Set(extraWarnings));
+
+  const serializeOutput = (
+    targetRecords: DataGridRecord[],
+    targetColumns: string[],
+    includeHeader = true,
+    overrides: {
+      delimiter?: typeof parsed.inspection.delimiter;
+      lineEnding?: CsvLineEnding;
+      quoteAll?: boolean;
+      quote?: CsvQuote;
+      escapeMode?: CsvEscapeMode;
+    } = {},
+  ) => serializeCsv(targetRecords, targetColumns, {
+    delimiter: overrides.delimiter,
+    lineEnding: overrides.lineEnding ?? lineEnding,
+    quoteAll: overrides.quoteAll ?? quoteAll,
+    quote: overrides.quote ?? outputQuote,
+    escapeMode: overrides.escapeMode ?? outputEscapeMode,
+    includeHeader,
+    finalLineEnding: true,
+    headerLabels: targetColumns.map((column) => {
+      const index = columns.indexOf(column);
+      return index >= 0 ? headerValues[index] : column;
+    }),
+  });
+
+  const downloadCsv = (
+    targetRecords: DataGridRecord[],
+    targetColumns: string[],
+    options: {
+      encoding: CsvOutputEncoding;
+      lineEnding: CsvLineEnding;
+      includeBom: boolean;
+      quoteAll: boolean;
+      quote: CsvQuote;
+      escapeMode: CsvEscapeMode;
+      delimiter?: typeof parsed.inspection.delimiter;
+      replaceUnmappable?: boolean;
+    },
+  ) => {
+    const output = serializeOutput(targetRecords, targetColumns, true, options);
+    if (options.encoding === "shift_jis" && !options.replaceUnmappable) {
+      const unmappable = findSjisUnmappableInRecords(targetRecords, targetColumns);
+      if (unmappable.length) {
+        setSjisDialog({ unmappable, records: targetRecords, columns: targetColumns });
+        return;
+      }
+    }
+    const encoded = encodeCsvText(output, options.encoding, options.includeBom, {
+      replaceUnmappable: options.replaceUnmappable,
+    });
+    if (encoded.unmappable.length && !options.replaceUnmappable) {
+      setSjisDialog({ unmappable: encoded.unmappable, records: targetRecords, columns: targetColumns });
+      return;
+    }
+    const mimeEncoding = options.encoding === "shift_jis" ? "shift_jis" : "utf-8";
+    triggerDownload(encoded.bytes, `devsmith-data_${formatCsvTimestamp()}.csv`, `text/csv;charset=${mimeEncoding}`);
+  };
+
+  const downloadWithCurrentSettings = (targetRecords: DataGridRecord[], targetColumns: string[]) =>
+    downloadCsv(targetRecords, targetColumns, {
       encoding: outputEncoding,
       lineEnding,
       includeBom: outputEncoding === "utf-8" && includeBom,
@@ -275,24 +262,49 @@ export function CsvViewerSuite() {
       quote: outputQuote,
       escapeMode: outputEscapeMode,
     });
-  const serializeOutput = (
-    targetRecords: DataGridRecord[],
-    columns: string[],
-    includeHeader = true,
-  ) => serializeCsv(targetRecords, columns, {
-    lineEnding,
-    quoteAll,
-    quote: outputQuote,
-    escapeMode: outputEscapeMode,
-    includeHeader,
-    finalLineEnding: true,
-  });
 
-  const updateInput = (value: string) => {
+  const downloadInherited = (targetRecords: DataGridRecord[], targetColumns: string[]) => {
+    if (inputSource !== "file" || !detectedEncoding) return;
+    const inheritedEncoding: CsvOutputEncoding = detectedEncoding === "shift_jis" ? "shift_jis" : "utf-8";
+    downloadCsv(targetRecords, targetColumns, {
+      encoding: inheritedEncoding,
+      lineEnding: lineEndingFromInspection(parsed.inspection.lineEnding),
+      includeBom: inheritedEncoding === "utf-8" && Boolean(fileHasBom),
+      quoteAll,
+      quote: settings.quote,
+      escapeMode: settings.escapeMode,
+      delimiter: parsed.inspection.delimiter,
+    });
+  };
+
+  const downloadXlsxSafe = async (targetRecords: DataGridRecord[], targetColumns: string[]) => {
+    setXlsxError("");
+    const limits = checkXlsxLimits(targetRecords, targetColumns);
+    if (limits.length) {
+      setXlsxError(limits[0]);
+      return;
+    }
+    const labels = targetColumns.map((column) => {
+      const index = columns.indexOf(column);
+      return index >= 0 ? headerValues[index] : column;
+    });
+    const bytes = await buildXlsxBuffer(targetRecords, targetColumns, labels);
+    triggerDownload(bytes, `devsmith-data_${formatCsvTimestamp()}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  };
+
+  const updateInput = (value: string, source: CsvInputSource = "paste") => {
     setInput(value);
     setEditedRecords(null);
     setRepairError("");
     setRepairMessage("");
+    setXlsxError("");
+    setInputSource(source);
+    if (source === "paste") {
+      fileBytesRef.current = null;
+      setDetectedEncoding(null);
+      setFileHasBom(null);
+      setReplacementCount(0);
+    }
   };
 
   useEffect(() => {
@@ -302,7 +314,7 @@ export function CsvViewerSuite() {
       sessionStorage.removeItem("devsmith:paste-anything:value");
       sessionStorage.removeItem("devsmith:paste-anything:type");
       const timer = window.setTimeout(() => {
-        updateInput(storedValue);
+        updateInput(storedValue, "paste");
         if (storedType === "tsv") setSettings((current) => ({ ...current, delimiter: "\t" }));
       }, 0);
       return () => window.clearTimeout(timer);
@@ -319,9 +331,10 @@ export function CsvViewerSuite() {
 
   const decodeFile = (bytes: Uint8Array, encoding: CsvFileEncoding) => {
     const decoded = decodeCsvBytes(bytes, encoding);
-    updateInput(decoded.text);
+    updateInput(decoded.text, "file");
     setDetectedEncoding(decoded.encoding);
     setFileHasBom(decoded.hasBom);
+    setReplacementCount(decoded.replacementCount);
   };
 
   const changeFileEncoding = (encoding: CsvFileEncoding) => {
@@ -336,7 +349,7 @@ export function CsvViewerSuite() {
       .map((failure) => `${failure.row}行目,${failure.column}列`)
       .join(" / ");
     const remaining = result.failures.length > 8 ? ` ほか${result.failures.length - 8}件` : "";
-    updateInput(result.text);
+    updateInput(result.text, inputSource);
     setRepairError("");
     if (result.repairedCount && result.failures.length) {
       setRepairMessage(`可能な範囲を修復しました（${result.repairedCount}件）。一部修復できませんでした。（${unrepaired}${remaining}）`);
@@ -352,11 +365,12 @@ export function CsvViewerSuite() {
   const loadSample = (value: string) => {
     fileBytesRef.current = null;
     setDetectedEncoding(null);
-    setFileHasBom(false);
+    setFileHasBom(null);
     setExcelSheets([]);
     setSelectedSheet("");
     setPreviewNotice("");
-    updateInput(value);
+    setReplacementCount(0);
+    updateInput(value, "paste");
   };
 
   const loadExcelFile = async (file: File, previewOnly: boolean) => {
@@ -370,18 +384,25 @@ export function CsvViewerSuite() {
       worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
         if (previewOnly && rowNumber > PREVIEW_ROW_LIMIT + 1) return;
         const values = Array.isArray(row.values) ? row.values.slice(1) : [];
-        rows.push(values.map(excelValueToText));
+        rows.push(values.map(excelCellToText));
       });
       return { name: worksheet.name, csv: rowsToCsv(rows) };
     });
     if (!sheets.length) throw new Error("読み込めるシートがありません。");
     setExcelSheets(sheets);
-    setSelectedSheet(sheets[0].name);
-    setSettings((current) => ({ ...current, delimiter: ",", quote: '"', escapeMode: "double" }));
-    updateInput(sheets[0].csv);
     fileBytesRef.current = null;
     setDetectedEncoding(null);
-    setFileHasBom(false);
+    setFileHasBom(null);
+    setReplacementCount(0);
+    setSettings((currentSettings) => ({ ...currentSettings, delimiter: ",", quote: '"', escapeMode: "double" }));
+    if (sheets.length === 1) {
+      setSelectedSheet(sheets[0].name);
+      updateInput(sheets[0].csv, "xlsx");
+    } else {
+      setSelectedSheet("");
+      updateInput("", "xlsx");
+      setPreviewNotice("複数シートがあります。読み込むシートを選択してください。最初のシートは自動選択しません。");
+    }
   };
 
   const processFile = async (file: File, previewOnly = false) => {
@@ -403,9 +424,10 @@ export function CsvViewerSuite() {
       fileBytesRef.current = bytes;
       const decoded = decodeCsvBytes(bytes, fileEncoding);
       const text = previewOnly ? previewCsv(decoded.text, settings) : decoded.text;
-      updateInput(text);
+      updateInput(text, "file");
       setDetectedEncoding(decoded.encoding);
       setFileHasBom(decoded.hasBom);
+      setReplacementCount(decoded.replacementCount);
       setExcelSheets([]);
       setSelectedSheet("");
       if (previewOnly) setPreviewNotice(`大容量ファイルの先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行だけを表示しています。`);
@@ -430,12 +452,49 @@ export function CsvViewerSuite() {
     void processFile(file);
   };
 
+  const detectedItems = inputSource === "paste"
+    ? [
+      "入力: 貼り付けテキスト",
+      "文字コード: 判定対象外",
+      "BOM: 判定対象外",
+      `区切り: ${delimiterLabel(parsed.inspection.delimiter).replace("区切り", "")}`,
+      `現在の改行: ${parsed.inspection.lineEnding}`,
+      `${records.length.toLocaleString()} rows`,
+      `${columns.length} columns`,
+    ]
+    : inputSource === "xlsx"
+      ? [
+        "入力: XLSX",
+        "文字コード: 判定対象外",
+        "BOM: 判定対象外",
+        delimiterLabel(parsed.inspection.delimiter),
+        parsed.inspection.lineEnding,
+        `${records.length.toLocaleString()} rows`,
+        `${columns.length} columns`,
+      ]
+      : [
+        encodingLabel(detectedEncoding, inputSource),
+        fileHasBom ? "BOMあり" : "BOMなし",
+        delimiterLabel(parsed.inspection.delimiter),
+        parsed.inspection.lineEnding,
+        `${records.length.toLocaleString()} rows`,
+        `${columns.length} columns`,
+      ];
+
+  const validationSummary = [
+    { ok: structureIssues.length === 0, label: "CSV構造", detail: structureIssues.length ? `${structureIssues.length}件` : "" },
+    { ok: encodingIssues.length === 0, label: "文字コード", detail: encodingIssues.length ? `${encodingIssues.length}件` : "" },
+    { ok: excelRiskSummary.kinds === 0, label: "Excel変換リスク", detail: excelRiskSummary.kinds ? `${excelRiskSummary.kinds}種類` : "", warn: excelRiskSummary.kinds > 0 },
+    { ok: sjisUnmappable.length === 0, label: "Shift_JIS変換不可", detail: sjisUnmappable.length ? `${sjisUnmappable.length}セル` : "", warn: sjisUnmappable.length > 0 },
+    { ok: injectionCount === 0, label: "CSV Injection", detail: injectionCount ? `${injectionCount}件` : "", warn: injectionCount > 0 },
+  ];
+
   return (
     <ToolShell
-      slug="csv-viewer"
+      slug="csv-viewer-beta"
       category="データ"
-      title="CSV Viewer"
-      description="CSVを貼り付けるかファイルで開き、表として絞り込み・並べ替え・編集します。"
+      title="CSV Viewer Beta"
+      description="現行CSV Viewerを基準にした次期版です。解析・変換の安全性を改善しています。"
       functionCount={1}
       tabs={[
         { id: "simple", label: "Simple" },
@@ -445,6 +504,12 @@ export function CsvViewerSuite() {
       onTabChange={(tab) => setViewerMode(tab as "simple" | "pro")}
     >
       <div className="csv-viewer-flow">
+        <section className="csv-beta-banner" aria-label="Beta注意">
+          <strong>BETA</strong>
+          <p>Beta版です。CSV解析・変換機能を改善中です。重要なデータは出力結果を確認してから使用してください。</p>
+          <Link href="/tools/csv-viewer">安定版CSV Viewerを開く</Link>
+        </section>
+
         {viewerMode === "pro" ? (
         <details open className="csv-settings-group">
           <summary><span>INPUT SETTINGS</span><ChevronDown size={15} /></summary>
@@ -454,7 +519,9 @@ export function CsvViewerSuite() {
               <select value={fileEncoding} onChange={(event) => changeFileEncoding(event.target.value as CsvFileEncoding)}>
                 <option value="auto">自動判定</option>
                 <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS（SJIS）</option>
+                <option value="shift_jis">Shift_JIS（encoding-japanese SJIS）</option>
+                <option value="utf-16le">UTF-16LE</option>
+                <option value="utf-16be">UTF-16BE</option>
               </select>
             </label>
             <label>
@@ -463,7 +530,7 @@ export function CsvViewerSuite() {
                 value={settings.delimiter}
                 onChange={(event) => setSettings((current) => ({ ...current, delimiter: event.target.value as CsvDelimiterSetting }))}
               >
-                <option value="auto">自動判定</option>
+                <option value="auto">自動判定（comma / tab / semicolon / pipe）</option>
                 <option value=",">カンマ</option>
                 <option value={"\t"}>タブ</option>
                 <option value=";">セミコロン</option>
@@ -540,10 +607,9 @@ export function CsvViewerSuite() {
         <header>
           <span>INPUT CSV</span>
           <div>
-            <Link className="csv-beta-entry-link" href="/tools/csv-viewer-beta">Beta版を試す</Link>
             <label>
               <Upload size={14} />
-              CSV / Excelを開く
+              CSV / TSV / XLSXを開く
               <input
                 type="file"
                 accept=".csv,.tsv,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -573,7 +639,7 @@ export function CsvViewerSuite() {
             )}
           </div>
         </header>
-        {excelSheets.length > 1 && (
+        {(excelSheets.length > 1 || (excelSheets.length > 0 && !selectedSheet)) && (
           <div className="csv-sheet-selector">
             <Sheet size={15} />
             <label>
@@ -582,15 +648,19 @@ export function CsvViewerSuite() {
                 value={selectedSheet}
                 onChange={(event) => {
                   const sheet = excelSheets.find((item) => item.name === event.target.value);
-                  if (!sheet) return;
-                  setSelectedSheet(sheet.name);
-                  updateInput(sheet.csv);
+                  setSelectedSheet(event.target.value);
+                  if (!sheet) {
+                    updateInput("", "xlsx");
+                    return;
+                  }
+                  updateInput(sheet.csv, "xlsx");
                 }}
               >
+                <option value="">シートを選択</option>
                 {excelSheets.map((sheet) => <option value={sheet.name} key={sheet.name}>{sheet.name}</option>)}
               </select>
             </label>
-            <small>.xlsxのみ対応。マクロ形式は読み込みません。</small>
+            <small>.xlsxのみ対応。.xls / マクロ形式は読み込みません。数式は計算結果、日付はISO文字列、数値・文字列はその値をテキストとして取り込みます。</small>
           </div>
         )}
         {loading && (
@@ -601,7 +671,7 @@ export function CsvViewerSuite() {
         )}
         <textarea
           value={input}
-          onChange={(event) => updateInput(event.target.value)}
+          onChange={(event) => updateInput(event.target.value, "paste")}
           spellCheck={false}
           placeholder={viewerMode === "simple" ? "CSVを貼り付け" : "ヘッダーを含むCSVを貼り付け"}
           aria-label="CSV入力"
@@ -616,18 +686,57 @@ export function CsvViewerSuite() {
               {detectedItems.map((item) => <span key={item}>{item}</span>)}
               {usingCustomSettings && <span className="csv-custom-flag">カスタム設定を使用中</span>}
             </div>
-            {parsed.warnings.length > 0 && (
+            <div className="csv-validation-summary">
+              <strong>CSV検証</strong>
+              <ul>
+                {validationSummary.map((item) => (
+                  <li key={item.label}>
+                    {item.ok ? "✓" : "⚠"} {item.label}{item.detail ? ` ${item.detail}` : ""}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => setShowValidationDetails((current) => !current)}>
+                {showValidationDetails ? "詳細を閉じる" : "詳細を見る"}
+              </button>
+            </div>
+            {showValidationDetails && (
               <div className="csv-simple-warnings">
-                <strong>⚠ {parsed.warnings.length}件の問題があります</strong>
-                <ul>{parsed.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+                <ul>{uniqueWarnings.length ? uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>) : <li>詳細な問題は見つかりませんでした。</li>}</ul>
+                {excelRiskSummary.kinds > 0 && (
+                  <ul>
+                    <li>先頭ゼロ {excelRiskSummary.leadingZero}件</li>
+                    <li>16桁以上の整数 {excelRiskSummary.longInteger}件</li>
+                    <li>日付変換候補 {excelRiskSummary.dateLike}件</li>
+                    <li>scientific notation候補 {excelRiskSummary.scientific}件</li>
+                  </ul>
+                )}
               </div>
             )}
             <div className="csv-simple-downloads">
-              <span>ダウンロード</span>
-              <button type="button" onClick={() => downloadCsv(records, columns, standardCsvPreset)}>標準CSV</button>
-              <button type="button" onClick={() => downloadCsv(records, columns, excelCsvPreset)}>Excel用CSV</button>
-              <button type="button" onClick={() => void downloadXlsx(records, columns)}>XLSX</button>
+              <span>ダウンロード · 編集済み全件 {records.length.toLocaleString()}件</span>
+              <button
+                type="button"
+                title="UTF-8 / BOMなし"
+                onClick={() => downloadCsv(records, columns, utf8CsvPreset)}
+              >
+                UTF-8 CSV
+              </button>
+              <button
+                type="button"
+                title={"UTF-8 BOM付き・CRLFで出力します。\nExcelでの文字化けを抑えますが、先頭ゼロや長い数値、日付などの自動変換は防げません。"}
+                onClick={() => downloadCsv(records, columns, excelOrientedCsvPreset)}
+              >
+                Excel向けCSV
+              </button>
+              <button type="button" onClick={() => void downloadXlsxSafe(records, columns)}>XLSX</button>
             </div>
+            {excelRiskSummary.kinds > 0 && (
+              <div className="csv-excel-risk">
+                <strong>⚠ Excelで値が変わる可能性があります</strong>
+                <p>先頭ゼロ: {excelRiskSummary.leadingZero}件 · 16桁以上の整数: {excelRiskSummary.longInteger}件 · 日付変換候補: {excelRiskSummary.dateLike}件 · 指数表記: {excelRiskSummary.scientific}件</p>
+                <button type="button" onClick={() => void downloadXlsxSafe(records, columns)}>XLSXで保存</button>
+              </div>
+            )}
           </section>
         ) : (
         <details open className="csv-settings-group">
@@ -637,7 +746,7 @@ export function CsvViewerSuite() {
               出力文字コード
               <select value={outputEncoding} onChange={(event) => setOutputEncoding(event.target.value as CsvOutputEncoding)}>
                 <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS（SJIS）</option>
+                <option value="shift_jis">Shift_JIS（encoding-japanese SJIS）</option>
               </select>
             </label>
             <label>
@@ -681,13 +790,34 @@ export function CsvViewerSuite() {
               />
               全フィールドを囲む
             </label>
-            <div className="csv-detection">
-              <strong>DETECTED</strong>
-              <span>{detectedEncoding ? detectedEncoding.toUpperCase() : "貼り付けテキスト"}</span>
-              <span>{parsed.inspection.delimiter === "\t" ? "TAB" : parsed.inspection.delimiter}</span>
-              <span>{parsed.inspection.lineEnding}</span>
-              <span>{fileHasBom || parsed.inspection.hasBom ? "BOMあり" : "BOMなし"}</span>
+            <div className="csv-io-compare">
+              <div>
+                <strong>INPUT</strong>
+                <span>{inputSource === "paste" ? "貼り付けテキスト" : inputSource === "xlsx" ? "XLSX" : "ファイル"}</span>
+                <span>{encodingLabel(detectedEncoding, inputSource)}</span>
+                <span>{parsed.inspection.lineEnding}</span>
+                <span>{delimiterToken(parsed.inspection.delimiter)}</span>
+                <span>{fileHasBom === null ? "BOM 判定対象外" : fileHasBom ? "BOMあり" : "BOMなし"}</span>
+              </div>
+              <div>
+                <strong>OUTPUT</strong>
+                <span>{outputEncoding === "shift_jis" ? "Shift_JIS" : "UTF-8"}</span>
+                <span>{lineEndingToken(lineEnding)}</span>
+                <span>{delimiterToken(",")}</span>
+                <span>{outputEncoding === "utf-8" ? (includeBom ? "BOMあり" : "BOMなし") : "BOMなし"}</span>
+              </div>
             </div>
+            {inputSource === "file" && (
+              <div className="csv-inherit-save">
+                <button type="button" onClick={() => downloadInherited(records, columns)}>
+                  入力形式を引き継いで保存
+                </button>
+                <small>
+                  文字コード・BOM・区切り・改行を入力ファイルから引き継ぎます。再serializeするため quote 配置などは正規化され、元ファイルとbyte一致は保証しません。
+                  {detectedEncoding === "utf-16le" || detectedEncoding === "utf-16be" ? " UTF-16入力はUTF-8として保存します。" : ""}
+                </small>
+              </div>
+            )}
           </fieldset>
         </details>
         )}
@@ -696,14 +826,14 @@ export function CsvViewerSuite() {
         {fullscreenMode === "split" && (
           <section className="csv-fullscreen-input">
             <header><span>INPUT CSV</span><small>{input.length.toLocaleString()} CHARS</small></header>
-            <textarea value={input} onChange={(event) => updateInput(event.target.value)} spellCheck={false} aria-label="全画面CSV入力" />
+            <textarea value={input} onChange={(event) => updateInput(event.target.value, "paste")} spellCheck={false} aria-label="全画面CSV入力" />
           </section>
         )}
         <section className="csv-viewer-output">
           <header>
             <span><FileSpreadsheet size={15} />OUTPUT</span>
             <div>
-              <small>Grid操作 · Raw CSV確認 · ダウンロード</small>
+              <small>Grid操作 · Raw CSV確認 · 全件保存と表示中エクスポートは別ボタン</small>
               {fullscreenMode === "none" ? (
                 <>
                   <button type="button" onClick={() => setFullscreenMode("output")}><Maximize2 size={14} />全画面</button>
@@ -723,12 +853,14 @@ export function CsvViewerSuite() {
           records={records}
           editable
           enableDuplicateValidation
+          columnLabels={columnLabels}
+          exportSplit
           onRecordsChange={setEditedRecords}
-          csvSerializer={(targetRecords, columns, includeHeader) =>
-            serializeOutput(targetRecords, columns, includeHeader)
+          csvSerializer={(targetRecords, targetColumns, includeHeader) =>
+            serializeOutput(targetRecords, targetColumns, includeHeader)
           }
-          rawPreview={(targetRecords, columns) => ({
-            content: serializeOutput(targetRecords, columns),
+          rawPreview={(targetRecords, targetColumns) => ({
+            content: serializeOutput(targetRecords, targetColumns),
             meta: formatCsvOutputMeta({
               encoding: outputEncoding,
               lineEnding,
@@ -736,24 +868,26 @@ export function CsvViewerSuite() {
               escapeMode: outputEscapeMode,
             }),
           })}
+          onDownloadAllCsv={downloadWithCurrentSettings}
           onDownloadCsv={downloadWithCurrentSettings}
-          onDownloadXlsx={(downloadRecords, columns) => void downloadXlsx(downloadRecords, columns)}
+          onDownloadAllXlsx={(downloadRecords, downloadColumns) => void downloadXlsxSafe(downloadRecords, downloadColumns)}
+          onDownloadXlsx={(downloadRecords, downloadColumns) => void downloadXlsxSafe(downloadRecords, downloadColumns)}
           emptyMessage="CSVの行がありません"
           />
         </section>
       </div>
       </div>
-      <ToolStatus error={parsed.error || repairError}>
+      <ToolStatus error={parsed.error || repairError || xlsxError}>
         {parsed.error ? undefined : `${records.length}行を読み込みました。編集内容はブラウザ内だけに保持されます`}
       </ToolStatus>
 
       {pendingLargeFile && (
         <div className="csv-large-file-backdrop" role="presentation">
-          <section className="csv-large-file-dialog" role="dialog" aria-modal="true" aria-labelledby="large-file-title">
+          <section className="csv-large-file-dialog" role="dialog" aria-modal="true" aria-labelledby="large-file-title-beta">
             <FileWarning size={24} />
             <div>
               <span>LARGE FILE</span>
-              <h2 id="large-file-title">大容量ファイルです</h2>
+              <h2 id="large-file-title-beta">大容量ファイルです</h2>
               <p>
                 {pendingLargeFile.name}（{(pendingLargeFile.size / 1024 / 1024).toFixed(1)}MB）を読み込もうとしています。
                 ブラウザに固定上限はありませんが、端末メモリの数倍を使う場合があります。
@@ -773,57 +907,113 @@ export function CsvViewerSuite() {
         </div>
       )}
 
-      <section className="csv-validation" aria-labelledby="csv-validation-title">
+      {sjisDialog && (
+        <div className="csv-large-file-backdrop" role="presentation">
+          <section className="csv-large-file-dialog csv-sjis-dialog" role="dialog" aria-modal="true" aria-labelledby="sjis-unmappable-title">
+            <AlertTriangle size={24} />
+            <div>
+              <span>SHIFT_JIS</span>
+              <h2 id="sjis-unmappable-title">⚠ Shift_JISに変換できない文字が{sjisDialog.unmappable.length}件あります</h2>
+              <ul>
+                {sjisDialog.unmappable.slice(0, 8).map((item, index) => (
+                  <li key={`${item.row}-${item.column}-${item.char}-${index}`}>
+                    {item.row ? `${item.row}行` : "位置不明"}
+                    {item.column ? ` / ${columnLabels[columns[item.column - 1]] ?? `${item.column}列`}` : ""}
+                    <code>{item.char}</code>
+                  </li>
+                ))}
+              </ul>
+              {sjisDialog.unmappable.length > 8 && <small>ほか{sjisDialog.unmappable.length - 8}件</small>}
+              <div>
+                <button type="button" onClick={() => { setShowValidationDetails(true); setSjisDialog(null); }}>該当箇所を見る</button>
+                <button type="button" onClick={() => {
+                  downloadCsv(sjisDialog.records, sjisDialog.columns, utf8CsvPreset);
+                  setSjisDialog(null);
+                }}>UTF-8で保存</button>
+                <button type="button" onClick={() => {
+                  downloadCsv(sjisDialog.records, sjisDialog.columns, {
+                    encoding: "shift_jis",
+                    lineEnding,
+                    includeBom: false,
+                    quoteAll,
+                    quote: outputQuote,
+                    escapeMode: outputEscapeMode,
+                    replaceUnmappable: true,
+                  });
+                  setSjisDialog(null);
+                }}>置換して続行</button>
+                <button type="button" className="primary" onClick={() => setSjisDialog(null)}>キャンセル</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      <section className="csv-validation" aria-labelledby="csv-validation-title-beta">
         <header>
-          <span id="csv-validation-title">
-            {parsed.warnings.length ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+          <span id="csv-validation-title-beta">
+            {uniqueWarnings.length ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
             CSV検証
           </span>
-          <strong>{parsed.warnings.length ? `${parsed.warnings.length}件の注意` : "問題は見つかりませんでした"}</strong>
+          <strong>{uniqueWarnings.length ? `${uniqueWarnings.length}件の注意` : "問題は見つかりませんでした"}</strong>
         </header>
-        {parsed.warnings.length ? (
-          <ul>{parsed.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+        {viewerMode === "simple" ? (
+          <div className="csv-validation-simple">
+            <ul>
+              {validationSummary.map((item) => (
+                <li key={item.label}>{item.ok ? "✓" : "⚠"} {item.label}{item.detail ? ` ${item.detail}` : ""}</li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => setShowValidationDetails((current) => !current)}>
+              {showValidationDetails ? "詳細を閉じる" : "詳細を見る"}
+            </button>
+            {showValidationDetails && uniqueWarnings.length > 0 && (
+              <ul>{uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+            )}
+          </div>
+        ) : uniqueWarnings.length ? (
+          <ul>{uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
         ) : (
-          <p>囲み文字、列数、NUL文字、表計算ソフトの数式として解釈され得る値を確認しました。</p>
+          <p>囲み文字、列数、NUL、改行混在、デコード不能、Excel変換リスク、CSV Injection、Shift_JIS変換不能を確認しました。値は自動修正していません。</p>
         )}
       </section>
 
-      <section className="csv-guide" aria-labelledby="csv-guide-title">
+      <section className="csv-guide" aria-labelledby="csv-guide-title-beta">
         <div className="csv-guide-heading">
           <span>GUIDE / TROUBLESHOOTING</span>
-          <h2 id="csv-guide-title">CSVを安全に扱うための設定ガイド</h2>
-          <p>CSVには単一の完全な仕様がなく、作成元のOS・表計算ソフト・業務システムによって解釈が変わります。</p>
+          <h2 id="csv-guide-title-beta">Betaの安全なCSV取り扱い</h2>
+          <p>このページは安定版と別実装です。CSV内容の自動修正、黙った文字置換、文字コードの断定は行いません。</p>
         </div>
         <div className="csv-guide-grid">
           <article>
             <span>01</span>
-            <h3>文字コードと文字化け</h3>
-            <p>Simpleではファイル読込時にUTF-8／BOM／区切り／改行を自動判定します。詳細な文字コード切替はProで行います。出力のShift_JISはencoding-japaneseのSJIS変換です。貼り付け後の文字列には元の文字コード情報がありません。「縺薙」のようなUTF-8をShift_JISとして読んだ文字化けは可能な範囲で修復し、復元できない箇所は行・列で残します。</p>
+            <h3>文字コード</h3>
+            <p>ファイル読込時のみbyteから判定します。貼り付けテキストに元文字コードとBOMはありません。Shift_JIS出力はencoding-japanese 2.3.0のSJIS変換です。CP932専用エンコーダではありません。変換不能文字は停止します。</p>
           </article>
           <article>
             <span>02</span>
-            <h3>区切り・囲み・改行</h3>
-            <p>カンマのほかタブ、セミコロン、縦棒、スペースを選べます。値に区切り文字や改行を含める場合は囲み文字が必要です。引用符自体は二重化してエスケープします。Windows連携ではCRLF、macOS／LinuxではLFが一般的です。</p>
+            <h3>区切り・改行</h3>
+            <p>Simpleの自動判定はcomma / tab / semicolon / pipeです。quote内の区切りは除外し、列数の安定を見ます。spaceはProで手動指定できます。quoted field内改行は1セルです。混在改行は警告します。</p>
           </article>
           <article>
             <span>03</span>
-            <h3>ヘッダーと読み込み開始行</h3>
-            <p>帳票名や注記が先頭にあるファイルはヘッダー行と読込開始行を指定します。重複ヘッダーはデータ参照が曖昧になるためエラーにし、空ヘッダーはcolumn_Nへ補完します。行ごとの列数差も検証欄に表示します。</p>
+            <h3>ヘッダー</h3>
+            <p>重複・空ヘッダーでも開けます。内部キーはcol_N、表示は元ヘッダー、出力は元ヘッダーを保持します。空列の表示名は(空列N)ですが、未編集なら空のまま出力します。</p>
           </article>
           <article>
             <span>04</span>
-            <h3>Excel互換とBOM</h3>
-            <p>Simpleの「Excel用CSV」はUTF-8 BOMあり・CRLFです。ProではBOMを個別に切り替えられます。古い業務システム向けのShift_JIS出力はProから利用します。機種依存文字や絵文字はSJISに存在せず、出力時に文字参照へ置き換わる可能性があります。</p>
+            <h3>Excel向けCSVとXLSX</h3>
+            <p>Excel向けCSVはUTF-8 BOMあり・CRLFです。文字化け対策であり、先頭ゼロや日付変換は防げません。リスクがある場合はXLSX（文字列保持）を推奨します。XLSX入力は.xlsxのみ。複数シートは選択必須です。</p>
           </article>
           <article>
             <span>05</span>
-            <h3>型・先頭ゼロ・日付</h3>
-            <p>CSV自体に型情報はありません。郵便番号やIDの先頭ゼロ、長い数値、日付は表計算ソフトが自動変換することがあります。このViewerでは文字列として保持しますが、別ソフトへ渡す際はインポート列型を明示してください。</p>
+            <h3>エクスポート対象</h3>
+            <p>Simpleの用途別ボタンは編集済み全件です。Gridの「CSVを保存 N件」も全件、「表示中のN件をエクスポート」はfilter/sort後です。sort/filterは表示中エクスポートにだけ反映します。</p>
           </article>
           <article>
             <span>06</span>
-            <h3>数式注入と大容量ファイル</h3>
-            <p>=、+、-、@で始まる値は表計算ソフトで数式として実行されることがあります。外部由来データは確認してから開いてください。処理はすべてブラウザ内ですが、大容量ファイルは端末メモリを消費します。</p>
+            <h3>入力形式の引き継ぎ</h3>
+            <p>ファイル読込時のみ「入力形式を引き継いで保存」を使えます。再serializeするためquote配置のbyte一致は保証しません。貼り付けには適用しません。</p>
           </article>
         </div>
       </section>

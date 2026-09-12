@@ -30,6 +30,7 @@ type ToolShellProps = {
 const wideWorkspaceSlugs = new Set([
   "data-converter",
   "csv-viewer",
+  "csv-viewer-beta",
   "encoder",
   "jwt",
   "hash",

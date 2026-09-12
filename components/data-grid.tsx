@@ -65,6 +65,10 @@ export type DataGridProps = {
   onRecordsChange?: (records: DataGridRecord[]) => void;
   onDownloadCsv?: (records: DataGridRecord[], columns: string[]) => void;
   onDownloadXlsx?: (records: DataGridRecord[], columns: string[]) => void;
+  onDownloadAllCsv?: (records: DataGridRecord[], columns: string[]) => void;
+  onDownloadAllXlsx?: (records: DataGridRecord[], columns: string[]) => void;
+  columnLabels?: Record<string, string>;
+  exportSplit?: boolean;
   csvSerializer?: (
     records: DataGridRecord[],
     columns: string[],
@@ -84,6 +88,10 @@ export function DataGrid({
   onRecordsChange,
   onDownloadCsv,
   onDownloadXlsx,
+  onDownloadAllCsv,
+  onDownloadAllXlsx,
+  columnLabels,
+  exportSplit = false,
   csvSerializer,
   rawPreview,
   enableDuplicateValidation = false,
@@ -144,6 +152,7 @@ export function DataGrid({
     });
   }, [filters, records, sort, sourceColumns]);
   const visibleRecords = indexedRows.map(({ record }) => record);
+  const labelFor = (column: string) => columnLabels?.[column] ?? column;
   const toCsv = (
     targetRecords: DataGridRecord[],
     targetColumns: string[],
@@ -318,7 +327,7 @@ export function DataGrid({
   const requiredBlankTotal = requiredColumnStats.reduce((total, item) => total + item.blankRows, 0);
   const duplicateSummary = duplicateColumns
     .filter((column) => columns.includes(column))
-    .map((column) => `${column}: ${duplicateValues[column]?.size ?? 0}値`);
+    .map((column) => `${labelFor(column)}: ${duplicateValues[column]?.size ?? 0}値`);
   const validationHasError = uniqueBlankRows > 0 || uniqueDuplicateRows > 0 || requiredBlankTotal > 0;
   const isRequiredColumn = (column: string) => requiredColumns.includes(column) || column === uniqueKey;
   const isBlankValidatedCell = (column: string, value: unknown) =>
@@ -440,14 +449,26 @@ export function DataGrid({
             label="TSVコピー"
           />
           <CopyButton value={selectionValue} label="選択セルをコピー" />
+          {exportSplit && onDownloadAllCsv && (
+            <button type="button" onClick={() => onDownloadAllCsv(records, columns)}>
+              <Download size={14} />CSVを保存 {records.length.toLocaleString()}件
+            </button>
+          )}
           {onDownloadCsv && (
             <button type="button" onClick={() => onDownloadCsv(visibleRecords, columns)}>
-              <Download size={14} />CSV
+              <Download size={14} />
+              {exportSplit ? `表示中の${visibleRecords.length.toLocaleString()}件をエクスポート` : "CSV"}
+            </button>
+          )}
+          {exportSplit && onDownloadAllXlsx && (
+            <button type="button" onClick={() => onDownloadAllXlsx(records, columns)}>
+              <Download size={14} />XLSXを保存 {records.length.toLocaleString()}件
             </button>
           )}
           {onDownloadXlsx && (
             <button type="button" onClick={() => onDownloadXlsx(visibleRecords, columns)}>
-              <Download size={14} />XLSX
+              <Download size={14} />
+              {exportSplit ? `表示中の${visibleRecords.length.toLocaleString()}件をXLSX` : "XLSX"}
             </button>
           )}
         </div>
@@ -468,7 +489,7 @@ export function DataGrid({
                 UNIQUE KEY
                 <select value={uniqueKey} onChange={(event) => setUniqueKey(event.target.value)}>
                   <option value="">指定なし</option>
-                  {columns.map((column) => <option value={column} key={column}>{column}</option>)}
+                  {columns.map((column) => <option value={column} key={column}>{labelFor(column)}</option>)}
                 </select>
               </label>
               <label>
@@ -494,9 +515,9 @@ export function DataGrid({
                   className="data-grid-chip"
                   key={column}
                   onClick={() => toggleRequiredColumn(column)}
-                  title={`${column}を必須列から外す`}
+                  title={`${labelFor(column)}を必須列から外す`}
                 >
-                  {column}
+                  {labelFor(column)}
                   <span aria-hidden="true">×</span>
                 </button>
               ))}
@@ -574,15 +595,15 @@ export function DataGrid({
                       className="data-grid-drag-handle"
                     >
                       <GripVertical size={12} />
-                      <strong>{column}</strong>
+                      <strong>{labelFor(column)}</strong>
                     </span>
                     <span>
                       <CopyButton
                         value={toCsv(visibleRecords, [column], includeHeader)}
-                        label={`${column}列をコピー`}
+                        label={`${labelFor(column)}列をコピー`}
                         iconOnly
                       />
-                      <button type="button" onClick={() => toggleSort(column)} aria-label={`${column}列をソート`}>
+                      <button type="button" onClick={() => toggleSort(column)} aria-label={`${labelFor(column)}列をソート`}>
                         {sort?.column === column
                           ? sort.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                           : <ArrowUpDown size={12} />}
@@ -591,7 +612,7 @@ export function DataGrid({
                         type="button"
                         className={pinnedColumns.includes(column) ? "active" : ""}
                         onClick={(event) => togglePinned(column, event.currentTarget.closest("table"))}
-                        aria-label={`${column}列を${pinnedColumns.includes(column) ? "固定解除" : "左に固定"}`}
+                        aria-label={`${labelFor(column)}列を${pinnedColumns.includes(column) ? "固定解除" : "左に固定"}`}
                         title={pinnedColumns.includes(column) ? "列の固定を解除" : "横スクロール時に左へ固定"}
                       >
                         {pinnedColumns.includes(column) ? <PinOff size={12} /> : <Pin size={12} />}
@@ -602,7 +623,7 @@ export function DataGrid({
                             type="button"
                             className={requiredColumns.includes(column) ? "active" : ""}
                             onClick={() => toggleRequiredColumn(column)}
-                            aria-label={`${column}列を${requiredColumns.includes(column) ? "必須解除" : "必須にする"}`}
+                            aria-label={`${labelFor(column)}列を${requiredColumns.includes(column) ? "必須解除" : "必須にする"}`}
                             title={requiredColumns.includes(column) ? "必須列を解除" : "空欄チェックする必須列"}
                           >
                             <Asterisk size={12} />
@@ -615,7 +636,7 @@ export function DataGrid({
                                 ? current.filter((item) => item !== column)
                                 : [...current, column]
                             )}
-                            aria-label={`${column}列の重複チェック`}
+                            aria-label={`${labelFor(column)}列の重複チェック`}
                             title="この列の重複を色付け"
                           >
                             <ScanSearch size={12} />
@@ -623,7 +644,7 @@ export function DataGrid({
                         </>
                       )}
                       {editable && (
-                        <button type="button" onClick={() => deleteColumn(column)} aria-label={`${column}列を削除`}>
+                        <button type="button" onClick={() => deleteColumn(column)} aria-label={`${labelFor(column)}列を削除`}>
                           <Trash2 size={12} />
                         </button>
                       )}
@@ -635,12 +656,12 @@ export function DataGrid({
                       setFilters((current) => ({ ...current, [column]: event.target.value }))
                     }
                     placeholder="フィルタ"
-                    aria-label={`${column}列をフィルタ`}
+                    aria-label={`${labelFor(column)}列をフィルタ`}
                   />
                   <span
                     className="data-grid-column-resizer"
                     role="separator"
-                    aria-label={`${column}列の幅を変更`}
+                    aria-label={`${labelFor(column)}列の幅を変更`}
                     aria-orientation="vertical"
                     title="ドラッグして列幅を変更・ダブルクリックで初期化"
                     onPointerDown={(event) => startColumnResize(event, column)}
@@ -748,12 +769,17 @@ export function DataGrid({
       {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0) && (
         <div className={`data-grid-duplicate-status ${validationHasError ? "error" : ""}`} role="status">
           <strong>
-            {uniqueKey ? `UNIQUE ${uniqueKey}` : requiredColumns.length ? "REQUIRED" : "DUPLICATE CHECK"}
+            {uniqueKey ? `UNIQUE ${labelFor(uniqueKey)}` : requiredColumns.length ? "REQUIRED" : "DUPLICATE CHECK"}
           </strong>
           <span>
             {[
               uniqueKey ? describeUniqueKeyValidation(uniqueBlankRows, uniqueDuplicateRows) : "",
-              requiredColumnStats.length ? describeRequiredColumnValidation(requiredColumnStats) : "",
+              requiredColumnStats.length
+                ? describeRequiredColumnValidation(requiredColumnStats.map((item) => ({
+                  ...item,
+                  column: labelFor(item.column),
+                })))
+                : "",
               !uniqueKey && !requiredColumnStats.length ? duplicateSummary.join(" · ") : "",
             ].filter(Boolean).join(" · ")}
           </span>

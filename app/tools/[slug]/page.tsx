@@ -6,6 +6,7 @@ import { tools } from "@/lib/tools";
 const slugs: SuiteSlug[] = [
   "data-converter",
   "csv-viewer",
+  "csv-viewer-beta",
   "encoder",
   "jwt",
   "hash",
@@ -31,6 +32,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  if (slug === "csv-viewer-beta") {
+    return {
+      title: "CSV Viewer Beta | DevSmith",
+      description: "Beta版です。CSV解析・変換機能を改善中です。入力データを外部送信せず、ブラウザ内で処理します。",
+    };
+  }
   const tool = tools.find((item) => item.href === `/tools/${slug}`);
   if (!tool) return {};
   return {
