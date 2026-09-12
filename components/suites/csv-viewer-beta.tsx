@@ -191,7 +191,7 @@ function CsvValidationSummary({
             <ul>
               {examples.map((hit) => (
                 <li key={`${hit.kind}-${hit.row}-${hit.column}`}>
-                  {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}
+                  {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}{" "}
                   <code>{hit.value}</code>
                 </li>
               ))}
@@ -911,7 +911,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             {excelRiskSummary.kinds > 0 && (
               <div className="csv-excel-risk">
                 <strong>⚠ Excelで値が変わる可能性があります</strong>
-                <p>{describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値として読むと、先頭ゼロや指数表記が消えることがあります。</p>
+                <p>{describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値や日付として読むと、値が変わることがあります。</p>
                 <button type="button" onClick={() => {
                   const full = recordsForFullExport();
                   void downloadXlsxSafe(full.records, full.columns);
