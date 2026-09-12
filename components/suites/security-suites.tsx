@@ -289,6 +289,7 @@ export function IdGeneratorSuite() {
       title="ID Generator"
       description="暗号学的に安全なUUID v4と、時系列ソート可能なULIDを生成します。"
       functionCount={2}
+      layout="compact"
       tabs={[
         { id: "uuid", label: "UUID v4" },
         { id: "ulid", label: "ULID" },

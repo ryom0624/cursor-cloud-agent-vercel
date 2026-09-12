@@ -21,6 +21,7 @@ type ToolShellProps = {
   title: string;
   description: string;
   functionCount: number;
+  layout?: "fill" | "compact";
   tabs?: { id: string; label: string }[];
   activeTab?: string;
   onTabChange?: (tab: string) => void;
@@ -33,6 +34,7 @@ export function ToolShell({
   title,
   description,
   functionCount,
+  layout = "fill",
   tabs,
   activeTab,
   onTabChange,
@@ -74,7 +76,9 @@ export function ToolShell({
         </div>
       </aside>
 
-      <section className="workbench-main suite-main">
+      <section
+        className={`workbench-main suite-main ${layout === "compact" ? "suite-compact" : ""}`}
+      >
         <ToolBreadcrumb title={title} />
 
         <div className="workbench-heading">

@@ -916,7 +916,7 @@ kbd {
 .workbench-shell {
   min-height: calc(100vh - 65px);
   display: grid;
-  grid-template-columns: 214px 1fr;
+  grid-template-columns: 214px minmax(0, 1fr);
 }
 
 .workbench-sidebar {
@@ -978,7 +978,8 @@ kbd {
 }
 
 .workbench-main {
-  width: min(100%, 1320px);
+  width: 100%;
+  min-width: 0;
   padding: 0 36px 50px;
 }
 
@@ -1158,7 +1159,8 @@ kbd {
 
 .editors {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border: 1px solid var(--ink);
 }
 
@@ -1360,9 +1362,11 @@ kbd {
   font-size: 8px;
 }
 
-/* Production tool suites */
-.suite-main {
-  max-width: 1500px;
+/* Production tool suites.
+   Pane/table tools fill the remaining shell column.
+   Form-centric tools keep a readable max width so controls do not stretch. */
+.workbench-main.suite-compact {
+  max-width: 1120px;
 }
 
 .suite-content {
@@ -1414,6 +1418,7 @@ kbd {
 
 .suite-editors {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border: 1px solid var(--ink);
   background: var(--white);
@@ -3005,7 +3010,7 @@ kbd {
 }
 
 .workbench-shell.sidebar-collapsed {
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 46px minmax(0, 1fr);
 }
 
 .sidebar-collapsed .sidebar-title {
@@ -3144,6 +3149,7 @@ kbd {
   z-index: 200;
   width: 100%;
   max-width: none;
+  min-width: 0;
   overflow: auto;
   padding: 12px 18px;
   background: var(--paper);

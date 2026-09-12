@@ -71,6 +71,7 @@ export function DateTimeSuite() {
       title="Date & Time"
       description="Unix Timestampと、主要タイムゾーンの日時をすぐに変換します。"
       functionCount={2}
+      layout="compact"
       tabs={[
         { id: "timestamp", label: "Unix Timestamp" },
         { id: "timezone", label: "Timezone" },
@@ -263,6 +264,7 @@ export function CronSuite() {
       title="Cron Tools"
       description="Cron式を読み解き、次回実行日時を確認しながら組み立てます。"
       functionCount={2}
+      layout="compact"
       tabs={[
         { id: "parser", label: "Parser" },
         { id: "builder", label: "Builder" },

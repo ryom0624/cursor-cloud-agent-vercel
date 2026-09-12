@@ -206,6 +206,7 @@ export function PasswordSuite() {
       title="Password Generator"
       description="Web Crypto APIを使って、推測されにくいパスワードを生成します。"
       functionCount={1}
+      layout="compact"
     >
       <div className="password-presets" aria-label="生成パターン">
         {passwordPresets.map((item) => (
@@ -450,6 +451,7 @@ export function LoremSuite() {
       title="Lorem Ipsum"
       description="重複しない日本語・英語のダミーテキストを、最大100件まで生成します。"
       functionCount={1}
+      layout="compact"
     >
       <div className="generator-controls lorem-controls">
         <label className="control-label">
