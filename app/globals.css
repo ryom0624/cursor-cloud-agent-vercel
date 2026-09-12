@@ -2672,6 +2672,310 @@ kbd {
   }
 }
 
+/* Reusable data grid and CSV viewer */
+.editor-resizer {
+  position: relative;
+  cursor: col-resize;
+  background: var(--paper-deep);
+  border-right: 1px solid var(--line-dark);
+  border-left: 1px solid var(--line-dark);
+  touch-action: none;
+}
+
+.editor-resizer:hover,
+.editor-resizer:focus {
+  outline: 0;
+  background: #d9d4c8;
+}
+
+.editor-resizer span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 36px;
+  background: var(--ink-soft);
+  transform: translate(-50%, -50%);
+}
+
+.editors.input-expanded .editor-resizer {
+  display: none;
+}
+
+.data-grid-toolbar {
+  min-height: 44px;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+}
+
+.data-grid-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.data-grid-toolbar > div:first-child {
+  margin-right: auto;
+}
+
+.data-grid-toolbar label {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-size: 10px;
+}
+
+.data-grid-toolbar label input {
+  margin: 0;
+}
+
+.data-grid-drag-handle {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: grab;
+}
+
+.data-grid-drag-handle:active {
+  cursor: grabbing;
+}
+
+.json-grid-scroll thead th.dragging {
+  color: var(--rust-dark);
+  background: #eadfd5;
+}
+
+.json-grid-scroll td.selected {
+  position: relative;
+  color: var(--ink);
+  background: #e4e9df !important;
+  box-shadow: inset 0 0 0 1px var(--moss);
+}
+
+.json-grid-scroll td[contenteditable="true"]:focus {
+  overflow: visible;
+  outline: 2px solid var(--rust);
+  background: var(--white) !important;
+  white-space: normal;
+}
+
+.json-grid-scroll .row-number {
+  width: 58px;
+  min-width: 58px;
+  padding: 0 4px;
+}
+
+.json-grid-scroll tbody .row-number {
+  display: table-cell;
+  white-space: nowrap;
+}
+
+.json-grid-scroll tbody .row-number button,
+.json-grid-scroll tbody .row-number > span {
+  display: inline-grid;
+  vertical-align: middle;
+}
+
+.json-grid-scroll tbody .row-number button {
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  color: var(--ink-soft);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.json-grid-scroll tbody .row-number > span {
+  width: 22px;
+  place-items: center;
+}
+
+.json-grid-scroll thead .row-number > button {
+  width: 100%;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.data-grid-selection-status {
+  min-height: 30px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 9px;
+  color: var(--ink-soft);
+  border-top: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.data-grid-column-editor {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line-dark);
+  background: #f3f0e8;
+}
+
+.data-grid-column-editor label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.data-grid-column-editor input {
+  height: 29px;
+  padding: 0 8px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.data-grid-column-editor button {
+  min-height: 29px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  color: var(--white);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.data-grid-column-editor button:disabled {
+  opacity: 0.4;
+}
+
+.data-grid-column-editor small {
+  margin-left: auto;
+  color: var(--ink-soft);
+}
+
+.csv-viewer-input,
+.csv-viewer-output {
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.csv-viewer-input {
+  margin-bottom: 15px;
+}
+
+.csv-viewer-input > header,
+.csv-viewer-output > header {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px 0 13px;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-viewer-input > header > div,
+.csv-viewer-output > header > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-viewer-input label,
+.csv-viewer-input button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.csv-viewer-input label input {
+  display: none;
+}
+
+.csv-viewer-input textarea {
+  width: 100%;
+  min-height: 180px;
+  display: block;
+  resize: vertical;
+  padding: 13px;
+  color: var(--ink);
+  border: 0;
+  outline: 0;
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-viewer-output .json-grid-panel {
+  height: 460px;
+}
+
+@media (max-width: 760px) {
+  .editors {
+    grid-template-columns: 1fr !important;
+  }
+
+  .editor-resizer {
+    display: none;
+  }
+
+  .editor-pane.output-pane {
+    border-top: 1px solid var(--ink);
+  }
+
+  .data-grid-toolbar,
+  .data-grid-toolbar > div,
+  .data-grid-column-editor,
+  .csv-viewer-input > header,
+  .csv-viewer-output > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .data-grid-toolbar > div:first-child {
+    margin-right: 0;
+  }
+
+  .data-grid-column-editor small {
+    margin-left: 0;
+  }
+
+  .data-grid-selection-status {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-block: 6px;
+  }
+}
+
 /* Shared workspace controls */
 .sidebar-title button {
   width: 28px;

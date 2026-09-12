@@ -14,6 +14,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import Link from "next/link";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
@@ -108,6 +109,7 @@ export function JsonWorkbench() {
   const [indent, setIndent] = useState(2);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [splitPercent, setSplitPercent] = useState(42);
 
   const parsed = useMemo(() => {
     try {
@@ -172,6 +174,22 @@ export function JsonWorkbench() {
     anchor.download = "devsmith-output.json";
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    const bounds = container.getBoundingClientRect();
+    const move = (pointerEvent: PointerEvent) => {
+      const next = ((pointerEvent.clientX - bounds.left) / bounds.width) * 100;
+      setSplitPercent(Math.max(25, Math.min(75, next)));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
   };
 
   return (
@@ -278,7 +296,14 @@ export function JsonWorkbench() {
           </div>
         </div>
 
-        <div className={`editors ${inputExpanded ? "input-expanded" : ""} ${mode === "grid" ? "grid-mode" : ""}`}>
+        <div
+          className={`editors ${inputExpanded ? "input-expanded" : ""} ${mode === "grid" ? "grid-mode" : ""}`}
+          style={{
+            gridTemplateColumns: inputExpanded
+              ? "1fr"
+              : `minmax(220px, ${splitPercent}fr) 7px minmax(0, ${100 - splitPercent}fr)`,
+          }}
+        >
           <div className="editor-pane input-pane">
             <div className="pane-heading">
               <span>INPUT</span>
@@ -306,6 +331,23 @@ export function JsonWorkbench() {
                 aria-label="JSON入力"
               />
             </div>
+          </div>
+          <div
+            className="editor-resizer"
+            role="separator"
+            aria-label="入力と出力の幅を変更"
+            aria-orientation="vertical"
+            aria-valuemin={25}
+            aria-valuemax={75}
+            aria-valuenow={Math.round(splitPercent)}
+            tabIndex={inputExpanded ? -1 : 0}
+            onPointerDown={startResize}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") setSplitPercent((current) => Math.max(25, current - 5));
+              if (event.key === "ArrowRight") setSplitPercent((current) => Math.min(75, current + 5));
+            }}
+          >
+            <span />
           </div>
           <div className="editor-pane output-pane">
             <div className="pane-heading">
