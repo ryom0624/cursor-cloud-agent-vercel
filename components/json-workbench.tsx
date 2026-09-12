@@ -221,7 +221,9 @@ export function JsonWorkbench() {
         </div>
       </aside>
 
-      <section className={`workbench-main ${fullscreen ? "json-fullscreen" : ""}`}>
+      <section
+        className={`workbench-main layout-wide ${fullscreen ? "json-fullscreen" : ""}`}
+      >
         <ToolBreadcrumb title="JSON Tools" />
 
         <div className="workbench-heading">
