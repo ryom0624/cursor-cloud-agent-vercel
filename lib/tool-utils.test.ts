@@ -12,6 +12,13 @@ import {
   parseCsv,
   convertCase,
 } from "./tool-utils";
+import {
+  decodeCsvBytes,
+  encodeCsvText,
+  inspectCsv,
+  repairUtf8ReadAsShiftJis,
+  serializeCsv,
+} from "./csv-utils";
 
 describe("CSV utilities", () => {
   it("parses quoted fields and line breaks", () => {
@@ -27,6 +34,36 @@ describe("CSV utilities", () => {
     expect(JSON.parse(csvToJson(csv))).toEqual([
       { name: "DevSmith", count: "24" },
     ]);
+  });
+
+  it("detects delimiters, line endings, BOM, and uneven rows", () => {
+    const inspection = inspectCsv("\uFEFFid;name\r\n1;DevSmith\r\n2");
+    expect(inspection.delimiter).toBe(";");
+    expect(inspection.lineEnding).toBe("CRLF");
+    expect(inspection.hasBom).toBe(true);
+    expect(inspection.warnings[0]).toContain("列数");
+  });
+
+  it("encodes and decodes Shift_JIS files", () => {
+    const source = "id,name\r\n1,開発";
+    const bytes = encodeCsvText(source, "shift_jis", false);
+    expect(decodeCsvBytes(bytes, "auto")).toMatchObject({
+      text: source,
+      encoding: "shift_jis",
+      hasBom: false,
+    });
+  });
+
+  it("repairs reversible UTF-8 read as Shift_JIS mojibake", () => {
+    expect(repairUtf8ReadAsShiftJis("縺薙ｓ縺ｫ縺｡縺ｯ")).toBe("こんにちは");
+    expect(() => repairUtf8ReadAsShiftJis("壊れた�文字")).toThrow("復元できません");
+  });
+
+  it("serializes configurable CSV output", () => {
+    expect(serializeCsv([{ id: "01", note: "a,b" }], ["id", "note"], {
+      lineEnding: "\r\n",
+      quoteAll: true,
+    })).toBe('"id","note"\r\n"01","a,b"');
   });
 });
 

@@ -10,6 +10,7 @@ import {
   TableProperties,
   Trash2,
 } from "lucide-react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 
@@ -69,6 +70,7 @@ export function DataGrid({
   const [selectionEnd, setSelectionEnd] = useState<CellPosition | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [newColumn, setNewColumn] = useState("new_column");
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const dragColumnRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -132,6 +134,28 @@ export function DataGrid({
       ordered.splice(to, 0, source);
       return ordered;
     });
+  };
+
+  const startColumnResize = (
+    event: ReactPointerEvent<HTMLSpanElement>,
+    column: string,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const header = event.currentTarget.closest("th");
+    if (!header) return;
+    const startX = event.clientX;
+    const startWidth = header.getBoundingClientRect().width;
+    const move = (pointerEvent: PointerEvent) => {
+      const width = Math.round(Math.max(96, Math.min(640, startWidth + pointerEvent.clientX - startX)));
+      setColumnWidths((current) => ({ ...current, [column]: width }));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
   };
 
   const bounds = selectionStart && selectionEnd
@@ -239,7 +263,16 @@ export function DataGrid({
         </div>
       )}
       <div className="json-grid-scroll" onMouseLeave={() => setSelecting(false)}>
-        <table>
+        <table className={Object.keys(columnWidths).length ? "has-custom-widths" : ""}>
+          <colgroup>
+            <col className="row-number-column" />
+            {columns.map((column) => (
+              <col
+                key={column}
+                style={columnWidths[column] ? { width: columnWidths[column] } : undefined}
+              />
+            ))}
+          </colgroup>
           <thead>
             <tr>
               <th className="row-number">
@@ -255,6 +288,13 @@ export function DataGrid({
                   key={column}
                   data-grid-column={column}
                   className={draggedColumn === column ? "dragging" : ""}
+                  style={columnWidths[column]
+                    ? {
+                        width: columnWidths[column],
+                        minWidth: columnWidths[column],
+                        maxWidth: columnWidths[column],
+                      }
+                    : undefined}
                 >
                   <div
                     onPointerDown={(event) => {
@@ -312,6 +352,21 @@ export function DataGrid({
                     placeholder="フィルタ"
                     aria-label={`${column}列をフィルタ`}
                   />
+                  <span
+                    className="data-grid-column-resizer"
+                    role="separator"
+                    aria-label={`${column}列の幅を変更`}
+                    aria-orientation="vertical"
+                    title="ドラッグして列幅を変更・ダブルクリックで初期化"
+                    onPointerDown={(event) => startColumnResize(event, column)}
+                    onDoubleClick={() =>
+                      setColumnWidths((current) => {
+                        const next = { ...current };
+                        delete next[column];
+                        return next;
+                      })
+                    }
+                  />
                 </th>
               ))}
             </tr>
@@ -331,6 +386,13 @@ export function DataGrid({
                   <td
                     key={column}
                     className={isSelected(rowIndex, columnIndex) ? "selected" : ""}
+                    style={columnWidths[column]
+                      ? {
+                          width: columnWidths[column],
+                          minWidth: columnWidths[column],
+                          maxWidth: columnWidths[column],
+                        }
+                      : undefined}
                     title={displayValue(record[column])}
                     onMouseDown={(event) => {
                       event.preventDefault();

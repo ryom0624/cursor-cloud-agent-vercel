@@ -916,7 +916,7 @@ kbd {
 .workbench-shell {
   min-height: calc(100vh - 65px);
   display: grid;
-  grid-template-columns: 214px 1fr;
+  grid-template-columns: 214px minmax(0, 1fr);
 }
 
 .workbench-sidebar {
@@ -978,7 +978,10 @@ kbd {
 }
 
 .workbench-main {
-  width: min(100%, 1320px);
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
   padding: 0 36px 50px;
 }
 
@@ -1362,7 +1365,11 @@ kbd {
 
 /* Production tool suites */
 .suite-main {
-  max-width: 1500px;
+  max-width: none;
+}
+
+.workbench-main.layout-form {
+  width: min(100%, 1120px);
 }
 
 .suite-content {
@@ -2754,6 +2761,45 @@ kbd {
   cursor: grabbing;
 }
 
+.json-grid-scroll thead th {
+  position: relative;
+}
+
+.data-grid-column-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  z-index: 4;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.data-grid-column-resizer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background: transparent;
+  content: "";
+}
+
+.data-grid-column-resizer:hover::after,
+.data-grid-column-resizer:focus::after {
+  background: var(--rust);
+}
+
+.json-grid-scroll table.has-custom-widths {
+  width: max-content;
+}
+
+.json-grid-scroll table.has-custom-widths th,
+.json-grid-scroll table.has-custom-widths td {
+  max-width: none;
+}
+
 .json-grid-scroll thead th.dragging {
   color: var(--rust-dark);
   background: #eadfd5;
@@ -2881,17 +2927,24 @@ kbd {
 }
 
 .csv-viewer-input,
-.csv-viewer-output {
+.csv-viewer-output,
+.csv-settings,
+.csv-validation {
   border: 1px solid var(--ink);
   background: var(--white);
 }
 
-.csv-viewer-input {
+.csv-settings,
+.csv-viewer-input,
+.csv-viewer-output,
+.csv-validation {
   margin-bottom: 15px;
 }
 
+.csv-settings > header,
 .csv-viewer-input > header,
-.csv-viewer-output > header {
+.csv-viewer-output > header,
+.csv-validation > header {
   min-height: 38px;
   display: flex;
   align-items: center;
@@ -2904,11 +2957,99 @@ kbd {
   font-size: 10px;
 }
 
+.csv-settings > header > span,
+.csv-validation > header > span,
 .csv-viewer-input > header > div,
 .csv-viewer-output > header > span {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.csv-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+}
+
+.csv-settings fieldset {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+}
+
+.csv-settings fieldset + fieldset {
+  border-left: 1px solid var(--line-dark);
+}
+
+.csv-settings legend {
+  padding: 0 4px;
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.csv-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-settings select,
+.csv-settings input[type="number"] {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.csv-settings .csv-check {
+  min-height: 34px;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+
+.csv-settings .csv-check input {
+  margin: 0;
+}
+
+.csv-detection {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-detection strong,
+.csv-detection span {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--line-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-detection strong {
+  color: var(--white);
+  border-color: var(--ink);
+  background: var(--ink);
 }
 
 .csv-viewer-input label,
@@ -2948,6 +3089,94 @@ kbd {
   height: 460px;
 }
 
+.csv-validation {
+  color: var(--ink);
+}
+
+.csv-validation > header {
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.csv-validation > header strong {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-validation p,
+.csv-validation ul {
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-validation ul {
+  padding-left: 34px;
+}
+
+.csv-guide {
+  margin-top: 34px;
+  padding-top: 25px;
+  border-top: 1px solid var(--ink);
+}
+
+.csv-guide-heading {
+  max-width: 760px;
+  margin-bottom: 18px;
+}
+
+.csv-guide-heading > span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.csv-guide-heading h2 {
+  margin: 8px 0;
+  font-size: 22px;
+}
+
+.csv-guide-heading p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.csv-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--line-dark);
+  border-left: 1px solid var(--line-dark);
+}
+
+.csv-guide article {
+  min-width: 0;
+  padding: 18px;
+  border-right: 1px solid var(--line-dark);
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.csv-guide article > span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-guide h3 {
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.csv-guide article p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.85;
+}
+
 @media (max-width: 760px) {
   .editors {
     grid-template-columns: 1fr !important;
@@ -2983,6 +3212,24 @@ kbd {
     flex-direction: column;
     padding-block: 6px;
   }
+
+  .csv-settings-grid,
+  .csv-guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-settings fieldset {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-settings fieldset + fieldset {
+    border-top: 1px solid var(--line-dark);
+    border-left: 0;
+  }
+
+  .csv-guide-heading h2 {
+    font-size: 18px;
+  }
 }
 
 /* Shared workspace controls */
@@ -3005,7 +3252,7 @@ kbd {
 }
 
 .workbench-shell.sidebar-collapsed {
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 46px minmax(0, 1fr);
 }
 
 .sidebar-collapsed .sidebar-title {

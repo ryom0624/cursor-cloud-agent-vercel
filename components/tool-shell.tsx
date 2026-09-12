@@ -27,6 +27,17 @@ type ToolShellProps = {
   children: ReactNode;
 };
 
+const wideWorkspaceSlugs = new Set([
+  "data-converter",
+  "csv-viewer",
+  "encoder",
+  "jwt",
+  "hash",
+  "regex",
+  "diff",
+  "text",
+]);
+
 export function ToolShell({
   slug,
   category,
@@ -39,6 +50,7 @@ export function ToolShell({
   children,
 }: ToolShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const layout = wideWorkspaceSlugs.has(slug) ? "wide" : "form";
 
   return (
     <main className={`workbench-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
@@ -74,7 +86,7 @@ export function ToolShell({
         </div>
       </aside>
 
-      <section className="workbench-main suite-main">
+      <section className={`workbench-main suite-main layout-${layout}`}>
         <ToolBreadcrumb title={title} />
 
         <div className="workbench-heading">
