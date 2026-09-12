@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { JsonGrid } from "@/components/json-grid";
-import { tools } from "@/lib/tools";
+import { pasteAnythingStorageKeys, tools } from "@/lib/tools";
 
 const sample = `[
   {
@@ -110,6 +110,14 @@ export function JsonWorkbench() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [splitPercent, setSplitPercent] = useState(42);
+
+  useEffect(() => {
+    if (sessionStorage.getItem(pasteAnythingStorageKeys.type) !== "json") return;
+    const storedInput = sessionStorage.getItem(pasteAnythingStorageKeys.value);
+    if (storedInput !== null) setInput(storedInput);
+    sessionStorage.removeItem(pasteAnythingStorageKeys.value);
+    sessionStorage.removeItem(pasteAnythingStorageKeys.type);
+  }, []);
 
   const parsed = useMemo(() => {
     try {

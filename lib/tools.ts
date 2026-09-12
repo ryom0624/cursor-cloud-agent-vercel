@@ -9,15 +9,6 @@ export type Tool = {
   featured?: boolean;
 };
 
-export const categories = [
-  { name: "すべて", count: 14 },
-  { name: "データ", count: 3 },
-  { name: "エンコード", count: 3 },
-  { name: "テキスト", count: 4 },
-  { name: "日時", count: 2 },
-  { name: "生成", count: 2 },
-];
-
 export const tools: Tool[] = [
   {
     name: "JSON Tools",
@@ -151,3 +142,23 @@ export const tools: Tool[] = [
     index: "14",
   },
 ];
+
+export const toolCount = tools.length;
+
+export const functionCount = tools.reduce(
+  (total, tool) => total + tool.functions,
+  0,
+);
+
+export const categories = [
+  { name: "すべて", count: toolCount },
+  ...Array.from(new Set(tools.map((tool) => tool.category))).map((name) => ({
+    name,
+    count: tools.filter((tool) => tool.category === name).length,
+  })),
+];
+
+export const pasteAnythingStorageKeys = {
+  value: "devsmith:paste-anything:value",
+  type: "devsmith:paste-anything:type",
+} as const;

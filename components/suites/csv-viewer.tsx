@@ -3,13 +3,20 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  Columns2,
   FileCog,
   FileSpreadsheet,
+  FileWarning,
+  LoaderCircle,
+  Maximize2,
+  Minimize2,
   RotateCcw,
+  Sheet,
   Upload,
   Wrench,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BoundedNumberInput } from "@/components/bounded-number-input";
 import { DataGrid, type DataGridRecord } from "@/components/data-grid";
 import { ToolShell, ToolStatus } from "@/components/tool-shell";
@@ -47,6 +54,36 @@ const csvViewerComplexSample = `id,name,note,address,amount,formula
 2行目","大阪府大阪市",0,"+cmd"
 3,引用符,"彼は""確認済み""と回答","福岡県福岡市",00125,""
 4,空データ,,"  前後に空白  ",-450,"@external"`;
+
+const LARGE_FILE_WARNING_BYTES = 10 * 1024 * 1024;
+const PREVIEW_ROW_LIMIT = 10_000;
+
+type ExcelSheet = { name: string; csv: string };
+
+function excelValueToText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value !== "object") return String(value);
+  if ("result" in value) return excelValueToText((value as { result?: unknown }).result);
+  if ("text" in value) return String((value as { text?: unknown }).text ?? "");
+  if ("richText" in value && Array.isArray((value as { richText?: unknown[] }).richText)) {
+    return (value as { richText: { text?: string }[] }).richText.map((part) => part.text ?? "").join("");
+  }
+  return JSON.stringify(value);
+}
+
+function rowsToCsv(rows: string[][]): string {
+  if (!rows.length) return "";
+  const width = Math.max(...rows.map((row) => row.length));
+  const columns = Array.from({ length: width }, (_, index) => `column_${index}`);
+  const records = rows.map((row) => Object.fromEntries(columns.map((column, index) => [column, row[index] ?? ""])));
+  return serializeCsv(records, columns, { includeHeader: false });
+}
+
+function previewCsv(text: string, settings: ViewerSettings): string {
+  const rows = inspectCsv(text, settings).rows.slice(0, PREVIEW_ROW_LIMIT + 1);
+  return rowsToCsv(rows);
+}
 
 type ViewerSettings = {
   delimiter: CsvDelimiterSetting;
@@ -150,6 +187,13 @@ export function CsvViewerSuite() {
   const [outputQuote, setOutputQuote] = useState<CsvQuote>('"');
   const [outputEscapeMode, setOutputEscapeMode] = useState<CsvEscapeMode>("double");
   const [repairError, setRepairError] = useState("");
+  const [repairMessage, setRepairMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pendingLargeFile, setPendingLargeFile] = useState<File | null>(null);
+  const [excelSheets, setExcelSheets] = useState<ExcelSheet[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState("");
+  const [fullscreenMode, setFullscreenMode] = useState<"none" | "output" | "split">("none");
+  const [previewNotice, setPreviewNotice] = useState("");
   const fileBytesRef = useRef<Uint8Array | null>(null);
   const parsed = useMemo(() => parseRecords(input, settings), [input, settings]);
   const records = editedRecords ?? parsed.records;
@@ -170,7 +214,27 @@ export function CsvViewerSuite() {
     setInput(value);
     setEditedRecords(null);
     setRepairError("");
+    setRepairMessage("");
   };
+
+  useEffect(() => {
+    const storedValue = sessionStorage.getItem("devsmith:paste-anything:value");
+    const storedType = sessionStorage.getItem("devsmith:paste-anything:type");
+    if (storedValue && (storedType === "csv" || storedType === "tsv")) {
+      updateInput(storedValue);
+      if (storedType === "tsv") setSettings((current) => ({ ...current, delimiter: "\t" }));
+      sessionStorage.removeItem("devsmith:paste-anything:value");
+      sessionStorage.removeItem("devsmith:paste-anything:type");
+    }
+  }, []);
+
+  useEffect(() => {
+    const closeFullscreen = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreenMode("none");
+    };
+    window.addEventListener("keydown", closeFullscreen);
+    return () => window.removeEventListener("keydown", closeFullscreen);
+  }, []);
 
   const decodeFile = (bytes: Uint8Array, encoding: CsvFileEncoding) => {
     const decoded = decodeCsvBytes(bytes, encoding);
@@ -187,6 +251,7 @@ export function CsvViewerSuite() {
   const repairMojibake = () => {
     try {
       updateInput(repairUtf8ReadAsShiftJis(input));
+      setRepairMessage("UTF-8をShift_JISとして誤読した可逆な文字化けを修復しました。");
     } catch (error) {
       setRepairError(error instanceof Error ? error.message : "文字化けを修復できませんでした。");
     }
@@ -196,7 +261,81 @@ export function CsvViewerSuite() {
     fileBytesRef.current = null;
     setDetectedEncoding(null);
     setFileHasBom(false);
+    setExcelSheets([]);
+    setSelectedSheet("");
+    setPreviewNotice("");
     updateInput(value);
+  };
+
+  const loadExcelFile = async (file: File, previewOnly: boolean) => {
+    const module = await import("exceljs");
+    const ExcelJS = module.default;
+    const workbook = new ExcelJS.Workbook();
+    const buffer = await file.arrayBuffer();
+    await workbook.xlsx.load(buffer as unknown as Buffer);
+    const sheets = workbook.worksheets.map((worksheet) => {
+      const rows: string[][] = [];
+      worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+        if (previewOnly && rowNumber > PREVIEW_ROW_LIMIT + 1) return;
+        const values = Array.isArray(row.values) ? row.values.slice(1) : [];
+        rows.push(values.map(excelValueToText));
+      });
+      return { name: worksheet.name, csv: rowsToCsv(rows) };
+    });
+    if (!sheets.length) throw new Error("読み込めるシートがありません。");
+    setExcelSheets(sheets);
+    setSelectedSheet(sheets[0].name);
+    setSettings((current) => ({ ...current, delimiter: ",", quote: '"', escapeMode: "double" }));
+    updateInput(sheets[0].csv);
+    fileBytesRef.current = null;
+    setDetectedEncoding(null);
+    setFileHasBom(false);
+  };
+
+  const processFile = async (file: File, previewOnly = false) => {
+    setLoading(true);
+    setRepairError("");
+    setPreviewNotice("");
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    try {
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+      if (["xlsm", "xlsb", "xlam", "xls"].includes(extension)) {
+        throw new Error("マクロ・バイナリ形式は安全のため読み込めません。.xlsxへ保存してから開いてください。");
+      }
+      if (extension === "xlsx") {
+        await loadExcelFile(file, previewOnly);
+        if (previewOnly) setPreviewNotice(`大容量Excelの各シート先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行だけを表示しています。`);
+        return;
+      }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      fileBytesRef.current = bytes;
+      const decoded = decodeCsvBytes(bytes, fileEncoding);
+      const text = previewOnly ? previewCsv(decoded.text, settings) : decoded.text;
+      updateInput(text);
+      setDetectedEncoding(decoded.encoding);
+      setFileHasBom(decoded.hasBom);
+      setExcelSheets([]);
+      setSelectedSheet("");
+      if (previewOnly) setPreviewNotice(`大容量ファイルの先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行だけを表示しています。`);
+    } catch (error) {
+      setRepairError(error instanceof Error ? error.message : "ファイルを読み込めませんでした。");
+    } finally {
+      setLoading(false);
+      setPendingLargeFile(null);
+    }
+  };
+
+  const selectFile = (file: File) => {
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (["xlsm", "xlsb", "xlam", "xls"].includes(extension)) {
+      setRepairError("マクロ・バイナリ形式は安全のため読み込めません。.xlsxへ保存してから開いてください。");
+      return;
+    }
+    if (file.size >= LARGE_FILE_WARNING_BYTES) {
+      setPendingLargeFile(file);
+      return;
+    }
+    void processFile(file);
   };
 
   return (
@@ -213,8 +352,9 @@ export function CsvViewerSuite() {
           <small>ファイル読込時に文字コードを判定し、解析条件と出力形式を個別に指定できます。</small>
         </header>
         <div className="csv-settings-grid">
-          <fieldset>
-            <legend>INPUT</legend>
+          <details open className="csv-settings-group">
+            <summary><span>INPUT SETTINGS</span><ChevronDown size={15} /></summary>
+            <fieldset>
             <label>
               ファイル文字コード
               <select value={fileEncoding} onChange={(event) => changeFileEncoding(event.target.value as CsvFileEncoding)}>
@@ -298,9 +438,11 @@ export function CsvViewerSuite() {
               />
               空行を読み飛ばす
             </label>
-          </fieldset>
-          <fieldset>
-            <legend>OUTPUT / DOWNLOAD</legend>
+            </fieldset>
+          </details>
+          <details open className="csv-settings-group">
+            <summary><span>OUTPUT / DOWNLOAD SETTINGS</span><ChevronDown size={15} /></summary>
+            <fieldset>
             <label>
               出力文字コード
               <select value={outputEncoding} onChange={(event) => setOutputEncoding(event.target.value as CsvOutputEncoding)}>
@@ -356,7 +498,8 @@ export function CsvViewerSuite() {
               <span>{parsed.inspection.lineEnding}</span>
               <span>{fileHasBom || parsed.inspection.hasBom ? "BOMあり" : "BOMなし"}</span>
             </div>
-          </fieldset>
+            </fieldset>
+          </details>
         </div>
       </section>
 
@@ -366,17 +509,14 @@ export function CsvViewerSuite() {
           <div>
             <label>
               <Upload size={14} />
-              CSVファイルを開く
+              CSV / Excelを開く
               <input
                 type="file"
-                accept=".csv,text/csv"
-                onChange={async (event) => {
+                accept=".csv,.tsv,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) {
-                    const bytes = new Uint8Array(await file.arrayBuffer());
-                    fileBytesRef.current = bytes;
-                    decodeFile(bytes, fileEncoding);
-                  }
+                  if (file) selectFile(file);
+                  event.currentTarget.value = "";
                 }}
               />
             </label>
@@ -394,6 +534,32 @@ export function CsvViewerSuite() {
             </button>
           </div>
         </header>
+        {excelSheets.length > 1 && (
+          <div className="csv-sheet-selector">
+            <Sheet size={15} />
+            <label>
+              シート
+              <select
+                value={selectedSheet}
+                onChange={(event) => {
+                  const sheet = excelSheets.find((item) => item.name === event.target.value);
+                  if (!sheet) return;
+                  setSelectedSheet(sheet.name);
+                  updateInput(sheet.csv);
+                }}
+              >
+                {excelSheets.map((sheet) => <option value={sheet.name} key={sheet.name}>{sheet.name}</option>)}
+              </select>
+            </label>
+            <small>.xlsxのみ対応。マクロ形式は読み込みません。</small>
+          </div>
+        )}
+        {loading && (
+          <div className="csv-loading" role="status">
+            <LoaderCircle size={18} />
+            ファイルを読み込んでいます…
+          </div>
+        )}
         <textarea
           value={input}
           onChange={(event) => updateInput(event.target.value)}
@@ -401,16 +567,40 @@ export function CsvViewerSuite() {
           placeholder="ヘッダーを含むCSVを貼り付け"
           aria-label="CSV入力"
         />
+        {(repairMessage || previewNotice) && <div className="csv-input-notice">{repairMessage || previewNotice}</div>}
       </section>
 
-      <section className="csv-viewer-output">
-        <header>
-          <span><FileSpreadsheet size={15} />OUTPUT</span>
-          <small>Grid操作 · Raw CSV確認 · ダウンロード</small>
-        </header>
-        <DataGrid
+      <div className={`csv-output-stage ${fullscreenMode !== "none" ? "fullscreen" : ""} ${fullscreenMode === "split" ? "split" : ""}`}>
+        {fullscreenMode === "split" && (
+          <section className="csv-fullscreen-input">
+            <header><span>INPUT CSV</span><small>{input.length.toLocaleString()} CHARS</small></header>
+            <textarea value={input} onChange={(event) => updateInput(event.target.value)} spellCheck={false} aria-label="全画面CSV入力" />
+          </section>
+        )}
+        <section className="csv-viewer-output">
+          <header>
+            <span><FileSpreadsheet size={15} />OUTPUT</span>
+            <div>
+              <small>Grid操作 · Raw CSV確認 · ダウンロード</small>
+              {fullscreenMode === "none" ? (
+                <>
+                  <button type="button" onClick={() => setFullscreenMode("output")}><Maximize2 size={14} />全画面</button>
+                  <button type="button" onClick={() => setFullscreenMode("split")}><Columns2 size={14} />左右で全画面</button>
+                </>
+              ) : (
+                <>
+                  <button type="button" onClick={() => setFullscreenMode(fullscreenMode === "split" ? "output" : "split")}>
+                    <Columns2 size={14} />{fullscreenMode === "split" ? "出力のみ" : "左右ペイン"}
+                  </button>
+                  <button type="button" onClick={() => setFullscreenMode("none")}><Minimize2 size={14} />縮小 <kbd>Esc</kbd></button>
+                </>
+              )}
+            </div>
+          </header>
+          <DataGrid
           records={records}
           editable
+          enableDuplicateValidation
           onRecordsChange={setEditedRecords}
           csvSerializer={(targetRecords, columns, includeHeader) =>
             serializeOutput(targetRecords, columns, includeHeader)
@@ -430,11 +620,38 @@ export function CsvViewerSuite() {
             })
           }
           emptyMessage="CSVの行がありません"
-        />
-      </section>
+          />
+        </section>
+      </div>
       <ToolStatus error={parsed.error || repairError}>
         {parsed.error ? undefined : `${records.length}行を読み込みました。編集内容はブラウザ内だけに保持されます`}
       </ToolStatus>
+
+      {pendingLargeFile && (
+        <div className="csv-large-file-backdrop" role="presentation">
+          <section className="csv-large-file-dialog" role="dialog" aria-modal="true" aria-labelledby="large-file-title">
+            <FileWarning size={24} />
+            <div>
+              <span>LARGE FILE</span>
+              <h2 id="large-file-title">大容量ファイルです</h2>
+              <p>
+                {pendingLargeFile.name}（{(pendingLargeFile.size / 1024 / 1024).toFixed(1)}MB）を読み込もうとしています。
+                ブラウザに固定上限はありませんが、端末メモリの数倍を使う場合があります。
+              </p>
+              <small>10MB以上で注意を表示しています。50MB以上では先頭プレビューを推奨します。</small>
+              <div>
+                <button type="button" onClick={() => setPendingLargeFile(null)}>キャンセル</button>
+                <button type="button" onClick={() => void processFile(pendingLargeFile, true)}>
+                  先頭{PREVIEW_ROW_LIMIT.toLocaleString()}行
+                </button>
+                <button type="button" className="primary" onClick={() => void processFile(pendingLargeFile)}>
+                  全件読み込む
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       <section className="csv-validation" aria-labelledby="csv-validation-title">
         <header>

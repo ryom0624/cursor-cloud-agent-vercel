@@ -6,7 +6,11 @@ import {
   ArrowUpDown,
   Download,
   GripVertical,
+  KeyRound,
+  Pin,
+  PinOff,
   Plus,
+  ScanSearch,
   TableProperties,
   Trash2,
 } from "lucide-react";
@@ -61,6 +65,7 @@ export type DataGridProps = {
     records: DataGridRecord[],
     columns: string[],
   ) => { content: string; meta?: string };
+  enableDuplicateValidation?: boolean;
 };
 
 export function DataGrid({
@@ -71,6 +76,7 @@ export function DataGrid({
   onDownloadCsv,
   csvSerializer,
   rawPreview,
+  enableDuplicateValidation = false,
 }: DataGridProps) {
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [sort, setSort] = useState<SortState>(null);
@@ -83,6 +89,9 @@ export function DataGrid({
   const [newColumn, setNewColumn] = useState("new_column");
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<"grid" | "raw">("grid");
+  const [uniqueKey, setUniqueKey] = useState("");
+  const [duplicateColumns, setDuplicateColumns] = useState<string[]>([]);
+  const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
   const dragColumnRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -95,10 +104,10 @@ export function DataGrid({
     () => Array.from(new Set(records.flatMap((record) => Object.keys(record)))),
     [records],
   );
-  const columns = [
+  const columns = useMemo(() => [
     ...columnOrder.filter((column) => sourceColumns.includes(column)),
     ...sourceColumns.filter((column) => !columnOrder.includes(column)),
-  ];
+  ], [columnOrder, sourceColumns]);
   const indexedRows = useMemo(() => {
     const filtered = records
       .map((record, originalIndex) => ({ record, originalIndex }))
@@ -228,6 +237,67 @@ export function DataGrid({
   const customTableWidth = hasCustomWidths
     ? 58 + columns.reduce((total, column) => total + (columnWidths[column] ?? 160), 0)
     : undefined;
+  const checkedColumns = useMemo(() => Array.from(new Set([
+    ...(uniqueKey ? [uniqueKey] : []),
+    ...duplicateColumns,
+  ])).filter((column) => columns.includes(column)), [columns, duplicateColumns, uniqueKey]);
+  const duplicateValues = useMemo(() => Object.fromEntries(
+    checkedColumns.map((column) => {
+      const counts = new Map<string, number>();
+      records.forEach((record) => {
+        const value = displayValue(record[column]);
+        counts.set(value, (counts.get(value) ?? 0) + 1);
+      });
+      return [column, new Set(Array.from(counts).filter(([, count]) => count > 1).map(([value]) => value))];
+    }),
+  ) as Record<string, Set<string>>, [checkedColumns, records]);
+  const uniqueDuplicateRows = uniqueKey
+    ? records.filter((record) => duplicateValues[uniqueKey]?.has(displayValue(record[uniqueKey]))).length
+    : 0;
+  const duplicateSummary = duplicateColumns
+    .filter((column) => columns.includes(column))
+    .map((column) => `${column}: ${duplicateValues[column]?.size ?? 0}値`);
+  const pinnedOffsets = useMemo(() => {
+    let left = 58;
+    const offsets: Record<string, number> = {};
+    columns.forEach((column) => {
+      if (!pinnedColumns.includes(column)) return;
+      offsets[column] = left;
+      left += columnWidths[column] ?? 160;
+    });
+    return offsets;
+  }, [columnWidths, columns, pinnedColumns]);
+
+  const freezeCurrentWidths = (table: HTMLTableElement | null) => {
+    if (!table) return {};
+    const measured = Object.fromEntries(
+      Array.from(table.querySelectorAll<HTMLElement>("[data-grid-column]"))
+        .map((item) => [item.dataset.gridColumn ?? "", Math.round(item.getBoundingClientRect().width)])
+        .filter(([name]) => Boolean(name)),
+    );
+    setColumnWidths(measured);
+    return measured;
+  };
+
+  const togglePinned = (column: string, table: HTMLTableElement | null) => {
+    if (!hasCustomWidths) freezeCurrentWidths(table);
+    setPinnedColumns((current) =>
+      current.includes(column) ? current.filter((item) => item !== column) : [...current, column],
+    );
+  };
+
+  const columnStyle = (column: string) => ({
+    ...(columnWidths[column]
+      ? {
+          width: columnWidths[column],
+          minWidth: columnWidths[column],
+          maxWidth: columnWidths[column],
+        }
+      : {}),
+    ...(pinnedOffsets[column] !== undefined
+      ? { position: "sticky" as const, left: pinnedOffsets[column] }
+      : {}),
+  });
 
   const addColumn = () => {
     const name = newColumn.trim();
@@ -312,7 +382,17 @@ export function DataGrid({
           <button type="button" onClick={addColumn} disabled={!newColumn.trim() || columns.includes(newColumn.trim())}>
             <Plus size={14} />列を追加
           </button>
-          <small>セルは直接編集できます。列削除は各ヘッダーのごみ箱から行えます。</small>
+          {enableDuplicateValidation && (
+            <label>
+              <KeyRound size={14} />
+              UNIQUE KEY
+              <select value={uniqueKey} onChange={(event) => setUniqueKey(event.target.value)}>
+                <option value="">指定なし</option>
+                {columns.map((column) => <option value={column} key={column}>{column}</option>)}
+              </select>
+            </label>
+          )}
+          <small>列のピンで横スクロール時に固定できます。</small>
         </div>
       )}
       {viewMode === "raw" && rawOutput ? (
@@ -353,14 +433,8 @@ export function DataGrid({
                 <th
                   key={column}
                   data-grid-column={column}
-                  className={draggedColumn === column ? "dragging" : ""}
-                  style={columnWidths[column]
-                    ? {
-                        width: columnWidths[column],
-                        minWidth: columnWidths[column],
-                        maxWidth: columnWidths[column],
-                      }
-                    : undefined}
+                  className={`${draggedColumn === column ? "dragging" : ""} ${pinnedOffsets[column] !== undefined ? "pinned" : ""}`.trim()}
+                  style={columnStyle(column)}
                 >
                   <div
                     onPointerDown={(event) => {
@@ -403,6 +477,30 @@ export function DataGrid({
                           ? sort.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                           : <ArrowUpDown size={12} />}
                       </button>
+                      <button
+                        type="button"
+                        className={pinnedColumns.includes(column) ? "active" : ""}
+                        onClick={(event) => togglePinned(column, event.currentTarget.closest("table"))}
+                        aria-label={`${column}列を${pinnedColumns.includes(column) ? "固定解除" : "左に固定"}`}
+                        title={pinnedColumns.includes(column) ? "列の固定を解除" : "横スクロール時に左へ固定"}
+                      >
+                        {pinnedColumns.includes(column) ? <PinOff size={12} /> : <Pin size={12} />}
+                      </button>
+                      {enableDuplicateValidation && (
+                        <button
+                          type="button"
+                          className={duplicateColumns.includes(column) ? "active" : ""}
+                          onClick={() => setDuplicateColumns((current) =>
+                            current.includes(column)
+                              ? current.filter((item) => item !== column)
+                              : [...current, column]
+                          )}
+                          aria-label={`${column}列の重複チェック`}
+                          title="この列の重複を色付け"
+                        >
+                          <ScanSearch size={12} />
+                        </button>
+                      )}
                       {editable && (
                         <button type="button" onClick={() => deleteColumn(column)} aria-label={`${column}列を削除`}>
                           <Trash2 size={12} />
@@ -439,7 +537,10 @@ export function DataGrid({
           </thead>
           <tbody>
             {indexedRows.map(({ record, originalIndex }, rowIndex) => (
-              <tr key={originalIndex}>
+              <tr
+                key={originalIndex}
+                className={uniqueKey && duplicateValues[uniqueKey]?.has(displayValue(record[uniqueKey])) ? "duplicate-key-row" : ""}
+              >
                 <th className="row-number">
                   <CopyButton
                     value={toCsv([record], columns, includeHeader)}
@@ -451,14 +552,13 @@ export function DataGrid({
                 {columns.map((column, columnIndex) => (
                   <td
                     key={column}
-                    className={`${isSelected(rowIndex, columnIndex) ? "selected" : ""} ${displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") ? "multiline" : ""}`.trim()}
-                    style={columnWidths[column]
-                      ? {
-                          width: columnWidths[column],
-                          minWidth: columnWidths[column],
-                          maxWidth: columnWidths[column],
-                        }
-                      : undefined}
+                    className={[
+                      isSelected(rowIndex, columnIndex) ? "selected" : "",
+                      displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") ? "multiline" : "",
+                      duplicateValues[column]?.has(displayValue(record[column])) ? "duplicate-value" : "",
+                      pinnedOffsets[column] !== undefined ? "pinned" : "",
+                    ].filter(Boolean).join(" ")}
+                    style={columnStyle(column)}
                     title={displayValue(record[column])}
                     onMouseDown={(event) => {
                       event.preventDefault();
@@ -493,8 +593,21 @@ export function DataGrid({
             ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Ctrl/⌘+CでCSVコピー`
             : "セルをドラッグして範囲選択"}
         </span>
-        <span>列名のグリップをドラッグして移動</span>
+        <span>グリップ=列移動 · ピン=スクロール固定 · 虫眼鏡=重複チェック</span>
       </div>
+      {enableDuplicateValidation && (uniqueKey || duplicateColumns.length > 0) && (
+        <div className={`data-grid-duplicate-status ${uniqueDuplicateRows ? "error" : ""}`} role="status">
+          <strong>{uniqueKey ? `UNIQUE ${uniqueKey}` : "DUPLICATE CHECK"}</strong>
+          <span>
+            {uniqueKey
+              ? uniqueDuplicateRows
+                ? `${uniqueDuplicateRows}行が重複しています`
+                : "重複はありません"
+              : duplicateSummary.join(" · ")}
+          </span>
+          {uniqueKey && duplicateSummary.length > 0 && <small>{duplicateSummary.join(" · ")}</small>}
+        </div>
+      )}
     </div>
   );
 }
