@@ -52,7 +52,8 @@ const csvViewerComplexSample = `id,name,note,address,amount,formula
 2,改行データ,"1行目
 2行目","大阪府大阪市",0,"+cmd"
 3,引用符,"彼は""確認済み""と回答","福岡県福岡市",00125,""
-4,空データ,,"  前後に空白  ",-450,"@external"`;
+4,空データ,,"  前後に空白  ",-450,"@external"
+5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`
 
 const LARGE_FILE_WARNING_BYTES = 10 * 1024 * 1024;
 const PREVIEW_ROW_LIMIT = 10_000;

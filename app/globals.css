@@ -4074,6 +4074,10 @@ kbd {
   white-space: nowrap;
 }
 
+.json-grid-scroll td {
+  white-space: pre;
+}
+
 .json-grid-scroll th,
 .json-grid-scroll td {
   max-width: 280px;

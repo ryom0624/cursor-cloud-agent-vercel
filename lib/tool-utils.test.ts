@@ -27,6 +27,11 @@ describe("CSV utilities", () => {
       ["name", "note"],
       ["DevSmith", "fast, private"],
     ]);
+    expect(inspectCsv('id,name\n1,  前後空白  \n2,"  quoted  "').rows).toEqual([
+      ["id", "name"],
+      ["1", "  前後空白  "],
+      ["2", "  quoted  "],
+    ]);
   });
 
   it("converts JSON and CSV in both directions", () => {
