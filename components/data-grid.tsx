@@ -183,14 +183,14 @@ export function DataGrid({
     window.addEventListener("pointerup", stop);
   };
 
-  const bounds = selectionStart && selectionEnd
+  const bounds = useMemo(() => selectionStart && selectionEnd
     ? {
         rowStart: Math.min(selectionStart.row, selectionEnd.row),
         rowEnd: Math.max(selectionStart.row, selectionEnd.row),
         columnStart: Math.min(selectionStart.column, selectionEnd.column),
         columnEnd: Math.max(selectionStart.column, selectionEnd.column),
       }
-    : null;
+    : null, [selectionEnd, selectionStart]);
   const selectionRecords = bounds
     ? visibleRecords.slice(bounds.rowStart, bounds.rowEnd + 1)
     : [];
