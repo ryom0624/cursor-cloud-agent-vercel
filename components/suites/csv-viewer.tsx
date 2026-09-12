@@ -1,12 +1,16 @@
 "use client";
 
-import { FileSpreadsheet, RotateCcw, Upload } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, RotateCcw, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   DataGrid,
   type DataGridRecord,
 } from "@/components/data-grid";
 import { ToolShell, ToolStatus } from "@/components/tool-shell";
+import {
+  describeCsvFieldWarnings,
+  findCsvFieldWarnings,
+} from "@/lib/csv-field-warnings";
 import { parseCsv } from "@/lib/tool-utils";
 
 const csvViewerSample = `id,name,team,status,score,updated_at
@@ -15,6 +19,11 @@ const csvViewerSample = `id,name,team,status,score,updated_at
 103,Design Tokens,Design System,active,92,2026-09-09
 104,Log Pipeline,SRE,paused,74,2026-09-08
 105,Release Notes,Product,active,89,2026-09-07`;
+
+const csvNumericRiskSample = `id,zip,phone,amount
+1,00123,09012345678,1E10
+2,0000000001,0312345678,1.2e3
+3,1500001,08000000000,98`;
 
 function parseRecords(input: string) {
   const [headers, ...rows] = parseCsv(input);
@@ -56,6 +65,16 @@ export function CsvViewerSuite() {
   const [editedRecords, setEditedRecords] = useState<DataGridRecord[] | null>(null);
   const parsed = useMemo(() => parseRecords(input), [input]);
   const records = editedRecords ?? parsed.records;
+  const columns = useMemo(
+    () => Array.from(new Set(records.flatMap((record) => Object.keys(record)))),
+    [records],
+  );
+  const fieldWarnings = useMemo(
+    () => findCsvFieldWarnings(records, columns),
+    [columns, records],
+  );
+  const warningSummary = describeCsvFieldWarnings(fieldWarnings);
+  const warningExamples = fieldWarnings.slice(0, 4);
 
   const updateInput = (value: string) => {
     setInput(value);
@@ -89,6 +108,9 @@ export function CsvViewerSuite() {
             <button type="button" onClick={() => updateInput(csvViewerSample)}>
               <RotateCcw size={14} />サンプル
             </button>
+            <button type="button" onClick={() => updateInput(csvNumericRiskSample)}>
+              先頭ゼロ・指数
+            </button>
           </div>
         </header>
         <textarea
@@ -99,6 +121,29 @@ export function CsvViewerSuite() {
           aria-label="CSV入力"
         />
       </section>
+
+      {fieldWarnings.length > 0 && (
+        <section className="csv-field-warnings" role="status">
+          <strong>
+            <AlertTriangle size={15} />
+            Excel変換リスク
+          </strong>
+          <p>
+            {warningSummary}を検出しました。表計算ソフトが数値として読み、先頭ゼロや指数表記が消えることがあります。
+          </p>
+          <ul>
+            {warningExamples.map((hit) => (
+              <li key={`${hit.kind}-${hit.row}-${hit.column}`}>
+                {hit.row}行 / {hit.column}: {hit.kind === "leadingZero" ? "先頭ゼロ" : "指数表記"}
+                <code>{hit.value}</code>
+              </li>
+            ))}
+          </ul>
+          {fieldWarnings.length > warningExamples.length && (
+            <small>ほか{fieldWarnings.length - warningExamples.length}件</small>
+          )}
+        </section>
+      )}
 
       <section className="csv-viewer-output">
         <header>

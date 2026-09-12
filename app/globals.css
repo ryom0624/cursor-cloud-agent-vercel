@@ -2948,6 +2948,42 @@ kbd {
   height: 460px;
 }
 
+.csv-field-warnings {
+  margin-bottom: 15px;
+  padding: 12px 14px;
+  color: #6b4f12;
+  border: 1px solid #c9a15b;
+  background: #f6e6c8;
+}
+
+.csv-field-warnings strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.csv-field-warnings p,
+.csv-field-warnings ul,
+.csv-field-warnings small {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.csv-field-warnings ul {
+  padding-left: 18px;
+}
+
+.csv-field-warnings code {
+  margin-left: 8px;
+  padding: 0 5px;
+  border: 1px solid #c9a15b;
+  background: #fff8e8;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
 @media (max-width: 760px) {
   .editors {
     grid-template-columns: 1fr !important;
