@@ -57,8 +57,28 @@ describe("CSV utilities", () => {
   });
 
   it("repairs reversible UTF-8 read as Shift_JIS mojibake", () => {
-    expect(repairUtf8ReadAsShiftJis("縺薙ｓ縺ｫ縺｡縺ｯ")).toBe("こんにちは");
-    expect(() => repairUtf8ReadAsShiftJis("壊れた�文字")).toThrow("復元できません");
+    expect(repairUtf8ReadAsShiftJis("縺薙ｓ縺ｫ縺｡縺ｯ")).toMatchObject({
+      text: "こんにちは",
+      repairedCount: 1,
+      failures: [],
+    });
+    const mixed = repairUtf8ReadAsShiftJis("id,name,note\n1,縺薙ｓ縺ｫ縺｡縺ｯ,壊れた�文字");
+    expect(mixed.text).toContain("こんにちは");
+    expect(mixed.text).toContain("壊れた�文字");
+    expect(mixed.repairedCount).toBe(1);
+    expect(mixed.failures).toEqual([
+      expect.objectContaining({ row: 2, column: 3, reason: expect.stringContaining("置換文字") }),
+    ]);
+    const emoji = repairUtf8ReadAsShiftJis("id,note\n1,🔧");
+    expect(emoji.text).toContain("🔧");
+    expect(emoji.failures[0]).toEqual(expect.objectContaining({
+      row: 2,
+      column: 2,
+      reason: expect.stringContaining("戻せない文字"),
+    }));
+    const mixedCell = repairUtf8ReadAsShiftJis("id,note\n1,縺薙ｓ縺ｫ縺｡縺ｯ🔧");
+    expect(mixedCell.text).toContain("縺薙ｓ縺ｫ縺｡縺ｯ🔧");
+    expect(mixedCell.failures[0]).toEqual(expect.objectContaining({ row: 2, column: 2 }));
   });
 
   it("serializes configurable CSV output", () => {

@@ -182,22 +182,81 @@ export function encodeCsvText(
   }));
 }
 
-export function repairUtf8ReadAsShiftJis(input: string): string {
-  if (input.includes("\uFFFD")) {
-    throw new Error("置換文字（�）を含むため、失われた元バイトは復元できません。元ファイルを読み込んでください。");
+export type CsvRepairFailure = {
+  row: number;
+  column: number;
+  value: string;
+  reason: string;
+};
+
+export type CsvRepairResult = {
+  text: string;
+  repairedCount: number;
+  failures: CsvRepairFailure[];
+};
+
+function tryRepairUtf8ReadAsShiftJisChunk(value: string) {
+  try {
+    const mistakenBytes = Encoding.convert(Encoding.stringToCode(value), {
+      from: "UNICODE",
+      to: "SJIS",
+      type: "array",
+      fallback: "error",
+    }) as number[];
+    const repairedCodes = Encoding.convert(mistakenBytes, {
+      from: "UTF8",
+      to: "UNICODE",
+      type: "array",
+      fallback: "error",
+    }) as number[];
+    const text = Encoding.codeToString(repairedCodes);
+    return text.includes("\uFFFD") ? null : text;
+  } catch {
+    return null;
   }
-  const mistakenBytes = Encoding.convert(Encoding.stringToCode(input), {
-    from: "UNICODE",
-    to: "SJIS",
-    type: "array",
-    fallback: "error",
-  });
-  return Encoding.codeToString(Encoding.convert(mistakenBytes, {
-    from: "UTF8",
-    to: "UNICODE",
-    type: "array",
-    fallback: "error",
-  }));
+}
+
+function repairUtf8ReadAsShiftJisValue(value: string): { text: string; repaired: boolean; unrecoverable: boolean } {
+  if (!value) return { text: value, repaired: false, unrecoverable: false };
+  if (value.includes("\uFFFD")) return { text: value, repaired: false, unrecoverable: true };
+  const repaired = tryRepairUtf8ReadAsShiftJisChunk(value);
+  if (repaired !== null) return { text: repaired, repaired: repaired !== value, unrecoverable: false };
+  return { text: value, repaired: false, unrecoverable: true };
+}
+
+export function repairUtf8ReadAsShiftJis(input: string): CsvRepairResult {
+  const inspection = inspectCsv(input, { delimiter: "auto", skipEmptyLines: false });
+  const failures: CsvRepairFailure[] = [];
+  let repairedCount = 0;
+  const rows = inspection.rows.map((row, rowIndex) =>
+    row.map((value, columnIndex) => {
+      const repaired = repairUtf8ReadAsShiftJisValue(value);
+      if (repaired.repaired) repairedCount += 1;
+      if (repaired.unrecoverable) {
+        failures.push({
+          row: rowIndex + 1,
+          column: columnIndex + 1,
+          value,
+          reason: value.includes("\uFFFD")
+            ? "置換文字（�）を含むため元バイトを復元できません"
+            : "Shift_JISへ戻せない文字があるため元の値を残しました",
+        });
+      }
+      return repaired.text;
+    }),
+  );
+  const columns = Array.from({ length: Math.max(0, ...rows.map((row) => row.length)) }, (_, index) => `column_${index}`);
+  const records = rows.map((row) => Object.fromEntries(columns.map((column, index) => [column, row[index] ?? ""])));
+  return {
+    text: serializeCsv(records, columns, {
+      delimiter: inspection.delimiter,
+      includeHeader: false,
+      lineEnding: inspection.lineEnding === "CRLF" ? "\r\n" : inspection.lineEnding === "CR" ? "\r" : "\n",
+      finalLineEnding: /[\r\n]$/.test(input),
+    }),
+    repairedCount,
+    failures,
+  };
 }
 
 export function serializeCsv(

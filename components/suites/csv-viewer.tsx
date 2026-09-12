@@ -251,11 +251,22 @@ export function CsvViewerSuite() {
   };
 
   const repairMojibake = () => {
-    try {
-      updateInput(repairUtf8ReadAsShiftJis(input));
-      setRepairMessage("UTF-8をShift_JISとして誤読した可逆な文字化けを修復しました。");
-    } catch (error) {
-      setRepairError(error instanceof Error ? error.message : "文字化けを修復できませんでした。");
+    const result = repairUtf8ReadAsShiftJis(input);
+    const unrepaired = result.failures
+      .slice(0, 8)
+      .map((failure) => `${failure.row}行目,${failure.column}列`)
+      .join(" / ");
+    const remaining = result.failures.length > 8 ? ` ほか${result.failures.length - 8}件` : "";
+    updateInput(result.text);
+    setRepairError("");
+    if (result.repairedCount && result.failures.length) {
+      setRepairMessage(`可能な範囲を修復しました（${result.repairedCount}件）。一部修復できませんでした。（${unrepaired}${remaining}）`);
+    } else if (result.repairedCount) {
+      setRepairMessage(`UTF-8をShift_JISとして誤読した文字化けを${result.repairedCount}件修復しました。`);
+    } else if (result.failures.length) {
+      setRepairMessage(`修復できる文字化けはありませんでした。一部修復できませんでした。（${unrepaired}${remaining}）`);
+    } else {
+      setRepairMessage("修復対象の文字化けは見つかりませんでした。");
     }
   };
 
@@ -675,7 +686,7 @@ export function CsvViewerSuite() {
           <article>
             <span>01</span>
             <h3>文字コードと文字化け</h3>
-            <p>ファイルはバイト列を保持しているためUTF-8／Shift_JISを切り替えて再読込できます。貼り付け後の文字列には元の文字コード情報がありません。「縺薙」のようなUTF-8をShift_JISとして読んだ可逆な文字化けだけ修復できますが、「�」へ置換済みの文字は復元できません。</p>
+            <p>ファイルはバイト列を保持しているためUTF-8／Shift_JISを切り替えて再読込できます。貼り付け後の文字列には元の文字コード情報がありません。「縺薙」のようなUTF-8をShift_JISとして読んだ文字化けは可能な範囲で修復し、復元できない箇所は行・列で残します。「�」へ置換済みの文字は元バイトが失われているため復元できません。</p>
           </article>
           <article>
             <span>02</span>
