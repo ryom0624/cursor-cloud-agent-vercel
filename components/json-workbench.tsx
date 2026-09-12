@@ -9,6 +9,7 @@ import {
   Maximize2,
   Minimize2,
   PanelLeftClose,
+  PanelRightOpen,
   RotateCcw,
   WandSparkles,
 } from "lucide-react";
@@ -16,17 +17,60 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
+import { JsonGrid } from "@/components/json-grid";
 import { tools } from "@/lib/tools";
 
-const sample = `{"project":"devsmith","version":"0.1.0","private":true,"tools":["format","validate","minify"],"settings":{"theme":"paper","localOnly":true}}`;
+const sample = `[
+  {
+    "id": "PRJ-1042",
+    "name": "DevSmith Web",
+    "status": "active",
+    "priority": 1,
+    "owner": { "name": "Aki Tanaka", "team": "Platform" },
+    "tags": ["nextjs", "typescript", "vercel"],
+    "metrics": { "users": 18420, "uptime": 99.98 },
+    "updatedAt": "2026-09-11T14:32:00Z"
+  },
+  {
+    "id": "PRJ-1077",
+    "name": "API Gateway",
+    "status": "review",
+    "priority": 2,
+    "owner": { "name": "Mina Sato", "team": "Backend" },
+    "tags": ["go", "grpc"],
+    "metrics": { "users": 7320, "uptime": 99.91 },
+    "updatedAt": "2026-09-10T09:15:00Z"
+  },
+  {
+    "id": "PRJ-1091",
+    "name": "Design Tokens",
+    "status": "active",
+    "priority": 3,
+    "owner": { "name": "Ren Ito", "team": "Design System" },
+    "tags": ["css", "figma"],
+    "metrics": { "users": 2260, "uptime": 100 },
+    "updatedAt": "2026-09-09T18:05:00Z"
+  },
+  {
+    "id": "PRJ-1103",
+    "name": "Log Pipeline",
+    "status": "paused",
+    "priority": 2,
+    "owner": { "name": "Yui Mori", "team": "SRE" },
+    "tags": ["kafka", "clickhouse"],
+    "metrics": { "users": 840, "uptime": 98.72 },
+    "updatedAt": "2026-09-08T03:42:00Z"
+  }
+]`;
 
-type Mode = "format" | "validate" | "minify" | "tree";
+type Mode = "format" | "validate" | "minify" | "tree" | "grid";
 
 const modeDescriptions: Record<Mode, string> = {
   format: "インデントと改行を付け、JSONを読みやすい形へ整えます。",
   validate: "内容は書き換えず、構文エラーの有無とJSONの概要を確認します。",
   minify: "不要な空白と改行を取り除き、データサイズを小さくします。",
   tree: "オブジェクトと配列の階層を、開閉できるツリーで確認します。",
+  grid: "オブジェクト配列を表にし、列の移動、ソート、フィルタを操作できます。",
 };
 
 function JsonTreeNode({ value, name }: { value: unknown; name?: string }) {
@@ -62,6 +106,8 @@ export function JsonWorkbench() {
   const [input, setInput] = useState(sample);
   const [inputExpanded, setInputExpanded] = useState(false);
   const [indent, setIndent] = useState(2);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const parsed = useMemo(() => {
     try {
@@ -93,7 +139,17 @@ export function JsonWorkbench() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && fullscreen) {
+        event.preventDefault();
+        setFullscreen(false);
+        return;
+      }
       if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFullscreen((current) => !current);
+        return;
+      }
       if (event.key === "Enter") {
         event.preventDefault();
         setMode("format");
@@ -105,7 +161,7 @@ export function JsonWorkbench() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [result]);
+  }, [fullscreen, result]);
 
   const download = () => {
     const url = URL.createObjectURL(
@@ -119,11 +175,17 @@ export function JsonWorkbench() {
   };
 
   return (
-    <main className="workbench-shell">
+    <main className={`workbench-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="workbench-sidebar">
         <div className="sidebar-title">
           <span>WORKSPACES</span>
-          <PanelLeftClose size={15} />
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            aria-label={sidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
+          >
+            {sidebarCollapsed ? <PanelRightOpen size={15} /> : <PanelLeftClose size={15} />}
+          </button>
         </div>
         {tools.map((tool) => (
           <Link
@@ -141,15 +203,15 @@ export function JsonWorkbench() {
         </div>
       </aside>
 
-      <section className="workbench-main">
+      <section className={`workbench-main ${fullscreen ? "json-fullscreen" : ""}`}>
         <ToolBreadcrumb title="JSON Tools" />
 
         <div className="workbench-heading">
           <div className="workbench-icon"><Braces size={25} /></div>
           <div>
-            <div className="workbench-kicker">DATA · 4 FUNCTIONS</div>
+            <div className="workbench-kicker">DATA · 5 FUNCTIONS</div>
             <h1>JSON Tools</h1>
-            <p>JSONの整形、検証、圧縮、構造確認をひとつの作業台で。</p>
+            <p>JSONの整形、検証、圧縮、構造・表形式の確認をひとつの作業台で。</p>
           </div>
           <span className="local-badge"><span />LOCAL ONLY</span>
         </div>
@@ -160,6 +222,7 @@ export function JsonWorkbench() {
             ["validate", "検証"],
             ["minify", "圧縮"],
             ["tree", "ツリー表示"],
+            ["grid", "Grid"],
           ] as const).map(([value, label]) => (
             <button
               key={value}
@@ -173,7 +236,7 @@ export function JsonWorkbench() {
           ))}
         </div>
         <div className="mode-description">
-          <strong>{mode === "format" ? "整形" : mode === "validate" ? "検証" : mode === "minify" ? "圧縮" : "ツリー表示"}</strong>
+          <strong>{mode === "format" ? "整形" : mode === "validate" ? "検証" : mode === "minify" ? "圧縮" : mode === "tree" ? "ツリー表示" : "Grid"}</strong>
           <span>{modeDescriptions[mode]}</span>
         </div>
 
@@ -193,6 +256,14 @@ export function JsonWorkbench() {
             <button type="button" onClick={() => setInput(sample)}><RotateCcw size={15} />サンプル</button>
           </div>
           <div>
+            <button
+              type="button"
+              onClick={() => setFullscreen((current) => !current)}
+              title={fullscreen ? "縮小（Esc）" : "全画面表示（Ctrl/⌘+Shift+F）"}
+            >
+              {fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              {fullscreen ? "縮小" : "全画面"}
+            </button>
             <label>インデント</label>
             <select
               className="select-button"
@@ -207,7 +278,7 @@ export function JsonWorkbench() {
           </div>
         </div>
 
-        <div className={`editors ${inputExpanded ? "input-expanded" : ""}`}>
+        <div className={`editors ${inputExpanded ? "input-expanded" : ""} ${mode === "grid" ? "grid-mode" : ""}`}>
           <div className="editor-pane input-pane">
             <div className="pane-heading">
               <span>INPUT</span>
@@ -238,9 +309,9 @@ export function JsonWorkbench() {
           </div>
           <div className="editor-pane output-pane">
             <div className="pane-heading">
-              <span>{mode === "validate" ? "VALIDATION REPORT" : "OUTPUT"}</span>
+              <span>{mode === "validate" ? "VALIDATION REPORT" : mode === "grid" ? "DATA GRID" : "OUTPUT"}</span>
               <div>
-                {mode !== "validate" && (
+                {mode !== "validate" && mode !== "grid" && (
                   <>
                     <CopyButton value={result} />
                     <button type="button" disabled={!result} onClick={download} aria-label="JSONをダウンロード"><Download size={14} /></button>
@@ -248,7 +319,9 @@ export function JsonWorkbench() {
                 )}
               </div>
             </div>
-            {mode === "validate" ? (
+            {mode === "grid" && valid ? (
+              <JsonGrid value={parsed.value} />
+            ) : mode === "validate" ? (
               <div className={`json-validation-report ${valid ? "valid" : "invalid"}`}>
                 <span>{valid ? <Check size={22} /> : <WandSparkles size={22} />}</span>
                 <div>
@@ -288,6 +361,7 @@ export function JsonWorkbench() {
           <span><kbd>⌘</kbd> <kbd>Enter</kbd> 実行</span>
           <span><kbd>⌘</kbd> <kbd>K</kbd> ツール検索</span>
           <span><kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>C</kbd> コピー</span>
+          <span><kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>F</kbd> 全画面</span>
         </div>
       </section>
     </main>
