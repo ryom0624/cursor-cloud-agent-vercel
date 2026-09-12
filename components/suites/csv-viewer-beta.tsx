@@ -1050,6 +1050,14 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
           <header>
             <span><FileSpreadsheet size={15} />OUTPUT</span>
             <div>
+              <button
+                type="button"
+                onClick={() => setEditedRecords(null)}
+                disabled={!editedRecords}
+                title="Gridの編集を破棄し、いまの入力CSVの解析結果に戻します"
+              >
+                <RotateCcw size={14} />出力をリセット
+              </button>
               {fullscreenMode === "none" ? (
                 <>
                   <button type="button" onClick={() => setFullscreenMode("output")}><Maximize2 size={14} />全画面</button>
@@ -1074,6 +1082,8 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
           exportSplit
           allExportCount={hiddenRecords?.length ? records.length + hiddenRecords.length : undefined}
           onRecordsChange={setEditedRecords}
+          onReset={() => setEditedRecords(null)}
+          resetDisabled={!editedRecords}
           csvSerializer={(targetRecords, targetColumns, includeHeader) =>
             serializeOutput(targetRecords, targetColumns, includeHeader)
           }
