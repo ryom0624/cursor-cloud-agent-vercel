@@ -3170,6 +3170,16 @@ kbd {
   margin-bottom: 15px;
 }
 
+.csv-viewer-flow,
+.csv-simple-summary,
+.csv-beta-banner,
+.csv-sheet-selector,
+.csv-simple-downloads,
+.csv-sjis-dialog,
+.csv-large-file-dialog {
+  min-width: 0;
+}
+
 .csv-viewer-flow {
   display: flex;
   min-width: 0;
@@ -4072,6 +4082,20 @@ kbd {
   .csv-simple-downloads {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .csv-detection,
+  .csv-beta-banner,
+  .csv-sheet-selector,
+  .csv-sjis-dialog,
+  .csv-inherit-save {
+    overflow-wrap: anywhere;
+  }
+
+  .csv-detection span,
+  .csv-simple-downloads button,
+  .csv-sheet-selector select {
+    max-width: 100%;
   }
 }
 

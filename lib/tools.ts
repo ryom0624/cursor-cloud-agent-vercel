@@ -31,7 +31,7 @@ export const tools: Tool[] = [
   },
   {
     name: "CSV Viewer",
-    description: "CSVの閲覧、絞り込み、編集、ダウンロード",
+    description: "CSVの安全な閲覧、診断、編集、ダウンロード",
     category: "データ",
     functions: 1,
     href: "/tools/csv-viewer",

@@ -11,12 +11,19 @@ import {
   diagnoseExcelRisks,
   encodeCsvText,
   encodeToShiftJis,
-  excelCellToText,
   excelOrientedCsvPreset,
   findSjisUnmappableChars,
   findSjisUnmappableInRecords,
   hasMixedLineEndings,
+  detectCsvEncodingDetails,
+  encodeUtf16,
+  excelCellToText,
+  formatExcelDate,
+  applyPreviewEdits,
+  splitPreviewRecords,
+  PREVIEW_ROW_LIMIT,
   inspectCsv,
+  inspectRecordSeparators,
   isCsvInjectionValue,
   isDateLikeRisk,
   isLeadingZeroRisk,
@@ -100,7 +107,7 @@ describe("Current vs Beta: unchanged cases stay identical", () => {
     { name: "trailing empty field", text: "id,name,note\n1,DevSmith," },
     { name: "empty row skipped", text: "id,name\n1,DevSmith\n\n2,API" },
     { name: "NUL character", text: "id,name\n1,Dev\0Smith" },
-    { name: "formula =", text: "id,note\n1,=SUM(1,2)" },
+    { name: "quoted formula with comma", text: 'id,note\n1,"=SUM(1,2)"' },
   ];
 
   it.each(fixtures)("$name: row/column/cell/header/CSV output match", ({ text }) => {
@@ -197,6 +204,18 @@ describe("Intentional Beta differences", () => {
     expect(inspectCsv(csv, { delimiter: " " }).delimiter).toBe(" ");
   });
 
+  it("keeps extra fields when an unquoted formula contains a comma", () => {
+    const csv = "id,note\n1,=SUM(1,2)";
+    const currentParsed = parseRecordsCurrent(csv);
+    const betaParsed = parseCsvTable(csv, defaultSettings);
+    expect(Object.keys(currentParsed.records[0] ?? {})).toHaveLength(2);
+    expect(currentParsed.records[0]?.note).toBe("=SUM(1");
+    expect(betaParsed.columns).toHaveLength(3);
+    expect(betaParsed.records[0].col_1).toBe("=SUM(1");
+    expect(betaParsed.records[0].col_2).toBe("2)");
+    expect(betaParsed.warnings.some((warning) => warning.includes("ヘッダーより多い列"))).toBe(true);
+  });
+
   it("stops Shift_JIS conversion instead of silently replacing", () => {
     const text = "name,note\n1,😀";
     const currentBytes = current.encodeCsvText(text, "shift_jis", false);
@@ -260,11 +279,17 @@ describe("P1 decode, line endings, and XLSX limits", () => {
     expect(parseCsvTable(csv, defaultSettings).records).toHaveLength(2);
   });
 
-  it("detects mixed line endings", () => {
+  it("detects mixed line endings only outside quotes", () => {
     const mixed = "id,name\r\n1,A\n2,B";
     expect(hasMixedLineEndings(mixed)).toBe(true);
     expect(inspectCsv(mixed).warnings.some((warning) => warning.includes("混在"))).toBe(true);
     expect(inspectCsv("id,name\n1,A\n2,B").mixedLineEndings).toBe(false);
+    expect(hasMixedLineEndings("id,memo\r\n1,\"line1\nline2\"\r\n2,\"normal\"\r\n")).toBe(false);
+    expect(inspectRecordSeparators("id,memo\r\n1,\"line1\nline2\"\r\n2,\"normal\"\r\n").primary).toBe("CRLF");
+    expect(hasMixedLineEndings("id,memo\n1,\"line1\r\nline2\"\n2,\"normal\"\n")).toBe(false);
+    expect(inspectRecordSeparators("id,memo\n1,\"line1\r\nline2\"\n2,\"normal\"\n").primary).toBe("LF");
+    expect(hasMixedLineEndings("id,memo\r1,\"line1\nline2\"\r2,\"normal\"\r")).toBe(false);
+    expect(inspectRecordSeparators("id,memo\r1,\"line1\nline2\"\r2,\"normal\"\r").primary).toBe("CR");
   });
 
   it("reports replacement characters after invalid decode", () => {
@@ -392,3 +417,89 @@ describe("P2 fixtures and encoding-japanese 2.3.0", () => {
     expect(parsed.columns).toHaveLength(3);
   });
 });
+
+describe("UTF-16 encode/decode and safe detection", () => {
+  it("writes UTF-16LE/BE BOM and surrogate pairs at byte level", () => {
+    const le = encodeUtf16("ABC東京都髙①😀𠮷", true, true);
+    const be = encodeUtf16("ABC東京都髙①😀𠮷", false, true);
+    expect(Array.from(le.slice(0, 2))).toEqual([0xff, 0xfe]);
+    expect(Array.from(be.slice(0, 2))).toEqual([0xfe, 0xff]);
+    expect(new TextDecoder("utf-16le").decode(le)).toBe("ABC東京都髙①😀𠮷");
+    expect(new TextDecoder("utf-16be").decode(be)).toBe("ABC東京都髙①😀𠮷");
+    expect(encodeCsvText("LF\nCRLF\r\nCR\r", "utf-16le", true).bytes[0]).toBe(0xff);
+    expect(encodeCsvText("ABC", "utf-16be", false).bytes[0]).toBe(0x00);
+    expect(encodeCsvText("ABC", "utf-16be", false).bytes[1]).toBe(0x41);
+  });
+
+  it("round-trips UTF-16LE/BE with and without BOM", () => {
+    const source = "id,name\r\n1,東京都\r\n2,😀";
+    for (const encoding of ["utf-16le", "utf-16be"] as const) {
+      for (const bom of [true, false]) {
+        const bytes = encodeCsvText(source, encoding, bom).bytes;
+        const decoded = decodeCsvBytes(bytes, encoding);
+        expect(decoded.text).toBe(source);
+        expect(decoded.hasBom).toBe(bom);
+      }
+    }
+  });
+
+  it("does not treat failed UTF-8 as Shift_JIS", () => {
+    const invalid = Uint8Array.from([0x80, 0x81, 0x82, 0x00, 0xff]);
+    expect(detectCsvEncoding(invalid)).toBe("unknown");
+    expect(decodeCsvBytes(invalid, "auto").encoding).toBe("unknown");
+  });
+
+  it("keeps ASCII-only as UTF-8 compatible rather than Shift_JIS", () => {
+    const details = detectCsvEncodingDetails(new TextEncoder().encode("id,name\n1,Taro"));
+    expect(details.encoding).toBe("utf-8");
+    expect(details.asciiCompatible).toBe(true);
+  });
+
+  it("detects no-BOM UTF-16 only when the NUL pattern is confident", () => {
+    const le = encodeUtf16("id,name\n1,Taro", true, false);
+    const be = encodeUtf16("id,name\n1,Taro", false, false);
+    expect(detectCsvEncoding(le)).toBe("utf-16le");
+    expect(detectCsvEncoding(be)).toBe("utf-16be");
+  });
+
+  it("does not force Japanese no-BOM UTF-16 to Shift_JIS", () => {
+    const le = encodeUtf16("id,name\n1,東京都", true, false);
+    const be = encodeUtf16("id,name\n1,東京都", false, false);
+    expect(detectCsvEncoding(le)).toBe("unknown");
+    expect(detectCsvEncoding(be)).toBe("unknown");
+    expect(decodeCsvBytes(le, "utf-16le").text).toBe("id,name\n1,東京都");
+    expect(decodeCsvBytes(be, "utf-16be").text).toBe("id,name\n1,東京都");
+  });
+});
+
+describe("preview export must keep hidden rows", () => {
+  it("merges preview edits without dropping hidden records", () => {
+    const all = Array.from({ length: PREVIEW_ROW_LIMIT + 5 }, (_, index) => ({ col_0: String(index) }));
+    const split = splitPreviewRecords(all);
+    expect(split.visible).toHaveLength(PREVIEW_ROW_LIMIT);
+    expect(split.hidden).toHaveLength(5);
+    split.visible[0] = { col_0: "edited" };
+    const merged = applyPreviewEdits(split.hidden, split.visible);
+    expect(merged).toHaveLength(PREVIEW_ROW_LIMIT + 5);
+    expect(merged[0].col_0).toBe("edited");
+    expect(merged[PREVIEW_ROW_LIMIT].col_0).toBe(String(PREVIEW_ROW_LIMIT));
+    expect(serializeCsv(merged, ["col_0"], { includeHeader: false }).split("\n").filter(Boolean)).toHaveLength(PREVIEW_ROW_LIMIT + 5);
+  });
+});
+
+describe("Current vs Beta: quote-aware line endings", () => {
+  it("does not let quoted LF change the record separator the way current includes() does", () => {
+    const csv = "id,memo\r1,\"line1\nline2\"\r2,normal\r";
+    expect(current.inspectCsv(csv).lineEnding).toBe("LF");
+    expect(inspectCsv(csv).lineEnding).toBe("CR");
+    expect(inspectCsv(csv).mixedLineEndings).toBe(false);
+  });
+});
+
+describe("Excel date import uses UTC date-only text", () => {
+  it("keeps midnight UTC as YYYY-MM-DD", () => {
+    expect(formatExcelDate(new Date(Date.UTC(2026, 8, 12)))).toBe("2026-09-12");
+    expect(excelCellToText(new Date(Date.UTC(2026, 8, 12, 15, 0, 0)))).toBe(new Date(Date.UTC(2026, 8, 12, 15, 0, 0)).toISOString());
+  });
+});
+

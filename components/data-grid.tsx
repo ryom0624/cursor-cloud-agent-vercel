@@ -69,6 +69,7 @@ export type DataGridProps = {
   onDownloadAllXlsx?: (records: DataGridRecord[], columns: string[]) => void;
   columnLabels?: Record<string, string>;
   exportSplit?: boolean;
+  allExportCount?: number;
   csvSerializer?: (
     records: DataGridRecord[],
     columns: string[],
@@ -92,6 +93,7 @@ export function DataGrid({
   onDownloadAllXlsx,
   columnLabels,
   exportSplit = false,
+  allExportCount,
   csvSerializer,
   rawPreview,
   enableDuplicateValidation = false,
@@ -451,7 +453,7 @@ export function DataGrid({
           <CopyButton value={selectionValue} label="選択セルをコピー" />
           {exportSplit && onDownloadAllCsv && (
             <button type="button" onClick={() => onDownloadAllCsv(records, columns)}>
-              <Download size={14} />CSVを保存 {records.length.toLocaleString()}件
+              <Download size={14} />CSVを保存 {(allExportCount ?? records.length).toLocaleString()}件
             </button>
           )}
           {onDownloadCsv && (
@@ -462,7 +464,7 @@ export function DataGrid({
           )}
           {exportSplit && onDownloadAllXlsx && (
             <button type="button" onClick={() => onDownloadAllXlsx(records, columns)}>
-              <Download size={14} />XLSXを保存 {records.length.toLocaleString()}件
+              <Download size={14} />XLSXを保存 {(allExportCount ?? records.length).toLocaleString()}件
             </button>
           )}
           {onDownloadXlsx && (

@@ -1,0 +1,10 @@
+id,note
+1,=1+1
+2,+SUM(A1:A2)
+3,-cmd
+4,@external
+5,*test
+6,＝1+1
+7,＋cmd
+8,－cmd
+9,＠external

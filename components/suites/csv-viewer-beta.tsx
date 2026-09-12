@@ -37,9 +37,13 @@ import {
   formatCsvOutputMeta,
   formatCsvTimestamp,
   inspectCsv,
+  LARGE_FILE_WARNING_BYTES,
   lineEndingToken,
   locateReplacementCharacters,
   parseCsvTable,
+  PREVIEW_ROW_LIMIT,
+  applyPreviewEdits,
+  splitPreviewRecords,
   repairUtf8ReadAsShiftJis,
   rowsToCsv,
   serializeCsv,
@@ -79,8 +83,7 @@ const csvViewerComplexSample = `id,name,note,address,amount,formula
 4,空データ,,"  前後に空白  ",-450,"@external"
 5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`;
 
-const LARGE_FILE_WARNING_BYTES = 10 * 1024 * 1024;
-const PREVIEW_ROW_LIMIT = 10_000;
+type ViewerMode = "beta" | "official";
 
 type ExcelSheet = { name: string; csv: string };
 
@@ -112,7 +115,8 @@ function lineEndingFromInspection(lineEnding: "CRLF" | "LF" | "CR" | "なし"): 
   return "\n";
 }
 
-export function CsvViewerBetaSuite() {
+export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}) {
+  const official = mode === "official";
   const [input, setInput] = useState(csvViewerSample);
   const [editedRecords, setEditedRecords] = useState<DataGridRecord[] | null>(null);
   const [settings, setSettings] = useState(defaultViewerSettings);
@@ -143,7 +147,13 @@ export function CsvViewerBetaSuite() {
   } | null>(null);
   const [xlsxError, setXlsxError] = useState("");
   const [showValidationDetails, setShowValidationDetails] = useState(false);
+  const [detectionWarnings, setDetectionWarnings] = useState<string[]>([]);
+  const [asciiCompatible, setAsciiCompatible] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
+  const [hiddenRecords, setHiddenRecords] = useState<DataGridRecord[] | null>(null);
   const fileBytesRef = useRef<Uint8Array | null>(null);
+  const fullFileTextRef = useRef<string | null>(null);
+  const loadCancelledRef = useRef(false);
   const parsed = useMemo(() => parseCsvTable(input, settings), [input, settings]);
   const records = editedRecords ?? parsed.records;
   const columns = useMemo(() => {
@@ -188,6 +198,7 @@ export function CsvViewerBetaSuite() {
   ];
   const extraWarnings = [
     ...parsed.warnings,
+    ...detectionWarnings,
     ...(injectionCount ? [`表計算ソフトで数式として実行され得る値が${injectionCount}件あります。値は変更していません。`] : []),
     ...encodingIssues,
     ...(excelRowOverflow ? ["Excel向けCSVは1,048,576行を超えるとExcelで完全表示できない可能性があります。"] : []),
@@ -249,31 +260,64 @@ export function CsvViewerBetaSuite() {
       setSjisDialog({ unmappable: encoded.unmappable, records: targetRecords, columns: targetColumns });
       return;
     }
-    const mimeEncoding = options.encoding === "shift_jis" ? "shift_jis" : "utf-8";
+    const mimeEncoding = options.encoding === "shift_jis"
+      ? "shift_jis"
+      : options.encoding === "utf-16le"
+        ? "utf-16le"
+        : options.encoding === "utf-16be"
+          ? "utf-16be"
+          : "utf-8";
     triggerDownload(encoded.bytes, `devsmith-data_${formatCsvTimestamp()}.csv`, `text/csv;charset=${mimeEncoding}`);
   };
 
-  const downloadWithCurrentSettings = (targetRecords: DataGridRecord[], targetColumns: string[]) =>
+  const unknownEncodingBlocksExport = inputSource === "file" && detectedEncoding === "unknown" && fileEncoding === "auto";
+
+  const recordsForFullExport = () => {
+    if (hiddenRecords?.length) {
+      return {
+        records: applyPreviewEdits(hiddenRecords, records),
+        columns,
+        headerValues,
+      };
+    }
+    if (previewActive && !editedRecords && fullFileTextRef.current) {
+      const full = parseCsvTable(fullFileTextRef.current, settings);
+      return { records: full.records, columns: full.columns, headerValues: full.headerValues };
+    }
+    return { records, columns, headerValues };
+  };
+
+  const downloadWithCurrentSettings = (targetRecords: DataGridRecord[], targetColumns: string[]) => {
+    if (unknownEncodingBlocksExport) {
+      setRepairError("文字コードを自動判定できないため、Proで文字コードを指定してから保存してください。");
+      return;
+    }
     downloadCsv(targetRecords, targetColumns, {
       encoding: outputEncoding,
       lineEnding,
-      includeBom: outputEncoding === "utf-8" && includeBom,
+      includeBom: outputEncoding !== "shift_jis" && includeBom,
       quoteAll,
       quote: outputQuote,
       escapeMode: outputEscapeMode,
     });
+  };
 
   const downloadInherited = (targetRecords: DataGridRecord[], targetColumns: string[]) => {
-    if (inputSource !== "file" || !detectedEncoding) return;
-    const inheritedEncoding: CsvOutputEncoding = detectedEncoding === "shift_jis" ? "shift_jis" : "utf-8";
+    if (inputSource !== "file" || !detectedEncoding || detectedEncoding === "unknown") {
+      setRepairError("入力形式を引き継げる文字コードがありません。Proで文字コードを指定してください。");
+      return;
+    }
+    const inspection = fullFileTextRef.current
+      ? inspectCsv(fullFileTextRef.current, settings)
+      : parsed.inspection;
     downloadCsv(targetRecords, targetColumns, {
-      encoding: inheritedEncoding,
-      lineEnding: lineEndingFromInspection(parsed.inspection.lineEnding),
-      includeBom: inheritedEncoding === "utf-8" && Boolean(fileHasBom),
+      encoding: detectedEncoding,
+      lineEnding: lineEndingFromInspection(inspection.lineEnding),
+      includeBom: detectedEncoding === "shift_jis" ? false : Boolean(fileHasBom),
       quoteAll,
       quote: settings.quote,
       escapeMode: settings.escapeMode,
-      delimiter: parsed.inspection.delimiter,
+      delimiter: inspection.delimiter,
     });
   };
 
@@ -301,9 +345,14 @@ export function CsvViewerBetaSuite() {
     setInputSource(source);
     if (source === "paste") {
       fileBytesRef.current = null;
+      fullFileTextRef.current = null;
       setDetectedEncoding(null);
       setFileHasBom(null);
       setReplacementCount(0);
+      setDetectionWarnings([]);
+      setAsciiCompatible(false);
+      setPreviewActive(false);
+      setHiddenRecords(null);
     }
   };
 
@@ -329,12 +378,26 @@ export function CsvViewerBetaSuite() {
     return () => window.removeEventListener("keydown", closeFullscreen);
   }, []);
 
-  const decodeFile = (bytes: Uint8Array, encoding: CsvFileEncoding) => {
-    const decoded = decodeCsvBytes(bytes, encoding);
-    updateInput(decoded.text, "file");
+  const applyDecodedFile = (decoded: ReturnType<typeof decodeCsvBytes>, previewOnly: boolean) => {
+    fullFileTextRef.current = decoded.text;
+    const fullParsed = parseCsvTable(decoded.text, settings);
+    const split = splitPreviewRecords(fullParsed.records);
+    const usePreview = previewOnly && split.previewApplied;
+    setPreviewActive(usePreview);
+    setHiddenRecords(usePreview ? split.hidden : null);
+    updateInput(usePreview ? previewCsv(decoded.text, settings) : decoded.text, "file");
     setDetectedEncoding(decoded.encoding);
     setFileHasBom(decoded.hasBom);
     setReplacementCount(decoded.replacementCount);
+    setDetectionWarnings(decoded.detectionWarnings);
+    setAsciiCompatible(decoded.asciiCompatible);
+    setPreviewNotice(usePreview
+      ? `先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行を表示しています（元ファイルは${fullParsed.records.length.toLocaleString()}行）。全件保存は元ファイル全件です。プレビュー中の編集は先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行にだけ反映し、残りの行は未編集のまま保存します。filter/sortは表示中エクスポートにだけ反映されます。`
+      : "");
+  };
+
+  const decodeFile = (bytes: Uint8Array, encoding: CsvFileEncoding) => {
+    applyDecodedFile(decodeCsvBytes(bytes, encoding), previewActive);
   };
 
   const changeFileEncoding = (encoding: CsvFileEncoding) => {
@@ -370,6 +433,11 @@ export function CsvViewerBetaSuite() {
     setSelectedSheet("");
     setPreviewNotice("");
     setReplacementCount(0);
+    setDetectionWarnings([]);
+    setAsciiCompatible(false);
+    setPreviewActive(false);
+    setHiddenRecords(null);
+    fullFileTextRef.current = null;
     updateInput(value, "paste");
   };
 
@@ -407,30 +475,27 @@ export function CsvViewerBetaSuite() {
 
   const processFile = async (file: File, previewOnly = false) => {
     setLoading(true);
+    loadCancelledRef.current = false;
     setRepairError("");
     setPreviewNotice("");
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     try {
+      if (loadCancelledRef.current) return;
       const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
       if (["xlsm", "xlsb", "xlam", "xls"].includes(extension)) {
         throw new Error("マクロ・バイナリ形式は安全のため読み込めません。.xlsxへ保存してから開いてください。");
       }
       if (extension === "xlsx") {
         await loadExcelFile(file, previewOnly);
-        if (previewOnly) setPreviewNotice(`大容量Excelの各シート先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行だけを表示しています。`);
+        if (previewOnly) setPreviewNotice(`大容量Excelの各シート先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行だけを表示しています。全件保存は選択シートの読み込み済み範囲です。`);
         return;
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
+      if (loadCancelledRef.current) return;
       fileBytesRef.current = bytes;
-      const decoded = decodeCsvBytes(bytes, fileEncoding);
-      const text = previewOnly ? previewCsv(decoded.text, settings) : decoded.text;
-      updateInput(text, "file");
-      setDetectedEncoding(decoded.encoding);
-      setFileHasBom(decoded.hasBom);
-      setReplacementCount(decoded.replacementCount);
+      applyDecodedFile(decodeCsvBytes(bytes, fileEncoding), previewOnly);
       setExcelSheets([]);
       setSelectedSheet("");
-      if (previewOnly) setPreviewNotice(`大容量ファイルの先頭${PREVIEW_ROW_LIMIT.toLocaleString()}行だけを表示しています。`);
     } catch (error) {
       setRepairError(error instanceof Error ? error.message : "ファイルを読み込めませんでした。");
     } finally {
@@ -491,10 +556,12 @@ export function CsvViewerBetaSuite() {
 
   return (
     <ToolShell
-      slug="csv-viewer-beta"
+      slug={official ? "csv-viewer" : "csv-viewer-beta"}
       category="データ"
-      title="CSV Viewer Beta"
-      description="現行CSV Viewerを基準にした次期版です。解析・変換の安全性を改善しています。"
+      title={official ? "CSV Viewer" : "CSV Viewer Beta"}
+      description={official
+        ? "CSVを貼り付けるかファイルで開き、文字化け・Excel変換事故・データ破壊を事前に検出します。"
+        : "現行CSV Viewerを基準にした次期版です。解析・変換の安全性を改善しています。"}
       functionCount={1}
       tabs={[
         { id: "simple", label: "Simple" },
@@ -504,11 +571,13 @@ export function CsvViewerBetaSuite() {
       onTabChange={(tab) => setViewerMode(tab as "simple" | "pro")}
     >
       <div className="csv-viewer-flow">
+        {!official && (
         <section className="csv-beta-banner" aria-label="Beta注意">
           <strong>BETA</strong>
           <p>Beta版です。CSV解析・変換機能を改善中です。重要なデータは出力結果を確認してから使用してください。</p>
           <Link href="/tools/csv-viewer">安定版CSV Viewerを開く</Link>
         </section>
+        )}
 
         {viewerMode === "pro" ? (
         <details open className="csv-settings-group">
@@ -519,7 +588,7 @@ export function CsvViewerBetaSuite() {
               <select value={fileEncoding} onChange={(event) => changeFileEncoding(event.target.value as CsvFileEncoding)}>
                 <option value="auto">自動判定</option>
                 <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS（encoding-japanese SJIS）</option>
+                <option value="shift_jis" title="encoding-japanese SJIS。CP932完全互換ではありません。">Shift_JIS</option>
                 <option value="utf-16le">UTF-16LE</option>
                 <option value="utf-16be">UTF-16BE</option>
               </select>
@@ -603,7 +672,18 @@ export function CsvViewerBetaSuite() {
         </details>
         ) : null}
 
-      <section className="csv-viewer-input">
+      <section
+        className="csv-viewer-input"
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          const file = event.dataTransfer.files?.[0];
+          if (file) selectFile(file);
+        }}
+      >
         <header>
           <span>INPUT CSV</span>
           <div>
@@ -667,6 +747,7 @@ export function CsvViewerBetaSuite() {
           <div className="csv-loading" role="status">
             <LoaderCircle size={18} />
             ファイルを読み込んでいます…
+            <button type="button" onClick={() => { loadCancelledRef.current = true; setLoading(false); }}>キャンセル</button>
           </div>
         )}
         <textarea
@@ -685,7 +766,14 @@ export function CsvViewerBetaSuite() {
               <strong>DETECTED</strong>
               {detectedItems.map((item) => <span key={item}>{item}</span>)}
               {usingCustomSettings && <span className="csv-custom-flag">カスタム設定を使用中</span>}
+              {asciiCompatible && inputSource === "file" && <span>ASCII互換</span>}
             </div>
+            {unknownEncodingBlocksExport && (
+              <div className="csv-simple-warnings">
+                <strong>⚠ 文字コードを自動判定できませんでした</strong>
+                <button type="button" onClick={() => setViewerMode("pro")}>Proで文字コードを指定</button>
+              </div>
+            )}
             <div className="csv-validation-summary">
               <strong>CSV検証</strong>
               <ul>
@@ -713,28 +801,46 @@ export function CsvViewerBetaSuite() {
               </div>
             )}
             <div className="csv-simple-downloads">
-              <span>ダウンロード · 編集済み全件 {records.length.toLocaleString()}件</span>
+              <span>
+                ダウンロード · {hiddenRecords?.length
+                  ? `全件 ${(records.length + hiddenRecords.length).toLocaleString()}件（表示は先頭${records.length.toLocaleString()}行）`
+                  : `編集済み全件 ${records.length.toLocaleString()}件`}
+              </span>
               <button
                 type="button"
                 title="UTF-8 / BOMなし"
-                onClick={() => downloadCsv(records, columns, utf8CsvPreset)}
+                disabled={unknownEncodingBlocksExport}
+                onClick={() => {
+                  const full = recordsForFullExport();
+                  downloadCsv(full.records, full.columns, utf8CsvPreset);
+                }}
               >
                 UTF-8 CSV
               </button>
               <button
                 type="button"
                 title={"UTF-8 BOM付き・CRLFで出力します。\nExcelでの文字化けを抑えますが、先頭ゼロや長い数値、日付などの自動変換は防げません。"}
-                onClick={() => downloadCsv(records, columns, excelOrientedCsvPreset)}
+                disabled={unknownEncodingBlocksExport}
+                onClick={() => {
+                  const full = recordsForFullExport();
+                  downloadCsv(full.records, full.columns, excelOrientedCsvPreset);
+                }}
               >
                 Excel向けCSV
               </button>
-              <button type="button" onClick={() => void downloadXlsxSafe(records, columns)}>XLSX</button>
+              <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => {
+                const full = recordsForFullExport();
+                void downloadXlsxSafe(full.records, full.columns);
+              }}>XLSX</button>
             </div>
             {excelRiskSummary.kinds > 0 && (
               <div className="csv-excel-risk">
                 <strong>⚠ Excelで値が変わる可能性があります</strong>
                 <p>先頭ゼロ: {excelRiskSummary.leadingZero}件 · 16桁以上の整数: {excelRiskSummary.longInteger}件 · 日付変換候補: {excelRiskSummary.dateLike}件 · 指数表記: {excelRiskSummary.scientific}件</p>
-                <button type="button" onClick={() => void downloadXlsxSafe(records, columns)}>XLSXで保存</button>
+                <button type="button" onClick={() => {
+                  const full = recordsForFullExport();
+                  void downloadXlsxSafe(full.records, full.columns);
+                }}>XLSXで保存</button>
               </div>
             )}
           </section>
@@ -744,9 +850,15 @@ export function CsvViewerBetaSuite() {
           <fieldset>
             <label>
               出力文字コード
-              <select value={outputEncoding} onChange={(event) => setOutputEncoding(event.target.value as CsvOutputEncoding)}>
+              <select value={outputEncoding} onChange={(event) => {
+                const next = event.target.value as CsvOutputEncoding;
+                setOutputEncoding(next);
+                if (next === "utf-16le" || next === "utf-16be") setIncludeBom(true);
+              }}>
                 <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS（encoding-japanese SJIS）</option>
+                <option value="shift_jis" title="encoding-japanese SJIS。CP932完全互換ではありません。">Shift_JIS</option>
+                <option value="utf-16le">UTF-16LE</option>
+                <option value="utf-16be">UTF-16BE</option>
               </select>
             </label>
             <label>
@@ -779,8 +891,11 @@ export function CsvViewerBetaSuite() {
                 disabled={outputEncoding === "shift_jis"}
                 onChange={(event) => setIncludeBom(event.target.checked)}
               />
-              UTF-8 BOMを付ける
+              {outputEncoding.startsWith("utf-16") ? "UTF-16 BOMを付ける" : "UTF-8 BOMを付ける"}
             </label>
+            {(outputEncoding === "utf-16le" || outputEncoding === "utf-16be") && !includeBom && (
+              <small className="csv-inherit-save">BOMなしは、受信側が文字コードを事前に認識している場合のみ推奨します。</small>
+            )}
             <label className="csv-check">
               <input
                 type="checkbox"
@@ -801,20 +916,22 @@ export function CsvViewerBetaSuite() {
               </div>
               <div>
                 <strong>OUTPUT</strong>
-                <span>{outputEncoding === "shift_jis" ? "Shift_JIS" : "UTF-8"}</span>
+                <span>{outputEncoding === "shift_jis" ? "Shift_JIS" : outputEncoding === "utf-16le" ? "UTF-16LE" : outputEncoding === "utf-16be" ? "UTF-16BE" : "UTF-8"}</span>
                 <span>{lineEndingToken(lineEnding)}</span>
                 <span>{delimiterToken(",")}</span>
-                <span>{outputEncoding === "utf-8" ? (includeBom ? "BOMあり" : "BOMなし") : "BOMなし"}</span>
+                <span>{outputEncoding === "shift_jis" ? "BOMなし" : includeBom ? "BOMあり" : "BOMなし"}</span>
               </div>
             </div>
             {inputSource === "file" && (
               <div className="csv-inherit-save">
-                <button type="button" onClick={() => downloadInherited(records, columns)}>
+                <button type="button" onClick={() => {
+                  const full = recordsForFullExport();
+                  downloadInherited(full.records, full.columns);
+                }}>
                   入力形式を引き継いで保存
                 </button>
                 <small>
-                  文字コード・BOM・区切り・改行を入力ファイルから引き継ぎます。再serializeするため quote 配置などは正規化され、元ファイルとbyte一致は保証しません。
-                  {detectedEncoding === "utf-16le" || detectedEncoding === "utf-16be" ? " UTF-16入力はUTF-8として保存します。" : ""}
+                  文字コード・BOM・区切り・改行・quote/escapeを入力ファイルから引き継ぎます。CSV構造を再生成するため、元ファイルとのbyte完全一致は保証しません。
                 </small>
               </div>
             )}
@@ -855,6 +972,7 @@ export function CsvViewerBetaSuite() {
           enableDuplicateValidation
           columnLabels={columnLabels}
           exportSplit
+          allExportCount={hiddenRecords?.length ? records.length + hiddenRecords.length : undefined}
           onRecordsChange={setEditedRecords}
           csvSerializer={(targetRecords, targetColumns, includeHeader) =>
             serializeOutput(targetRecords, targetColumns, includeHeader)
@@ -868,9 +986,15 @@ export function CsvViewerBetaSuite() {
               escapeMode: outputEscapeMode,
             }),
           })}
-          onDownloadAllCsv={downloadWithCurrentSettings}
+          onDownloadAllCsv={() => {
+            const full = recordsForFullExport();
+            downloadWithCurrentSettings(full.records, full.columns);
+          }}
           onDownloadCsv={downloadWithCurrentSettings}
-          onDownloadAllXlsx={(downloadRecords, downloadColumns) => void downloadXlsxSafe(downloadRecords, downloadColumns)}
+          onDownloadAllXlsx={() => {
+            const full = recordsForFullExport();
+            void downloadXlsxSafe(full.records, full.columns);
+          }}
           onDownloadXlsx={(downloadRecords, downloadColumns) => void downloadXlsxSafe(downloadRecords, downloadColumns)}
           emptyMessage="CSVの行がありません"
           />
@@ -981,19 +1105,19 @@ export function CsvViewerBetaSuite() {
       <section className="csv-guide" aria-labelledby="csv-guide-title-beta">
         <div className="csv-guide-heading">
           <span>GUIDE / TROUBLESHOOTING</span>
-          <h2 id="csv-guide-title-beta">Betaの安全なCSV取り扱い</h2>
-          <p>このページは安定版と別実装です。CSV内容の自動修正、黙った文字置換、文字コードの断定は行いません。</p>
+          <h2 id="csv-guide-title-beta">{official ? "安全なCSV取り扱い" : "Betaの安全なCSV取り扱い"}</h2>
+          <p>CSV内容の自動修正、黙った文字置換、根拠のない文字コード断定は行いません。通常はUTF-8を推奨します。UTF-16は既存システムとの互換用途としてProで利用できます。</p>
         </div>
         <div className="csv-guide-grid">
           <article>
             <span>01</span>
             <h3>文字コード</h3>
-            <p>ファイル読込時のみbyteから判定します。貼り付けテキストに元文字コードとBOMはありません。Shift_JIS出力はencoding-japanese 2.3.0のSJIS変換です。CP932専用エンコーダではありません。変換不能文字は停止します。</p>
+            <p>ファイル読込時のみbyteから判定します。BOMがあれば最優先。UTF-8でなければ即Shift_JISにはしません。曖昧なら不明として停止します。貼り付けに元encodingはありません。Shift_JISはencoding-japanese SJISで、変換不能文字は停止します。CP932完全互換ではありません。</p>
           </article>
           <article>
             <span>02</span>
             <h3>区切り・改行</h3>
-            <p>Simpleの自動判定はcomma / tab / semicolon / pipeです。quote内の区切りは除外し、列数の安定を見ます。spaceはProで手動指定できます。quoted field内改行は1セルです。混在改行は警告します。</p>
+            <p>Simpleの自動判定はcomma / tab / semicolon / pipeです。quote内の区切りは除外し、列数の安定を見ます。spaceはProで手動指定できます。quoted field内改行はrecord separatorに含めません。quote外の改行だけが混在判定の対象です。</p>
           </article>
           <article>
             <span>03</span>
@@ -1008,12 +1132,12 @@ export function CsvViewerBetaSuite() {
           <article>
             <span>05</span>
             <h3>エクスポート対象</h3>
-            <p>Simpleの用途別ボタンは編集済み全件です。Gridの「CSVを保存 N件」も全件、「表示中のN件をエクスポート」はfilter/sort後です。sort/filterは表示中エクスポートにだけ反映します。</p>
+            <p>Simpleの用途別ボタンは編集済み全件です。Gridの「CSVを保存 N件」も全件、「表示中のN件をエクスポート」はfilter/sort後です。sort/filterは表示中エクスポートにだけ反映します。先頭10,000行プレビュー中でも全件保存は切らず、隠れた行はstateに残します。</p>
           </article>
           <article>
             <span>06</span>
             <h3>入力形式の引き継ぎ</h3>
-            <p>ファイル読込時のみ「入力形式を引き継いで保存」を使えます。再serializeするためquote配置のbyte一致は保証しません。貼り付けには適用しません。</p>
+            <p>ファイル読込時のみ「入力形式を引き継いで保存」を使えます。UTF-16LE/BEもそのまま引き継ぎます。CSV構造を再生成するため、元ファイルとのbyte完全一致は保証しません。貼り付けには適用しません。Known limitation: EUC-JP / ISO-2022-JP非対応、巨大CSVはブラウザが固まる可能性、Grid仮想化なし。</p>
           </article>
         </div>
       </section>

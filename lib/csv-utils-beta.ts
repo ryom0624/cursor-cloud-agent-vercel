@@ -3,9 +3,9 @@ import * as Encoding from "encoding-japanese";
 export type CsvDelimiter = "," | "\t" | ";" | "|" | " ";
 export type CsvDelimiterSetting = CsvDelimiter | "auto";
 export type CsvQuote = '"' | "'" | "";
-export type CsvDetectedEncoding = "utf-8" | "shift_jis" | "utf-16le" | "utf-16be";
-export type CsvFileEncoding = "auto" | CsvDetectedEncoding;
-export type CsvOutputEncoding = "utf-8" | "shift_jis";
+export type CsvDetectedEncoding = "utf-8" | "shift_jis" | "utf-16le" | "utf-16be" | "unknown";
+export type CsvFileEncoding = "auto" | Exclude<CsvDetectedEncoding, "unknown">;
+export type CsvOutputEncoding = "utf-8" | "shift_jis" | "utf-16le" | "utf-16be";
 export type CsvLineEnding = "\n" | "\r\n" | "\r";
 export type CsvEscapeMode = "double" | "backslash";
 export type CsvParseOptions = {
@@ -30,6 +30,13 @@ export type CsvInspection = {
 export const XLSX_MAX_ROWS = 1_048_576;
 export const XLSX_MAX_COLS = 16_384;
 export const XLSX_MAX_CELL_CHARS = 32_767;
+export const LARGE_FILE_WARNING_BYTES = 10 * 1024 * 1024;
+export const PREVIEW_ROW_LIMIT = 10_000;
+export const VALIDATION_CELL_LIMIT = 80_000;
+
+export function cellCount(records: Array<Record<string, unknown>>, columns: string[]) {
+  return records.length * columns.length;
+}
 
 const autoDelimiterCandidates: CsvDelimiter[] = [",", "\t", ";", "|"];
 
@@ -101,28 +108,56 @@ function detectDelimiter(input: string, quote: CsvQuote, escapeMode: CsvEscapeMo
   return best.delimiter;
 }
 
-function inspectLineEnding(input: string): CsvInspection["lineEnding"] {
-  if (input.includes("\r\n")) return "CRLF";
-  if (input.includes("\n")) return "LF";
-  if (input.includes("\r")) return "CR";
-  return "なし";
-}
-
-export function hasMixedLineEndings(input: string) {
+export function inspectRecordSeparators(
+  input: string,
+  quote: CsvQuote = '"',
+  escapeMode: CsvEscapeMode = "double",
+) {
   let crlf = 0;
   let lf = 0;
   let cr = 0;
+  let quoted = false;
   for (let index = 0; index < input.length; index += 1) {
-    if (input[index] === "\r" && input[index + 1] === "\n") {
-      crlf += 1;
+    const char = input[index];
+    const next = input[index + 1];
+    if (quote && escapeMode === "backslash" && quoted && char === "\\" && next === quote) {
       index += 1;
-    } else if (input[index] === "\n") {
-      lf += 1;
-    } else if (input[index] === "\r") {
-      cr += 1;
+    } else if (quote && escapeMode === "double" && char === quote && quoted && next === quote) {
+      index += 1;
+    } else if (quote && char === quote) {
+      quoted = !quoted;
+    } else if (!quoted && (char === "\n" || char === "\r")) {
+      if (char === "\r" && next === "\n") {
+        crlf += 1;
+        index += 1;
+      } else if (char === "\n") {
+        lf += 1;
+      } else {
+        cr += 1;
+      }
     }
   }
-  return [crlf, lf, cr].filter((count) => count > 0).length > 1;
+  const kinds = [
+    crlf > 0 ? "CRLF" : null,
+    lf > 0 ? "LF" : null,
+    cr > 0 ? "CR" : null,
+  ].filter(Boolean) as Array<"CRLF" | "LF" | "CR">;
+  const primary: CsvInspection["lineEnding"] = crlf
+    ? "CRLF"
+    : lf
+      ? "LF"
+      : cr
+        ? "CR"
+        : "なし";
+  return { crlf, lf, cr, primary, mixed: kinds.length > 1 };
+}
+
+function inspectLineEnding(input: string, quote: CsvQuote = '"', escapeMode: CsvEscapeMode = "double"): CsvInspection["lineEnding"] {
+  return inspectRecordSeparators(input, quote, escapeMode).primary;
+}
+
+export function hasMixedLineEndings(input: string, quote: CsvQuote = '"', escapeMode: CsvEscapeMode = "double") {
+  return inspectRecordSeparators(input, quote, escapeMode).mixed;
 }
 
 function detectSeparatorDirective(input: string) {
@@ -152,7 +187,7 @@ export function inspectCsv(input: string, options: CsvParseOptions = {}): CsvIns
   const unevenRows = result.rows
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => row.length !== expectedWidth);
-  const mixedLineEndings = hasMixedLineEndings(normalized);
+  const mixedLineEndings = hasMixedLineEndings(normalized, quote, escapeMode);
   const separatorDirective = detectSeparatorDirective(normalized);
   if (result.unclosedQuote) warnings.push("囲み文字が閉じられていません。");
   if (unevenRows.length) {
@@ -164,7 +199,7 @@ export function inspectCsv(input: string, options: CsvParseOptions = {}): CsvIns
   return {
     ...result,
     delimiter,
-    lineEnding: inspectLineEnding(normalized),
+    lineEnding: inspectLineEnding(normalized, quote, escapeMode),
     hasBom,
     mixedLineEndings,
     separatorDirective,
@@ -176,16 +211,146 @@ export function parseCsv(input: string, options: CsvParseOptions = {}): string[]
   return inspectCsv(input, options).rows;
 }
 
-export function detectCsvEncoding(bytes: Uint8Array): CsvDetectedEncoding {
-  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return "utf-8";
-  if (bytes[0] === 0xff && bytes[1] === 0xfe) return "utf-16le";
-  if (bytes[0] === 0xfe && bytes[1] === 0xff) return "utf-16be";
+export type EncodingDetection = {
+  encoding: CsvDetectedEncoding;
+  hasBom: boolean;
+  asciiCompatible: boolean;
+  duplicateBom: boolean;
+  confidence: "bom" | "heuristic" | "fallback" | "unknown";
+  warnings: string[];
+};
+
+function isUtf8Bom(bytes: Uint8Array, offset = 0) {
+  return bytes[offset] === 0xef && bytes[offset + 1] === 0xbb && bytes[offset + 2] === 0xbf;
+}
+
+function isUtf16LeBom(bytes: Uint8Array, offset = 0) {
+  return bytes[offset] === 0xff && bytes[offset + 1] === 0xfe;
+}
+
+function isUtf16BeBom(bytes: Uint8Array, offset = 0) {
+  return bytes[offset] === 0xfe && bytes[offset + 1] === 0xff;
+}
+
+function isAsciiBytes(bytes: Uint8Array) {
+  return bytes.every((value) => value < 0x80);
+}
+
+function looksLikeIso2022Jp(bytes: Uint8Array) {
+  for (let index = 0; index < bytes.length - 2; index += 1) {
+    if (bytes[index] !== 0x1b) continue;
+    const next = bytes[index + 1];
+    const third = bytes[index + 2];
+    if (next === 0x24 && (third === 0x42 || third === 0x40 || third === 0x28)) return true;
+    if (next === 0x28 && (third === 0x4a || third === 0x42 || third === 0x49)) return true;
+  }
+  return false;
+}
+
+function looksLikeConfidentUtf16(bytes: Uint8Array, littleEndian: boolean) {
+  if (bytes.length < 8 || bytes.length % 2 !== 0) return false;
+  let highZero = 0;
+  const units = bytes.length / 2;
+  for (let index = 0; index < bytes.length; index += 2) {
+    const high = littleEndian ? bytes[index + 1] : bytes[index];
+    if (high === 0) highZero += 1;
+  }
+  if (highZero / units < 0.85) return false;
+  const decoded = new TextDecoder(littleEndian ? "utf-16le" : "utf-16be", { fatal: false }).decode(bytes);
+  if (decoded.includes("\uFFFD")) return false;
+  return /[,;\t|a-zA-Z0-9\n\r]/.test(decoded);
+}
+
+function looksLikeValidShiftJis(bytes: Uint8Array) {
+  const detected = Encoding.detect(Array.from(bytes));
+  if (
+    detected === "EUCJP"
+    || detected === "JIS"
+    || detected === "UNICODE"
+    || detected === "UTF16"
+    || detected === "UTF32"
+    || detected === "BINARY"
+  ) return false;
+  if (bytes.some((value, index) => value === 0x1b && bytes[index + 1] === 0x24)) return false;
+  const decoded = new TextDecoder("shift_jis", { fatal: false }).decode(bytes);
+  const chars = [...decoded];
+  if (!chars.length) return false;
+  const replacements = chars.filter((char) => char === "\uFFFD").length;
+  if (replacements / chars.length > 0.01) return false;
+  const badControls = chars.filter((char) => {
+    const code = char.codePointAt(0) ?? 0;
+    return code < 32 && char !== "\t" && char !== "\n" && char !== "\r";
+  }).length;
+  if (badControls > 2) return false;
+  const hasJapanese = /[\u3040-\u30FF\u4E00-\u9FFF\uFF61-\uFF9F]/.test(decoded);
+  return detected === "SJIS" || (hasJapanese && replacements === 0);
+}
+
+export function detectCsvEncodingDetails(bytes: Uint8Array): EncodingDetection {
+  const warnings: string[] = [];
+  if (!bytes.length) {
+    return { encoding: "unknown", hasBom: false, asciiCompatible: true, duplicateBom: false, confidence: "unknown", warnings };
+  }
+  if (isUtf8Bom(bytes)) {
+    const duplicateBom = isUtf8Bom(bytes, 3);
+    if (duplicateBom) warnings.push("UTF-8 BOMが重複しています。先頭のBOMのみ解釈しました。");
+    try {
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      warnings.push("UTF-8 BOMがありますが、デコード結果に不正なbyteがあります。");
+    }
+    return { encoding: "utf-8", hasBom: true, asciiCompatible: false, duplicateBom, confidence: "bom", warnings };
+  }
+  if (isUtf16LeBom(bytes)) {
+    const duplicateBom = isUtf16LeBom(bytes, 2);
+    if (duplicateBom) warnings.push("UTF-16LE BOMが重複しています。先頭のBOMのみ解釈しました。");
+    const decoded = new TextDecoder("utf-16le", { fatal: false }).decode(bytes);
+    if (decoded.includes("\uFFFD")) warnings.push("UTF-16LE BOMがありますが、デコードできない箇所があります。");
+    return { encoding: "utf-16le", hasBom: true, asciiCompatible: false, duplicateBom, confidence: "bom", warnings };
+  }
+  if (isUtf16BeBom(bytes)) {
+    const duplicateBom = isUtf16BeBom(bytes, 2);
+    if (duplicateBom) warnings.push("UTF-16BE BOMが重複しています。先頭のBOMのみ解釈しました。");
+    const decoded = new TextDecoder("utf-16be", { fatal: false }).decode(bytes);
+    if (decoded.includes("\uFFFD")) warnings.push("UTF-16BE BOMがありますが、デコードできない箇所があります。");
+    return { encoding: "utf-16be", hasBom: true, asciiCompatible: false, duplicateBom, confidence: "bom", warnings };
+  }
+  if (looksLikeConfidentUtf16(bytes, true)) {
+    return { encoding: "utf-16le", hasBom: false, asciiCompatible: false, duplicateBom: false, confidence: "heuristic", warnings };
+  }
+  if (looksLikeConfidentUtf16(bytes, false)) {
+    return { encoding: "utf-16be", hasBom: false, asciiCompatible: false, duplicateBom: false, confidence: "heuristic", warnings };
+  }
+  if (looksLikeIso2022Jp(bytes)) {
+    warnings.push("ISO-2022-JPの可能性があります。未対応のため判定不能にしました。");
+    return { encoding: "unknown", hasBom: false, asciiCompatible: false, duplicateBom: false, confidence: "unknown", warnings };
+  }
   try {
     new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    return "utf-8";
+    return {
+      encoding: "utf-8",
+      hasBom: false,
+      asciiCompatible: isAsciiBytes(bytes),
+      duplicateBom: false,
+      confidence: "fallback",
+      warnings,
+    };
   } catch {
-    return "shift_jis";
+    const detected = Encoding.detect(Array.from(bytes));
+    if (detected === "UTF16" || detected === "UNICODE" || detected === "UTF32") {
+      warnings.push("UTF-16の可能性がありますが、BOMがなくbyte orderを確信できないため判定不能にしました。Proで指定してください。");
+      return { encoding: "unknown", hasBom: false, asciiCompatible: false, duplicateBom: false, confidence: "unknown", warnings };
+    }
+    if (looksLikeValidShiftJis(bytes)) {
+      return { encoding: "shift_jis", hasBom: false, asciiCompatible: false, duplicateBom: false, confidence: "heuristic", warnings };
+    }
+    warnings.push("文字コードを自動判定できませんでした。");
+    return { encoding: "unknown", hasBom: false, asciiCompatible: false, duplicateBom: false, confidence: "unknown", warnings };
   }
+}
+
+export function detectCsvEncoding(bytes: Uint8Array): CsvDetectedEncoding {
+  return detectCsvEncodingDetails(bytes).encoding;
 }
 
 export type DecodeReplacement = {
@@ -202,27 +367,79 @@ export function decodeCsvBytes(
   encoding: CsvDetectedEncoding;
   hasBom: boolean;
   replacementCount: number;
+  asciiCompatible: boolean;
+  detectionWarnings: string[];
 } {
-  const encoding = requestedEncoding === "auto" ? detectCsvEncoding(bytes) : requestedEncoding;
-  const utf8Bom = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
-  const utf16leBom = bytes[0] === 0xff && bytes[1] === 0xfe;
-  const utf16beBom = bytes[0] === 0xfe && bytes[1] === 0xff;
-  const hasBom = encoding === "utf-8"
-    ? utf8Bom
-    : encoding === "utf-16le"
-      ? utf16leBom
-      : encoding === "utf-16be"
-        ? utf16beBom
-        : false;
-  const decoderLabel = encoding === "shift_jis" ? "shift_jis" : encoding;
-  const text = new TextDecoder(decoderLabel, { fatal: false }).decode(bytes);
+  const detection = requestedEncoding === "auto"
+    ? detectCsvEncodingDetails(bytes)
+    : {
+      encoding: requestedEncoding,
+      hasBom: requestedEncoding === "utf-8"
+        ? isUtf8Bom(bytes)
+        : requestedEncoding === "utf-16le"
+          ? isUtf16LeBom(bytes)
+          : requestedEncoding === "utf-16be"
+            ? isUtf16BeBom(bytes)
+            : false,
+      asciiCompatible: requestedEncoding === "utf-8" && isAsciiBytes(bytes),
+      duplicateBom: false,
+      confidence: "fallback" as const,
+      warnings: [] as string[],
+    };
+  if (detection.encoding === "unknown") {
+    const fallback = new TextDecoder("utf-8", { fatal: false }).decode(bytes).replace(/^\uFEFF/, "");
+    return {
+      text: fallback,
+      encoding: "unknown",
+      hasBom: false,
+      replacementCount: [...fallback].filter((char) => char === "\uFFFD").length,
+      asciiCompatible: false,
+      detectionWarnings: detection.warnings,
+    };
+  }
+  const text = detection.encoding === "shift_jis"
+    ? Encoding.codeToString(Encoding.convert(Array.from(bytes), {
+      from: "SJIS",
+      to: "UNICODE",
+      type: "array",
+    }) as number[])
+    : new TextDecoder(detection.encoding, { fatal: false }).decode(bytes);
   const stripped = text.replace(/^\uFEFF/, "");
   return {
     text: stripped,
-    encoding,
-    hasBom,
+    encoding: detection.encoding,
+    hasBom: detection.hasBom,
     replacementCount: [...stripped].filter((char) => char === "\uFFFD").length,
+    asciiCompatible: detection.asciiCompatible,
+    detectionWarnings: detection.warnings,
   };
+}
+
+export function encodeUtf16(text: string, littleEndian: boolean, includeBom: boolean) {
+  const units: number[] = [];
+  for (const char of text) {
+    const codePoint = char.codePointAt(0) ?? 0;
+    if (codePoint <= 0xffff) {
+      units.push(codePoint);
+    } else {
+      const value = codePoint - 0x10000;
+      units.push(0xd800 + (value >> 10), 0xdc00 + (value & 0x3ff));
+    }
+  }
+  const bytes = new Uint8Array((includeBom ? 2 : 0) + units.length * 2);
+  let offset = 0;
+  if (includeBom) {
+    bytes[0] = littleEndian ? 0xff : 0xfe;
+    bytes[1] = littleEndian ? 0xfe : 0xff;
+    offset = 2;
+  }
+  units.forEach((unit, index) => {
+    const low = unit & 0xff;
+    const high = unit >> 8;
+    bytes[offset + index * 2] = littleEndian ? low : high;
+    bytes[offset + index * 2 + 1] = littleEndian ? high : low;
+  });
+  return bytes;
 }
 
 export type SjisUnmappable = {
@@ -261,10 +478,14 @@ export function findSjisUnmappableChars(text: string): SjisUnmappable[] {
 export function findSjisUnmappableInRecords(
   records: Array<Record<string, unknown>>,
   columns: string[],
+  limit = VALIDATION_CELL_LIMIT,
 ): SjisUnmappable[] {
   const found: SjisUnmappable[] = [];
+  let scanned = 0;
   records.forEach((record, rowIndex) => {
     columns.forEach((column, columnIndex) => {
+      if (scanned >= limit) return;
+      scanned += 1;
       const value = String(record[column] ?? "");
       for (const char of value) {
         if (!canEncodeToShiftJis(char)) {
@@ -313,6 +534,12 @@ export function encodeCsvText(
     result.set([0xef, 0xbb, 0xbf]);
     result.set(body, 3);
     return { bytes: result, unmappable: [] };
+  }
+  if (encoding === "utf-16le") {
+    return { bytes: encodeUtf16(text, true, includeBom), unmappable: [] };
+  }
+  if (encoding === "utf-16be") {
+    return { bytes: encodeUtf16(text, false, includeBom), unmappable: [] };
   }
   return encodeToShiftJis(text, options);
 }
@@ -468,8 +695,15 @@ export function formatCsvOutputMeta(options: {
 }) {
   const newline = options.lineEnding === "\r\n" ? "CRLF" : options.lineEnding === "\n" ? "LF" : "CR";
   const escape = options.escapeMode === "double" ? "囲み文字を二重化" : "バックスラッシュ";
-  const parts = [options.encoding === "shift_jis" ? "Shift_JIS" : "UTF-8", newline];
-  if (options.encoding === "utf-8") {
+  const encodingLabelText = options.encoding === "shift_jis"
+    ? "Shift_JIS"
+    : options.encoding === "utf-16le"
+      ? "UTF-16LE"
+      : options.encoding === "utf-16be"
+        ? "UTF-16BE"
+        : "UTF-8";
+  const parts = [encodingLabelText, newline];
+  if (options.encoding !== "shift_jis") {
     parts.push(options.includeBom ? "BOMあり" : "BOMなし");
   }
   parts.push(escape);
@@ -511,6 +745,7 @@ export function encodingLabel(encoding: CsvDetectedEncoding | null, source: CsvI
   if (encoding === "shift_jis") return "Shift_JIS";
   if (encoding === "utf-16le") return "UTF-16LE";
   if (encoding === "utf-16be") return "UTF-16BE";
+  if (encoding === "unknown") return "不明";
   return "不明";
 }
 
@@ -575,12 +810,17 @@ export function parseCsvTable(input: string, settings: ViewerSettings): ParsedCs
       warnings: inspection.warnings,
     };
   }
-  const columns = headers.map((_, index) => `col_${index}`);
-  const headerValues = headers.map((header) => header);
-  const headerLabels = headers.map((header, index) => displayHeaderLabel(header, index, headers));
-  const columnLabels = Object.fromEntries(columns.map((column, index) => [column, headerLabels[index]]));
   const rows = inspection.rows.slice(Math.max(settings.dataStartRow - 1, settings.headerRow));
+  const maxWidth = Math.max(headers.length, ...rows.map((row) => row.length), 0);
+  const paddedHeaders = Array.from({ length: maxWidth }, (_, index) => headers[index] ?? "");
+  const columns = paddedHeaders.map((_, index) => `col_${index}`);
+  const headerValues = paddedHeaders.map((header) => header);
+  const headerLabels = paddedHeaders.map((header, index) => displayHeaderLabel(header, index, paddedHeaders));
+  const columnLabels = Object.fromEntries(columns.map((column, index) => [column, headerLabels[index]]));
   const warnings = [...inspection.warnings];
+  if (maxWidth > headers.length) {
+    warnings.push(`ヘッダーより多い列がある行があります。余分な列は空ヘッダーとして保持します。`);
+  }
   if (headers.some((header) => !header.trim())) {
     warnings.push("空のヘッダーがあります。表示名のみ補完し、出力時は元の空ヘッダーを保持します。");
   }
@@ -662,10 +902,14 @@ export function isScientificRisk(value: string) {
 export function diagnoseExcelRisks(
   records: Array<Record<string, unknown>>,
   columns: string[],
+  limit = VALIDATION_CELL_LIMIT,
 ): ExcelRiskHit[] {
   const hits: ExcelRiskHit[] = [];
+  let scanned = 0;
   records.forEach((record, rowIndex) => {
     columns.forEach((column, columnIndex) => {
+      if (scanned >= limit) return;
+      scanned += 1;
       const value = String(record[column] ?? "");
       const kinds: ExcelRiskKind[] = [];
       if (isLeadingZeroRisk(value)) kinds.push("leadingZero");
@@ -734,9 +978,37 @@ export function checkXlsxLimits(
   return errors;
 }
 
+export function applyPreviewEdits<T>(hiddenRecords: T[], editedVisible: T[]): T[] {
+  return [...editedVisible, ...hiddenRecords];
+}
+
+export function splitPreviewRecords<T>(records: T[], limit = PREVIEW_ROW_LIMIT) {
+  return {
+    visible: records.slice(0, limit),
+    hidden: records.slice(limit),
+    previewApplied: records.length > limit,
+  };
+}
+
+export function isLargeFileWarning(byteLength: number) {
+  return byteLength >= LARGE_FILE_WARNING_BYTES;
+}
+
+export function formatExcelDate(value: Date) {
+  const hasTime = value.getUTCHours() !== 0
+    || value.getUTCMinutes() !== 0
+    || value.getUTCSeconds() !== 0
+    || value.getUTCMilliseconds() !== 0;
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  if (!hasTime) return `${year}-${month}-${day}`;
+  return value.toISOString();
+}
+
 export function excelCellToText(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (value instanceof Date) return value.toISOString();
+  if (value instanceof Date) return formatExcelDate(value);
   if (typeof value !== "object") return String(value);
   if ("result" in value) return excelCellToText((value as { result?: unknown }).result);
   if ("text" in value) return String((value as { text?: unknown }).text ?? "");

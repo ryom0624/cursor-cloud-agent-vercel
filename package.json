@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:extended": "JTC_EXTENDED=1 vitest run tests/jtc-hell-csv.extended.test.ts"
   },
   "dependencies": {
     "cron-parser": "^5.10.0",
