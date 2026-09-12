@@ -349,10 +349,11 @@ export function CsvViewerSuite() {
       description="CSVを貼り付けるかファイルで開き、表として絞り込み・並べ替え・編集します。"
       functionCount={1}
     >
+      <div className="csv-viewer-flow">
       <section className="csv-settings" aria-labelledby="csv-settings-title">
         <header>
-          <span id="csv-settings-title"><FileCog size={15} />CSV解析・出力設定</span>
-          <small>ファイル読込時に文字コードを判定し、解析条件と出力形式を個別に指定できます。</small>
+          <span id="csv-settings-title"><FileCog size={15} />CSV設定</span>
+          <small>入力と出力の設定を個別に開閉できます。</small>
         </header>
         <div className="csv-settings-grid">
           <details open className="csv-settings-group">
@@ -625,6 +626,7 @@ export function CsvViewerSuite() {
           emptyMessage="CSVの行がありません"
           />
         </section>
+      </div>
       </div>
       <ToolStatus error={parsed.error || repairError}>
         {parsed.error ? undefined : `${records.length}行を読み込みました。編集内容はブラウザ内だけに保持されます`}

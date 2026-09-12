@@ -17,6 +17,7 @@ import {
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
+import { parseCsv } from "@/lib/csv-utils";
 
 export type DataGridRecord = Record<string, unknown>;
 
@@ -206,16 +207,16 @@ export function DataGrid({
   const selectionColumns = bounds
     ? columns.slice(bounds.columnStart, bounds.columnEnd + 1)
     : [];
-  const selectionValue = toCsv(
-    selectionRecords,
-    selectionColumns,
-    includeHeader,
-  );
+  const selectionValue = bounds
+    ? bounds.rowStart === bounds.rowEnd && bounds.columnStart === bounds.columnEnd
+      ? displayValue(selectionRecords[0]?.[selectionColumns[0]])
+      : toCsv(selectionRecords, selectionColumns, false)
+    : "";
   const rawOutput = rawPreview?.(visibleRecords, columns);
 
   useEffect(() => {
     const copySelection = (event: KeyboardEvent) => {
-      if (!bounds || !selectionValue) return;
+      if (!bounds) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "c") return;
@@ -225,6 +226,49 @@ export function DataGrid({
     window.addEventListener("keydown", copySelection);
     return () => window.removeEventListener("keydown", copySelection);
   }, [bounds, selectionValue]);
+
+  useEffect(() => {
+    const pasteSelection = (event: ClipboardEvent) => {
+      if (!editable || !bounds || !onRecordsChange) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const clipboard = event.clipboardData?.getData("text/plain") ?? "";
+      if (!clipboard) return;
+
+      const isSingleValue = !/[\t\r\n]/.test(clipboard);
+      const pastedRows = isSingleValue
+        ? [[clipboard]]
+        : parseCsv(clipboard, {
+            delimiter: clipboard.includes("\t") ? "\t" : "auto",
+            skipEmptyLines: false,
+          });
+      if (!pastedRows.length) return;
+
+      event.preventDefault();
+      const nextRecords = records.map((record) => ({ ...record }));
+      let pastedRowCount = 0;
+      let pastedColumnCount = 0;
+      pastedRows.forEach((row, rowOffset) => {
+        const targetRow = indexedRows[bounds.rowStart + rowOffset];
+        if (!targetRow) return;
+        pastedRowCount = rowOffset + 1;
+        row.forEach((value, columnOffset) => {
+          const targetColumn = columns[bounds.columnStart + columnOffset];
+          if (!targetColumn) return;
+          nextRecords[targetRow.originalIndex][targetColumn] = value;
+          pastedColumnCount = Math.max(pastedColumnCount, columnOffset + 1);
+        });
+      });
+      if (!pastedRowCount || !pastedColumnCount) return;
+      onRecordsChange(nextRecords);
+      setSelectionEnd({
+        row: bounds.rowStart + pastedRowCount - 1,
+        column: bounds.columnStart + pastedColumnCount - 1,
+      });
+    };
+    window.addEventListener("paste", pasteSelection);
+    return () => window.removeEventListener("paste", pasteSelection);
+  }, [bounds, columns, editable, indexedRows, onRecordsChange, records]);
   const isSelected = (row: number, column: number) =>
     Boolean(
       bounds
@@ -365,7 +409,7 @@ export function DataGrid({
             value={serializeGridRows(visibleRecords, columns, "\t", includeHeader)}
             label="TSVコピー"
           />
-          <CopyButton value={selectionValue} label="選択範囲をコピー" />
+          <CopyButton value={selectionValue} label="選択セルをコピー" />
           {onDownloadCsv && (
             <button type="button" onClick={() => onDownloadCsv(visibleRecords, columns)}>
               <Download size={14} />CSV
@@ -590,8 +634,8 @@ export function DataGrid({
       <div className="data-grid-selection-status">
         <span>
           {bounds
-            ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Ctrl/⌘+CでCSVコピー`
-            : "セルをドラッグして範囲選択"}
+            ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Ctrl/⌘+Cでコピー · Ctrl/⌘+Vで貼り付け`
+            : "セルをドラッグして範囲選択 · 選択後にCtrl/⌘+Vで貼り付け"}
         </span>
         <span>グリップ=列移動 · ピン=スクロール固定 · 虫眼鏡=重複チェック</span>
       </div>

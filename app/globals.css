@@ -3159,6 +3159,41 @@ kbd {
   margin-bottom: 15px;
 }
 
+.csv-viewer-flow {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.csv-viewer-flow > .csv-settings,
+.csv-viewer-flow > .csv-settings > header,
+.csv-viewer-flow > .csv-settings > .csv-settings-grid {
+  display: contents;
+}
+
+.csv-viewer-flow .csv-settings-group {
+  border: 1px solid var(--ink);
+  margin-bottom: 15px;
+  background: var(--white);
+}
+
+.csv-viewer-flow .csv-settings-group:first-child {
+  order: 1;
+}
+
+.csv-viewer-flow .csv-viewer-input {
+  order: 2;
+}
+
+.csv-viewer-flow .csv-settings-group:last-child {
+  order: 3;
+  border-left: 1px solid var(--ink);
+}
+
+.csv-viewer-flow .csv-output-stage {
+  order: 4;
+}
+
 .csv-settings > header,
 .csv-viewer-input > header,
 .csv-viewer-output > header,
