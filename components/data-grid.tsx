@@ -599,6 +599,8 @@ export function DataGrid({
                 {columns.map((column, columnIndex) => (
                   <td
                     key={column}
+                    data-grid-row={rowIndex}
+                    data-grid-col={columnIndex}
                     className={[
                       isSelected(rowIndex, columnIndex) ? "selected" : "",
                       displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") ? "multiline" : "",
@@ -617,6 +619,23 @@ export function DataGrid({
                     }}
                     onMouseEnter={() => {
                       if (selecting) setSelectionEnd({ row: rowIndex, column: columnIndex });
+                    }}
+                    onPointerMove={(event) => {
+                      if (!selecting || event.buttons !== 1) return;
+                      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("td");
+                      if (!target) return;
+                      const targetRow = Number(target.dataset.gridRow);
+                      const targetColumn = Number(target.dataset.gridCol);
+                      if (Number.isNaN(targetRow) || Number.isNaN(targetColumn)) return;
+                      setSelectionEnd({ row: targetRow, column: targetColumn });
+                    }}
+                    onPointerUp={(event) => {
+                      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("td");
+                      if (!target) return;
+                      const targetRow = Number(target.dataset.gridRow);
+                      const targetColumn = Number(target.dataset.gridCol);
+                      if (Number.isNaN(targetRow) || Number.isNaN(targetColumn)) return;
+                      setSelectionEnd({ row: targetRow, column: targetColumn });
                     }}
                     onDoubleClick={(event) => {
                       if (!editable) return;
