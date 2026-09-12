@@ -143,6 +143,16 @@ export function DataGrid({
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const dragColumnRef = useRef<string | null>(null);
+  const editingCellRef = useRef<CellPosition | null>(null);
+  const selectionEndRef = useRef<CellPosition | null>(null);
+
+  useEffect(() => {
+    editingCellRef.current = editingCell;
+  }, [editingCell]);
+
+  useEffect(() => {
+    selectionEndRef.current = selectionEnd;
+  }, [selectionEnd]);
 
   useEffect(() => {
     const stopSelecting = () => setSelecting(false);
@@ -307,12 +317,30 @@ export function DataGrid({
 
   useEffect(() => {
     const navigateSelection = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (!editable || !bounds || viewMode !== "grid") return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select")) return;
-      if (editingCell) return;
-      const inGrid = Boolean(target?.closest(".json-grid-panel, td[data-grid-row]"));
+      if (editingCellRef.current) return;
+      const inGrid = Boolean(
+        target?.closest(".json-grid-scroll, .json-grid-panel, td[data-grid-row]")
+        || (document.activeElement instanceof HTMLElement
+          && document.activeElement.closest("td[data-grid-row]")),
+      );
       if (!inGrid) return;
+
+      const origin = selectionEndRef.current ?? {
+        row: bounds.rowStart,
+        column: bounds.columnStart,
+      };
+      const applyMove = (rowDelta: number, columnDelta: number) => {
+        event.preventDefault();
+        const next = moveCell(origin.row, origin.column, rowDelta, columnDelta);
+        setSelectionStart(next);
+        setSelectionEnd(next);
+        setSelecting(false);
+        requestAnimationFrame(() => focusGridCell(next.row, next.column));
+      };
 
       if ((event.key === "Delete" || event.key === "Backspace") && onRecordsChange) {
         event.preventDefault();
@@ -329,26 +357,35 @@ export function DataGrid({
         return;
       }
 
+      if (event.key === "ArrowUp") {
+        applyMove(-1, 0);
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        applyMove(1, 0);
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        applyMove(0, -1);
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        applyMove(0, 1);
+        return;
+      }
+
       if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        const next = moveCell(bounds.rowStart, bounds.columnStart, 1, 0);
-        setSelectionStart(next);
-        setSelectionEnd(next);
-        requestAnimationFrame(() => focusGridCell(next.row, next.column));
+        applyMove(1, 0);
         return;
       }
 
       if (event.key === "Tab") {
-        event.preventDefault();
-        const next = moveCell(bounds.rowStart, bounds.columnStart, 0, event.shiftKey ? -1 : 1);
-        setSelectionStart(next);
-        setSelectionEnd(next);
-        requestAnimationFrame(() => focusGridCell(next.row, next.column));
+        applyMove(0, event.shiftKey ? -1 : 1);
       }
     };
     window.addEventListener("keydown", navigateSelection);
     return () => window.removeEventListener("keydown", navigateSelection);
-  }, [bounds, columns, editable, editingCell, indexedRows, moveCell, onRecordsChange, records, viewMode]);
+  }, [bounds, columns, editable, indexedRows, moveCell, onRecordsChange, records, viewMode]);
 
   useEffect(() => {
     if (!editingCell) {
@@ -984,11 +1021,13 @@ export function DataGrid({
                       }
                       if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
+                        event.stopPropagation();
                         commitAndMove(1, 0);
                         return;
                       }
                       if (event.key === "Tab") {
                         event.preventDefault();
+                        event.stopPropagation();
                         commitAndMove(0, event.shiftKey ? -1 : 1);
                       }
                     }}
@@ -1013,8 +1052,8 @@ export function DataGrid({
       <div className="data-grid-selection-status">
         <span>
           {bounds
-            ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Deleteで空 · Enterで下へ · Tabで右へ`
-            : "ダブルクリックで編集 · Deleteで空にする · Enterで下へ · Tabで右へ · Shift+Enterで改行"}
+            ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · 矢印で移動 · Deleteで空 · Enterで下へ · Tabで右へ`
+            : "ダブルクリックで編集 · 矢印で移動 · Deleteで空にする · Enterで下へ · Tabで右へ · Shift+Enterで改行"}
         </span>
         <span>グリップ=列移動 · ゴミ箱=列削除 · ピン=固定 · ＊=必須列 · 虫眼鏡=重複チェック</span>
       </div>
