@@ -117,7 +117,7 @@ export function DataGrid({
     });
   };
 
-  const dropColumn = (source: string, target: string) => {
+  const reorderColumn = (source: string, target: string) => {
     if (!source || source === target) return;
     const next = [...columns];
     const from = next.indexOf(source);
@@ -126,7 +126,6 @@ export function DataGrid({
     next.splice(from, 1);
     next.splice(to, 0, source);
     setColumnOrder(next);
-    setDraggedColumn(null);
   };
 
   const bounds = selectionStart && selectionEnd
@@ -249,9 +248,13 @@ export function DataGrid({
                 <th
                   key={column}
                   onDragOver={(event) => event.preventDefault()}
+                  onDragEnter={() => {
+                    if (draggedColumn) reorderColumn(draggedColumn, column);
+                  }}
                   onDrop={(event) => {
                     event.preventDefault();
-                    dropColumn(event.dataTransfer.getData("text/plain") || draggedColumn || "", column);
+                    reorderColumn(event.dataTransfer.getData("text/plain") || draggedColumn || "", column);
+                    setDraggedColumn(null);
                   }}
                   className={draggedColumn === column ? "dragging" : ""}
                 >
