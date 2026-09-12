@@ -258,7 +258,7 @@ kbd {
 .quick-links span {
   color: #79827c;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -282,7 +282,7 @@ kbd {
   justify-content: space-between;
   padding: 0 16px;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 
@@ -293,7 +293,7 @@ kbd {
 
 .quick-start-head small {
   color: #737d76;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .quick-start-list a {
@@ -313,7 +313,7 @@ kbd {
 .quick-start-list a > span {
   color: var(--rust);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .quick-start-list strong {
@@ -323,7 +323,7 @@ kbd {
 
 .quick-start-list small {
   color: #818a84;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .quick-start-list svg {
@@ -332,7 +332,7 @@ kbd {
 
 .quick-start-foot {
   color: #869089;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .quick-start-foot span {
@@ -343,7 +343,131 @@ kbd {
 
 .quick-start-foot strong {
   color: #bac0bb;
-  font-size: 8px;
+  font-size: 10px;
+}
+
+.paste-anything {
+  width: min(1184px, calc(100% - 64px));
+  min-width: 0;
+  margin: 52px auto;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.paste-anything-heading {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper-deep);
+}
+
+.paste-anything-heading > div {
+  min-width: 0;
+}
+
+.paste-anything-heading span,
+.paste-anything-result span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.paste-anything-heading h2 {
+  margin: 5px 0 0;
+  font-family: var(--mono);
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.paste-anything-heading small {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.paste-anything > textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 180px;
+  display: block;
+  resize: vertical;
+  padding: 17px 18px;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(28, 33, 30, 0.035) 1px, transparent 1px),
+    var(--white);
+  background-size: 100% 24px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 24px;
+}
+
+.paste-anything-result {
+  min-width: 0;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) minmax(190px, auto) auto;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.paste-anything-result > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.paste-anything-result > div strong {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.paste-anything-result p {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.paste-anything-result p span {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.paste-anything-result p strong {
+  color: var(--ink);
+}
+
+.paste-anything-result button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: var(--white);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.paste-anything-result .paste-anything-empty {
+  grid-column: 1 / -1;
 }
 
 .hero-console {
@@ -361,7 +485,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -495,7 +619,7 @@ kbd {
 .command-label {
   color: var(--rust);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
@@ -526,7 +650,7 @@ kbd {
 
 .function-count span {
   color: var(--ink-soft);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.45;
   letter-spacing: 0.1em;
 }
@@ -584,7 +708,7 @@ kbd {
 
 .roadmap-note > span {
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   opacity: 0.65;
 }
@@ -597,7 +721,7 @@ kbd {
 
 .roadmap-note p {
   margin: 0;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.7;
   opacity: 0.7;
 }
@@ -636,7 +760,7 @@ kbd {
   padding: 20px 48px 8px 58px;
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 
@@ -667,7 +791,7 @@ kbd {
   place-items: center;
   color: var(--white);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .accent-朱 { background: var(--rust); }
@@ -755,7 +879,7 @@ kbd {
 .principles span {
   color: var(--rust);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .principles h3 {
@@ -900,7 +1024,7 @@ kbd {
   border-top: 1px solid var(--line);
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .command-empty {
@@ -916,7 +1040,7 @@ kbd {
 .workbench-shell {
   min-height: calc(100vh - 65px);
   display: grid;
-  grid-template-columns: 214px 1fr;
+  grid-template-columns: 214px minmax(0, 1fr);
 }
 
 .workbench-sidebar {
@@ -936,7 +1060,7 @@ kbd {
   border-bottom: 1px solid var(--line-dark);
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
@@ -953,7 +1077,7 @@ kbd {
 
 .workbench-sidebar > a span {
   color: var(--ink-soft);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .workbench-sidebar > a.current {
@@ -973,12 +1097,15 @@ kbd {
   padding-top: 20px;
   border-top: 1px solid var(--line-dark);
   color: var(--ink-soft);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.7;
 }
 
 .workbench-main {
-  width: min(100%, 1320px);
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
   padding: 0 36px 50px;
 }
 
@@ -1041,7 +1168,7 @@ kbd {
 .workbench-kicker {
   color: var(--rust);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.11em;
 }
 
@@ -1066,7 +1193,7 @@ kbd {
   border: 1px solid var(--moss);
   color: var(--moss);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -1124,7 +1251,7 @@ kbd {
   border: 1px solid var(--line-dark);
   background: var(--white);
   cursor: pointer;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .editor-file-button {
@@ -1147,7 +1274,7 @@ kbd {
 .editor-toolbar label {
   margin-right: 2px;
   color: var(--ink-soft);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .editor-toolbar .clear-button {
@@ -1175,13 +1302,13 @@ kbd {
   border-bottom: 1px solid var(--line-dark);
   background: var(--paper-deep);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 
 .pane-heading small {
   color: var(--ink-soft);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .pane-heading > div {
@@ -1201,7 +1328,7 @@ kbd {
 }
 
 .pane-heading button span {
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .editors.input-expanded .input-pane {
@@ -1229,7 +1356,7 @@ kbd {
   color: #a5a79f;
   background: #f0eee7;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 22px;
   text-align: right;
   user-select: none;
@@ -1268,7 +1395,7 @@ kbd {
   border-top: 0;
   background: #e5ebe0;
   color: var(--moss);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .validation-bar > span {
@@ -1277,7 +1404,7 @@ kbd {
 }
 
 .validation-bar strong {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .validation-bar small {
@@ -1286,7 +1413,7 @@ kbd {
 
 .validation-bar em {
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   font-style: normal;
 }
 
@@ -1344,7 +1471,7 @@ kbd {
   gap: 22px;
   padding-top: 13px;
   color: var(--ink-soft);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .shortcut-row > span:first-child {
@@ -1357,12 +1484,16 @@ kbd {
   height: 18px;
   min-width: 19px;
   margin-right: 2px;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 /* Production tool suites */
 .suite-main {
-  max-width: 1500px;
+  max-width: none;
+}
+
+.workbench-main.layout-form {
+  width: min(100%, 1120px);
 }
 
 .suite-content {
@@ -1435,7 +1566,7 @@ kbd {
   border-bottom: 1px solid var(--line-dark);
   background: var(--paper-deep);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 
@@ -1447,7 +1578,7 @@ kbd {
 
 .suite-editor header small {
   color: var(--ink-soft);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .suite-editor header button {
@@ -1459,7 +1590,7 @@ kbd {
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .suite-editor header button:disabled {
@@ -1511,12 +1642,12 @@ kbd {
   border-top: 0;
   color: var(--moss);
   background: #e5ebe0;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .tool-status strong {
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -1556,7 +1687,7 @@ kbd {
   align-items: center;
   gap: 8px;
   color: var(--ink-soft);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .control-label.grow {
@@ -1590,7 +1721,7 @@ kbd {
   gap: 9px;
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .inline-metric strong {
@@ -1626,7 +1757,7 @@ kbd {
 .generated-list span {
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   text-align: center;
 }
 
@@ -1639,7 +1770,7 @@ kbd {
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .password-output {
@@ -1689,7 +1820,7 @@ kbd {
   border-bottom: 1px solid var(--line-dark);
   background: var(--paper-deep);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -1732,7 +1863,7 @@ kbd {
   padding-top: 5px;
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   text-align: center;
 }
 
@@ -1790,7 +1921,7 @@ kbd {
   padding: 0 10px;
   border: 1px solid var(--line);
   background: var(--white);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .check-controls small {
@@ -1855,7 +1986,7 @@ kbd {
   border-bottom: 1px solid var(--line-dark);
   background: var(--paper-deep);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .diff-inputs textarea,
@@ -1943,12 +2074,12 @@ kbd {
 
 .metric-grid span {
   color: var(--ink-soft);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .single-input-bar label {
   color: var(--ink-soft);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .single-input-bar input {
@@ -1981,7 +2112,7 @@ kbd {
 .timezone-list span {
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .date-results strong,
@@ -2016,7 +2147,7 @@ kbd {
 .timezone-output span {
   color: #939c96;
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .timezone-output strong {
@@ -2025,7 +2156,7 @@ kbd {
 
 .cron-expression span {
   color: var(--rust);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -2050,7 +2181,7 @@ kbd {
   justify-content: center;
   gap: 7px;
   border-right: 1px solid var(--line);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .cron-builder label:last-child {
@@ -2067,7 +2198,7 @@ kbd {
 
 .cron-builder small {
   color: var(--ink-soft);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .cron-summary {
@@ -2114,7 +2245,7 @@ kbd {
 .next-runs > div small {
   color: var(--ink-soft);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .next-runs > div strong {
@@ -2146,7 +2277,7 @@ kbd {
 .consent-banner p {
   margin: 6px 0 0;
   color: #aeb5b0;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.6;
 }
 
@@ -2162,7 +2293,7 @@ kbd {
   border: 1px solid #747c77;
   background: transparent;
   cursor: pointer;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .consent-banner button.accept {
@@ -2181,7 +2312,7 @@ kbd {
 .document-kicker {
   color: var(--rust);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
@@ -2209,7 +2340,7 @@ kbd {
 .document-page section > span {
   color: var(--rust);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .document-page h2 {
@@ -2261,7 +2392,7 @@ kbd {
 .suite-editor header,
 .diff-result header,
 .next-runs header {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .textarea-wrap textarea,
@@ -2334,6 +2465,30 @@ kbd {
 }
 
 @media (max-width: 760px) {
+  .paste-anything {
+    width: calc(100% - 40px);
+    margin: 36px auto;
+  }
+
+  .paste-anything-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .paste-anything > textarea {
+    min-height: 160px;
+    padding: 14px;
+  }
+
+  .paste-anything-result {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .paste-anything-result > p {
+    grid-column: 1 / -1;
+  }
+
   .site-header {
     height: 57px;
     padding: 0 16px;
@@ -2561,7 +2716,7 @@ kbd {
 
   .generated-list code {
     overflow-wrap: anywhere;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .password-output {
@@ -2672,6 +2827,21 @@ kbd {
   }
 }
 
+@media (max-width: 440px) {
+  .paste-anything {
+    width: calc(100% - 24px);
+  }
+
+  .paste-anything-result {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .paste-anything-result button {
+    width: 100%;
+    white-space: normal;
+  }
+}
+
 /* Reusable data grid and CSV viewer */
 .editor-resizer {
   position: relative;
@@ -2710,6 +2880,7 @@ kbd {
 
 .data-grid-toolbar > div {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
@@ -2741,17 +2912,78 @@ kbd {
   cursor: grab;
 }
 
-.json-grid-scroll thead th > div[title="ドラッグして列を移動"] {
-  cursor: grab;
-  touch-action: none;
+.data-grid-column-heading {
+  position: relative;
+  z-index: 5;
+  min-width: 0;
 }
 
-.json-grid-scroll thead th > div[title="ドラッグして列を移動"]:active {
-  cursor: grabbing;
+.data-grid-column-actions {
+  position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
+}
+
+.data-grid-delete-column {
+  position: relative;
+  z-index: 6;
+  color: var(--ink) !important;
+}
+
+.data-grid-export-hint {
+  color: var(--ink-soft);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 .data-grid-drag-handle:active {
   cursor: grabbing;
+}
+
+.json-grid-scroll thead th {
+  position: relative;
+}
+
+.data-grid-column-resizer {
+  position: absolute;
+  top: auto;
+  right: 0;
+  bottom: 5px;
+  z-index: 1;
+  width: 8px;
+  height: 25px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.data-grid-column-resizer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 1px;
+  width: 1px;
+  background: var(--line-dark);
+  content: "";
+}
+
+.data-grid-column-resizer:hover::after,
+.data-grid-column-resizer:focus::after {
+  width: 2px;
+  background: var(--rust);
+}
+
+.json-grid-scroll table.has-custom-widths {
+  width: max-content;
+  table-layout: fixed;
+}
+
+.json-grid-scroll table.has-custom-widths th,
+.json-grid-scroll table.has-custom-widths td {
+  max-width: none;
+}
+
+.json-grid-scroll table.has-custom-widths .row-number-column {
+  width: 58px;
 }
 
 .json-grid-scroll thead th.dragging {
@@ -2771,6 +3003,17 @@ kbd {
   outline: 2px solid var(--rust);
   background: var(--white) !important;
   white-space: normal;
+}
+
+.json-grid-scroll td.multiline {
+  height: auto;
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  overflow: visible;
+  line-height: 1.55;
+  text-overflow: clip;
+  white-space: pre-wrap;
 }
 
 .json-grid-scroll .row-number {
@@ -2830,14 +3073,58 @@ kbd {
   font-size: 10px;
 }
 
+.data-grid-duplicate-status {
+  min-height: 36px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 9px;
+  color: var(--moss);
+  border-top: 1px solid var(--moss);
+  background: #e5ebe0;
+  font-size: 10px;
+}
+
+.data-grid-duplicate-status.ok {
+  color: #2f5d3a;
+  border-color: #6f9a74;
+  background: #dce8de;
+}
+
+.data-grid-duplicate-status.error {
+  color: #722b1f;
+  border-color: #c66a57;
+  background: #f7dcd3;
+}
+
+.data-grid-duplicate-status strong {
+  font-family: var(--mono);
+}
+
+.data-grid-duplicate-status small {
+  margin-left: auto;
+}
+
 .data-grid-column-editor {
   min-height: 42px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
   border-bottom: 1px solid var(--line-dark);
   background: #f3f0e8;
+}
+
+.data-grid-column-editor .data-grid-chip {
+  color: var(--ink);
+  border-color: var(--line-dark);
+  background: var(--white);
+}
+
+.data-grid-column-editor .data-grid-chip span {
+  margin-left: 2px;
 }
 
 .data-grid-column-editor label {
@@ -2851,6 +3138,17 @@ kbd {
 .data-grid-column-editor input {
   height: 29px;
   padding: 0 8px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.data-grid-column-editor select {
+  min-height: 29px;
+  min-width: 120px;
+  padding: 0 24px 0 7px;
   color: var(--ink);
   border: 1px solid var(--line-dark);
   background: var(--white);
@@ -2881,17 +3179,46 @@ kbd {
 }
 
 .csv-viewer-input,
-.csv-viewer-output {
+.csv-viewer-output,
+.csv-settings,
+.csv-validation {
   border: 1px solid var(--ink);
   background: var(--white);
 }
 
-.csv-viewer-input {
+.csv-settings,
+.csv-viewer-input,
+.csv-viewer-output,
+.csv-validation {
   margin-bottom: 15px;
 }
 
+.csv-viewer-flow,
+.csv-simple-summary,
+.csv-beta-banner,
+.csv-sheet-selector,
+.csv-simple-downloads,
+.csv-sjis-dialog,
+.csv-large-file-dialog {
+  min-width: 0;
+}
+
+.csv-viewer-flow {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.csv-viewer-flow .csv-settings-group {
+  border: 1px solid var(--ink);
+  margin-bottom: 15px;
+  background: var(--white);
+}
+
+.csv-settings > header,
 .csv-viewer-input > header,
-.csv-viewer-output > header {
+.csv-viewer-output > header,
+.csv-validation > header {
   min-height: 38px;
   display: flex;
   align-items: center;
@@ -2904,11 +3231,468 @@ kbd {
   font-size: 10px;
 }
 
+.csv-settings > header > span,
+.csv-validation > header > span,
 .csv-viewer-input > header > div,
 .csv-viewer-output > header > span {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.csv-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+}
+
+.csv-settings-group {
+  min-width: 0;
+}
+
+.csv-settings-group > fieldset {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+}
+
+.csv-settings-group label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-settings-group select,
+.csv-settings-group input[type="number"] {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.csv-settings-group .csv-check {
+  min-height: 34px;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+
+.csv-settings-group .csv-check input {
+  margin: 0;
+}
+
+.csv-settings-group + .csv-settings-group {
+  border-left: 1px solid var(--line-dark);
+}
+
+.csv-settings-group > summary {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  color: var(--rust-dark);
+  border-bottom: 1px solid var(--line-dark);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  list-style: none;
+}
+
+.csv-settings-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.csv-settings-group[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.csv-settings fieldset {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+}
+
+.csv-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-settings select,
+.csv-settings input[type="number"] {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.csv-settings .csv-check {
+  min-height: 34px;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+
+.csv-settings .csv-check input {
+  margin: 0;
+}
+
+.csv-detection {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-detection strong,
+.csv-detection span {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--line-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-detection strong {
+  color: var(--white);
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.csv-excel-preset-note {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-simple-summary {
+  margin-bottom: 15px;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.csv-simple-summary .csv-detection {
+  padding: 12px 14px;
+}
+
+.csv-simple-warnings {
+  padding: 0 14px 12px;
+  color: var(--ink);
+}
+
+.csv-simple-warnings strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.csv-simple-warnings ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.csv-simple-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line-dark);
+}
+
+.csv-simple-downloads span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-simple-downloads button {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.csv-simple-summary .csv-custom-flag {
+  color: var(--ink-soft);
+}
+
+.csv-beta-entry-link {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--ink-soft);
+  border: 1px dashed var(--line-dark);
+  background: var(--white);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.csv-beta-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.csv-beta-banner strong {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--white);
+  background: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.csv-beta-banner p {
+  flex: 1 1 240px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.csv-beta-banner a {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.csv-validation-summary,
+.csv-excel-risk,
+.csv-inherit-save,
+.csv-io-compare {
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line-dark);
+}
+
+.csv-validation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.csv-validation-summary.all-ok,
+.csv-validation.all-ok > header {
+  color: #2f5d3a;
+  background: #dce8de;
+  border-color: #6f9a74;
+}
+
+.csv-validation-summary.has-warn,
+.csv-validation.has-warn > header {
+  color: #6b4f12;
+  background: #f6e6c8;
+  border-color: #c9a15b;
+}
+
+.csv-validation-summary.has-error,
+.csv-validation.has-error > header {
+  color: #722b1f;
+  background: #f7dcd3;
+  border-color: #c66a57;
+}
+
+.csv-validation-summary li {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-validation-summary li.ok {
+  color: #2f5d3a;
+  background: #e7f1e8;
+}
+
+.csv-validation-summary li.warn {
+  color: #6b4f12;
+  background: #fff4d8;
+}
+
+.csv-validation-summary li.error {
+  color: #722b1f;
+  background: #fde8e2;
+}
+
+.csv-validation-panel {
+  margin-bottom: 15px;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.csv-validation-panel .csv-validation-summary {
+  border-top: 0;
+}
+
+.csv-output-note {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.csv-validation-summary strong,
+.csv-excel-risk strong {
+  font-size: 12px;
+}
+
+.csv-validation-summary ul,
+.csv-excel-risk p,
+.csv-inherit-save small,
+.csv-sjis-dialog ul {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-validation-summary ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.csv-validation-summary button,
+.csv-excel-risk button,
+.csv-inherit-save button,
+.csv-validation-simple button {
+  min-height: 30px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.csv-excel-risk {
+  background: #f7f1e4;
+}
+
+.csv-io-compare {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.csv-io-compare div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.csv-io-compare strong {
+  width: 100%;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.csv-io-compare span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-inherit-save {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.csv-sjis-dialog ul {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+
+.csv-sjis-dialog code {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.csv-validation-simple {
+  padding: 12px 16px;
+}
+
+.csv-validation-simple ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.csv-sample-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-sample-group > span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
 }
 
 .csv-viewer-input label,
@@ -2944,8 +3728,433 @@ kbd {
   line-height: 1.7;
 }
 
+.csv-sheet-selector,
+.csv-input-notice {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line-dark);
+  color: var(--ink-soft);
+  background: #f3f0e8;
+  font-size: 10px;
+}
+
+.csv-sheet-selector label {
+  border: 0;
+  background: transparent;
+}
+
+.csv-sheet-selector select {
+  min-width: 180px;
+  height: 28px;
+  margin-left: 6px;
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+}
+
+.csv-loading {
+  min-height: 180px;
+  display: grid;
+  position: absolute;
+  z-index: 5;
+  inset: 38px 0 0;
+  place-content: center;
+  gap: 9px;
+  color: var(--ink);
+  background: rgba(247, 245, 239, 0.94);
+  font-size: 11px;
+  text-align: center;
+}
+
+.csv-loading svg {
+  margin: 0 auto;
+  animation: csv-spin 0.8s linear infinite;
+}
+
+@keyframes csv-spin {
+  to { transform: rotate(360deg); }
+}
+
+.csv-viewer-input {
+  position: relative;
+}
+
+.csv-input-notice {
+  border-top: 1px solid var(--moss);
+  border-bottom: 0;
+  color: var(--moss);
+  background: #e5ebe0;
+}
+
+.csv-viewer-output > header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  justify-content: stretch;
+  gap: 8px 12px;
+}
+
+.csv-viewer-output > header > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.csv-viewer-output > header > small {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.csv-viewer-output > header button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.csv-viewer-output > header kbd {
+  font-size: 10px;
+}
+
 .csv-viewer-output .json-grid-panel {
   height: 460px;
+}
+
+.csv-output-stage.fullscreen {
+  position: fixed;
+  z-index: 220;
+  inset: 0;
+  display: grid;
+  min-width: 0;
+  padding: 12px;
+  background: var(--paper);
+}
+
+.csv-output-stage.fullscreen .csv-viewer-output {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.csv-output-stage.fullscreen .json-grid-panel {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.csv-output-stage.fullscreen.split {
+  grid-template-columns: minmax(220px, var(--csv-split-left, 42fr)) 8px minmax(0, var(--csv-split-right, 58fr));
+  gap: 0;
+}
+
+.csv-split-resizer {
+  min-width: 8px;
+  align-self: stretch;
+}
+
+.csv-fullscreen-input {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.csv-fullscreen-input > header {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-fullscreen-input textarea {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  resize: none;
+  padding: 14px;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.csv-large-file-backdrop {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(28, 33, 30, 0.66);
+}
+
+.csv-large-file-dialog {
+  width: min(620px, 100%);
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.22);
+}
+
+.csv-large-file-dialog > svg {
+  color: var(--rust-dark);
+}
+
+.csv-large-file-dialog span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.csv-large-file-dialog h2 {
+  margin: 5px 0 8px;
+  font-size: 20px;
+}
+
+.csv-large-file-dialog p,
+.csv-large-file-dialog small {
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-large-file-dialog p {
+  margin: 0 0 7px;
+}
+
+.csv-large-file-dialog > div > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.csv-large-file-dialog button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.csv-large-file-dialog button.primary {
+  color: var(--white);
+  background: var(--ink);
+}
+
+.data-grid-view-tabs {
+  min-height: 36px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: end;
+  gap: 2px;
+  padding: 5px 8px 0;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.data-grid-view-tabs button {
+  min-height: 30px;
+  padding: 0 14px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  border-bottom: 0;
+  background: var(--white);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.data-grid-view-tabs button.active {
+  color: var(--white);
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.data-grid-raw {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--white);
+}
+
+.data-grid-raw > div {
+  min-height: 34px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line-dark);
+  color: var(--ink-soft);
+  background: #f3f0e8;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.data-grid-raw button {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.data-grid-raw pre {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: normal;
+}
+
+.csv-validation {
+  color: var(--ink);
+}
+
+.csv-validation > header {
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.csv-validation.all-ok > header strong,
+.csv-validation.has-warn > header strong,
+.csv-validation.has-error > header strong {
+  color: inherit;
+  font-size: 10px;
+}
+
+.csv-validation > header strong {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-validation .csv-validation-summary {
+  border-top: 0;
+}
+
+.csv-validation > p,
+.csv-validation > ul {
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-validation > ul {
+  padding-left: 34px;
+}
+
+.csv-validation .csv-validation-summary ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.csv-guide {
+  margin-top: 34px;
+  padding-top: 25px;
+  border-top: 1px solid var(--ink);
+}
+
+.csv-guide-heading {
+  max-width: 760px;
+  margin-bottom: 18px;
+}
+
+.csv-guide-heading > span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.csv-guide-heading h2 {
+  margin: 8px 0;
+  font-size: 22px;
+}
+
+.csv-guide-heading p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.csv-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--line-dark);
+  border-left: 1px solid var(--line-dark);
+}
+
+.csv-guide article {
+  min-width: 0;
+  padding: 18px;
+  border-right: 1px solid var(--line-dark);
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.csv-guide article > span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.csv-guide h3 {
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.csv-guide article p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.85;
 }
 
 .csv-field-warnings {
@@ -3019,6 +4228,64 @@ kbd {
     flex-direction: column;
     padding-block: 6px;
   }
+
+  .csv-settings-grid,
+  .csv-guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-settings-group + .csv-settings-group {
+    border-top: 1px solid var(--line-dark);
+    border-left: 0;
+  }
+
+  .csv-settings fieldset {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-settings fieldset + fieldset {
+    border-top: 1px solid var(--line-dark);
+    border-left: 0;
+  }
+
+  .csv-guide-heading h2 {
+    font-size: 18px;
+  }
+
+  .csv-output-stage.fullscreen.split {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 0.7fr) minmax(0, 1.3fr);
+  }
+
+  .csv-split-resizer {
+    display: none;
+  }
+
+  .csv-viewer-output > header > div,
+  .csv-sheet-selector,
+  .csv-large-file-dialog > div > div,
+  .csv-io-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-simple-downloads {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .csv-detection,
+  .csv-beta-banner,
+  .csv-sheet-selector,
+  .csv-sjis-dialog,
+  .csv-inherit-save {
+    overflow-wrap: anywhere;
+  }
+
+  .csv-detection span,
+  .csv-simple-downloads button,
+  .csv-sheet-selector select {
+    max-width: 100%;
+  }
 }
 
 /* Shared workspace controls */
@@ -3041,7 +4308,7 @@ kbd {
 }
 
 .workbench-shell.sidebar-collapsed {
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 46px minmax(0, 1fr);
 }
 
 .sidebar-collapsed .sidebar-title {
@@ -3215,10 +4482,11 @@ kbd {
   min-height: 37px;
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 0 9px;
+  gap: 8px 12px;
+  padding: 6px 9px;
   border-bottom: 1px solid var(--line-dark);
   background: var(--paper-deep);
 }
@@ -3234,10 +4502,12 @@ kbd {
 
 .json-grid-toolbar button {
   min-height: 27px;
+  flex: 0 0 auto;
   padding: 0 8px;
   border: 1px solid var(--line-dark);
   background: var(--white);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .json-grid-scroll {
@@ -3256,16 +4526,23 @@ kbd {
   white-space: nowrap;
 }
 
+.json-grid-scroll td {
+  white-space: pre;
+}
+
 .json-grid-scroll th,
 .json-grid-scroll td {
   max-width: 280px;
   height: 34px;
-  overflow: hidden;
   padding: 0 9px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   text-align: left;
   text-overflow: ellipsis;
+}
+
+.json-grid-scroll td {
+  overflow: hidden;
 }
 
 .json-grid-scroll thead {
@@ -3276,6 +4553,7 @@ kbd {
 
 .json-grid-scroll thead th {
   height: 63px;
+  overflow: visible;
   padding: 5px 7px;
   background: var(--paper-deep);
   vertical-align: top;
@@ -3310,6 +4588,11 @@ kbd {
   background: var(--white);
 }
 
+.json-grid-scroll thead button.active {
+  color: var(--white);
+  background: var(--rust-dark);
+}
+
 .json-grid-scroll thead button:disabled {
   cursor: default;
   opacity: 0.25;
@@ -3329,6 +4612,45 @@ kbd {
 .json-grid-scroll tbody tr:nth-child(even) td,
 .json-grid-scroll tbody tr:nth-child(even) th {
   background: #f7f5ef;
+}
+
+.json-grid-scroll th.pinned {
+  z-index: 4;
+  box-shadow: 1px 0 0 var(--ink);
+}
+
+.json-grid-scroll td.pinned {
+  z-index: 1;
+  background: var(--white);
+  box-shadow: 1px 0 0 var(--line-dark);
+}
+
+.json-grid-scroll tbody tr:nth-child(even) td.pinned {
+  background: #f7f5ef;
+}
+
+.json-grid-scroll td.blank-value {
+  color: #6b4f12;
+  background: #f6e6c8;
+  box-shadow: inset 0 0 0 1px #c9a15b;
+}
+
+.json-grid-scroll tbody tr:nth-child(even) td.blank-value,
+.json-grid-scroll tr.duplicate-key-row td.blank-value.pinned,
+.json-grid-scroll td.blank-value.pinned {
+  background: #f6e6c8;
+}
+
+.json-grid-scroll td.duplicate-value,
+.json-grid-scroll tr.duplicate-key-row td {
+  color: #722b1f;
+  background: #f7dcd3;
+  box-shadow: inset 0 0 0 1px #c66a57;
+}
+
+.json-grid-scroll tr.duplicate-key-row td.pinned,
+.json-grid-scroll tbody tr:nth-child(even) td.duplicate-value {
+  background: #f7dcd3;
 }
 
 .json-grid-scroll .row-number {
@@ -3880,5 +5202,111 @@ small {
   .copy-toast {
     right: 16px;
     bottom: 16px;
+  }
+}
+
+.number-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.number-controls .control-label {
+  min-width: 140px;
+}
+
+.number-controls .checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  font-size: 13px;
+}
+
+.number-radix-results > div {
+  grid-template-columns: 88px 1fr auto;
+  align-items: center;
+}
+
+.bit-string {
+  font-size: 11px !important;
+  line-height: 1.45;
+}
+
+.unit-conversion-grid {
+  margin-top: 18px;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.unit-conversion-grid > div {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-dark);
+  border-right: 1px solid var(--line-dark);
+}
+
+.unit-conversion-grid > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.unit-conversion-grid span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.unit-conversion-grid strong {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+}
+
+.expression-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.expression-samples button {
+  border: 1px solid var(--line-dark);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.expression-samples button:hover {
+  border-color: var(--ink);
+}
+
+.percent-inputs {
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .unit-conversion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .unit-conversion-grid > div {
+    border-right: 0;
+  }
+
+  .number-radix-results > div {
+    grid-template-columns: 1fr;
   }
 }

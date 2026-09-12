@@ -12,12 +12,133 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { categories, tools } from "@/lib/tools";
+import {
+  categories,
+  functionCount,
+  pasteAnythingStorageKeys,
+  toolCount,
+  tools,
+} from "@/lib/tools";
+
+type PasteType = "json" | "csv" | "tsv" | "jwt" | "url" | "timestamp" | "base64" | "text";
+
+type PasteDetection = {
+  type: PasteType;
+  label: string;
+  reason: string;
+  tool: string;
+  href: string;
+};
+
+const detections: Record<PasteType, Omit<PasteDetection, "type" | "reason">> = {
+  json: { label: "JSON", tool: "JSON Tools", href: "/tools/json" },
+  csv: { label: "CSV", tool: "CSV Viewer", href: "/tools/csv-viewer" },
+  tsv: { label: "TSV", tool: "CSV Viewer", href: "/tools/csv-viewer" },
+  jwt: { label: "JWT", tool: "JWT Decoder", href: "/tools/jwt" },
+  url: { label: "URL", tool: "Encoder / Decoder", href: "/tools/encoder" },
+  timestamp: { label: "UNIX TIMESTAMP", tool: "Date & Time", href: "/tools/date-time" },
+  base64: { label: "BASE64", tool: "Encoder / Decoder", href: "/tools/encoder" },
+  text: { label: "TEXT", tool: "Text Tools", href: "/tools/text" },
+};
+
+function result(type: PasteType, reason: string): PasteDetection {
+  return { type, reason, ...detections[type] };
+}
+
+function delimiterColumns(line: string, delimiter: "," | "\t") {
+  let columns = 1;
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    if (line[index] === '"') {
+      if (quoted && line[index + 1] === '"') index += 1;
+      else quoted = !quoted;
+    } else if (!quoted && line[index] === delimiter) {
+      columns += 1;
+    }
+  }
+  return columns;
+}
+
+function detectPaste(value: string): PasteDetection | null {
+  const input = value.trim();
+  if (!input) return null;
+
+  const jwtParts = input.split(".");
+  if (
+    jwtParts.length === 3 &&
+    jwtParts.every((part) => /^[A-Za-z0-9_-]+={0,2}$/.test(part))
+  ) {
+    return result("jwt", "Base64URL形式の3セグメントを検出しました。");
+  }
+
+  try {
+    const url = new URL(input);
+    if (url.protocol && url.hostname) {
+      return result("url", `${url.protocol}//${url.hostname} として解析できます。`);
+    }
+  } catch {
+    // Continue with the remaining local checks.
+  }
+
+  if (/^\d{10}$/.test(input) || /^\d{13}$/.test(input)) {
+    return result(
+      "timestamp",
+      `${input.length}桁の数字のみで構成されています。`,
+    );
+  }
+
+  try {
+    JSON.parse(input);
+    return result("json", "JSON.parseで構文を正しく解析できました。");
+  } catch {
+    // Continue with the remaining local checks.
+  }
+
+  const lines = input.split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length >= 2) {
+    for (const delimiter of ["\t", ","] as const) {
+      const counts = lines.slice(0, 20).map((line) => delimiterColumns(line, delimiter));
+      if (counts[0] >= 2 && counts.every((count) => count === counts[0])) {
+        const type = delimiter === "\t" ? "tsv" : "csv";
+        return result(
+          type,
+          `${lines.length}行で${counts[0]}列の区切り構造が揃っています。`,
+        );
+      }
+    }
+  }
+
+  const compact = input.replace(/\s/g, "");
+  if (
+    compact.length >= 12 &&
+    compact.length % 4 === 0 &&
+    /^[A-Za-z0-9+/]+={0,2}$/.test(compact)
+  ) {
+    try {
+      const decoded = atob(compact);
+      if (decoded.length) {
+        return result("base64", "Base64として復号できる文字列パターンです。");
+      }
+    } catch {
+      // Fall through to plain text.
+    }
+  }
+
+  return result("text", "構造化データのパターンには一致しませんでした。");
+}
 
 export function HomeMock() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("すべて");
+  const [pasteValue, setPasteValue] = useState("");
+  const pasteDetection = useMemo(() => detectPaste(pasteValue), [pasteValue]);
+  const quickStartTools = useMemo(
+    () => tools.filter((tool) => tool.featured).slice(0, 4),
+    [],
+  );
 
   const filteredTools = useMemo(() => {
     const normalized = query.toLowerCase().trim();
@@ -32,6 +153,13 @@ export function HomeMock() {
       return categoryMatches && queryMatches;
     });
   }, [category, query]);
+
+  const openDetectedTool = () => {
+    if (!pasteDetection) return;
+    sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValue);
+    sessionStorage.setItem(pasteAnythingStorageKeys.type, pasteDetection.type);
+    router.push(pasteDetection.href);
+  };
 
   return (
     <main>
@@ -74,10 +202,10 @@ export function HomeMock() {
         <div className="quick-start" aria-label="よく使う道具">
           <div className="quick-start-head">
             <span>QUICK START</span>
-            <small>04 / MOST USED</small>
+            <small>{String(quickStartTools.length).padStart(2, "0")} / MOST USED</small>
           </div>
           <div className="quick-start-list">
-            {tools.filter((tool) => tool.featured).slice(0, 4).map((tool) => (
+            {quickStartTools.map((tool) => (
               <Link href={tool.href} key={tool.index}>
                 <span>{tool.index}</span>
                 <strong>{tool.name}</strong>
@@ -88,8 +216,42 @@ export function HomeMock() {
           </div>
           <div className="quick-start-foot">
             <span><LockKeyhole size={13} /> 処理はこのブラウザ内だけで完結</span>
-            <strong>28 FUNCTIONS</strong>
+            <strong>{functionCount} FUNCTIONS</strong>
           </div>
+        </div>
+      </section>
+
+      <section className="paste-anything" aria-labelledby="paste-anything-title">
+        <div className="paste-anything-heading">
+          <div>
+            <span>LOCAL AUTO DETECTION</span>
+            <h2 id="paste-anything-title">PASTE ANYTHING</h2>
+          </div>
+          <small>入力内容は外部へ送信されません</small>
+        </div>
+        <textarea
+          value={pasteValue}
+          onChange={(event) => setPasteValue(event.target.value)}
+          placeholder="JSON、CSV / TSV、JWT、URL、Unix timestamp、Base64、テキストを貼り付け"
+          aria-label="判定するデータを貼り付け"
+          spellCheck={false}
+        />
+        <div className="paste-anything-result" aria-live="polite">
+          {pasteDetection ? (
+            <>
+              <div>
+                <span>DETECTED</span>
+                <strong>{pasteDetection.label}</strong>
+              </div>
+              <p><span>根拠</span>{pasteDetection.reason}</p>
+              <p><span>推奨ツール</span><strong>{pasteDetection.tool}</strong></p>
+              <button type="button" onClick={openDetectedTool}>
+                このツールで開く <ArrowRight size={15} />
+              </button>
+            </>
+          ) : (
+            <p className="paste-anything-empty">貼り付けると、この端末内ですぐに判定します。</p>
+          )}
         </div>
       </section>
 
@@ -104,9 +266,9 @@ export function HomeMock() {
           <div>
             <span className="section-number">01</span>
             <h2>道具箱</h2>
-            <p>14ワークスペース・28機能。すべて無料です。</p>
+            <p>{toolCount}ワークスペース・{functionCount}機能。すべて無料です。</p>
           </div>
-          <div className="function-count"><strong>24</strong><span>FUNCTIONS<br />AVAILABLE</span></div>
+          <div className="function-count"><strong>{functionCount}</strong><span>FUNCTIONS<br />AVAILABLE</span></div>
         </div>
 
         <div className="tool-browser">
@@ -148,7 +310,7 @@ export function HomeMock() {
               )}
             </div>
             <div className="list-labels">
-              <span>TOOL</span><span>CATEGORY</span><span>FUNCTIONS</span>
+              <span>TOOL · {filteredTools.length} / {toolCount} DISPLAYED</span><span>CATEGORY</span><span>FUNCTIONS</span>
             </div>
             {filteredTools.length ? (
               filteredTools.map((tool) => (

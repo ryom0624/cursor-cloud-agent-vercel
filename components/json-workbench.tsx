@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { JsonGrid } from "@/components/json-grid";
-import { tools } from "@/lib/tools";
+import { pasteAnythingStorageKeys, tools } from "@/lib/tools";
 
 const sample = `[
   {
@@ -110,6 +110,16 @@ export function JsonWorkbench() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [splitPercent, setSplitPercent] = useState(42);
+
+  useEffect(() => {
+    if (sessionStorage.getItem(pasteAnythingStorageKeys.type) !== "json") return;
+    const storedInput = sessionStorage.getItem(pasteAnythingStorageKeys.value);
+    sessionStorage.removeItem(pasteAnythingStorageKeys.value);
+    sessionStorage.removeItem(pasteAnythingStorageKeys.type);
+    if (storedInput === null) return;
+    const timer = window.setTimeout(() => setInput(storedInput), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const parsed = useMemo(() => {
     try {
@@ -221,7 +231,7 @@ export function JsonWorkbench() {
         </div>
       </aside>
 
-      <section className={`workbench-main ${fullscreen ? "json-fullscreen" : ""}`}>
+      <section className={`workbench-main layout-wide ${fullscreen ? "json-fullscreen" : ""}`}>
         <ToolBreadcrumb title="JSON Tools" />
 
         <div className="workbench-heading">

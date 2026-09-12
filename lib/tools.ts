@@ -9,15 +9,6 @@ export type Tool = {
   featured?: boolean;
 };
 
-export const categories = [
-  { name: "すべて", count: 14 },
-  { name: "データ", count: 3 },
-  { name: "エンコード", count: 3 },
-  { name: "テキスト", count: 4 },
-  { name: "日時", count: 2 },
-  { name: "生成", count: 2 },
-];
-
 export const tools: Tool[] = [
   {
     name: "JSON Tools",
@@ -40,7 +31,7 @@ export const tools: Tool[] = [
   },
   {
     name: "CSV Viewer",
-    description: "CSVの閲覧、絞り込み、編集、ダウンロード",
+    description: "CSVの安全な閲覧、診断、編集、ダウンロード",
     category: "データ",
     functions: 1,
     href: "/tools/csv-viewer",
@@ -150,4 +141,34 @@ export const tools: Tool[] = [
     accent: "苔",
     index: "14",
   },
+  {
+    name: "Number Tools",
+    description: "基数・単位・式・浮動小数点・割合を計算",
+    category: "数値",
+    functions: 5,
+    href: "/tools/number",
+    accent: "藤",
+    index: "15",
+    featured: true,
+  },
 ];
+
+export const toolCount = tools.length;
+
+export const functionCount = tools.reduce(
+  (total, tool) => total + tool.functions,
+  0,
+);
+
+export const categories = [
+  { name: "すべて", count: toolCount },
+  ...Array.from(new Set(tools.map((tool) => tool.category))).map((name) => ({
+    name,
+    count: tools.filter((tool) => tool.category === name).length,
+  })),
+];
+
+export const pasteAnythingStorageKeys = {
+  value: "devsmith:paste-anything:value",
+  type: "devsmith:paste-anything:type",
+} as const;
