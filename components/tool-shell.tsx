@@ -5,11 +5,12 @@ import {
   Maximize2,
   Minimize2,
   PanelLeftClose,
+  PanelRightOpen,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { tools } from "@/lib/tools";
@@ -37,12 +38,21 @@ export function ToolShell({
   onTabChange,
   children,
 }: ToolShellProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   return (
-    <main className="workbench-shell">
+    <main className={`workbench-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="workbench-sidebar">
         <div className="sidebar-title">
           <span>WORKSPACES</span>
-          <PanelLeftClose size={15} />
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            aria-label={sidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
+            title={sidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
+          >
+            {sidebarCollapsed ? <PanelRightOpen size={15} /> : <PanelLeftClose size={15} />}
+          </button>
         </div>
         {tools.map((tool) => (
           <Link
@@ -151,9 +161,25 @@ export function TextWorkspace({
   readOnlyOutput = true,
 }: TextWorkspaceProps) {
   const [expanded, setExpanded] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && fullscreen) {
+        event.preventDefault();
+        setFullscreen(false);
+      }
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFullscreen((current) => !current);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen]);
 
   return (
-    <>
+    <div className={`text-workspace ${fullscreen ? "fullscreen" : ""}`}>
       {toolbar && <div className="suite-toolbar">{toolbar}</div>}
       <div className={`suite-editors ${expanded ? "input-expanded" : ""}`}>
         <section className="suite-editor input-editor">
@@ -161,6 +187,15 @@ export function TextWorkspace({
             <span>{inputLabel}</span>
             <div>
               <small>{input.length} CHARS</small>
+              <button
+                type="button"
+                onClick={() => setFullscreen((current) => !current)}
+                aria-label={fullscreen ? "全画面表示を終了" : "全画面表示"}
+                title={fullscreen ? "縮小（Esc）" : "全画面表示（Ctrl/⌘+Shift+F）"}
+              >
+                {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                {fullscreen ? "縮小" : "全画面"}
+              </button>
               <button
                 type="button"
                 onClick={() => setExpanded((value) => !value)}
@@ -196,6 +231,6 @@ export function TextWorkspace({
       <ToolStatus error={error}>
         {output ? `${output.length}文字の結果を生成しました` : undefined}
       </ToolStatus>
-    </>
+    </div>
   );
 }

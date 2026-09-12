@@ -2672,6 +2672,388 @@ kbd {
   }
 }
 
+/* Shared workspace controls */
+.sidebar-title button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  color: var(--ink);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sidebar-title button:hover {
+  border-color: var(--line-dark);
+  background: var(--white);
+}
+
+.workbench-shell.sidebar-collapsed {
+  grid-template-columns: 46px 1fr;
+}
+
+.sidebar-collapsed .sidebar-title {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar-collapsed .sidebar-title > span,
+.sidebar-collapsed .sidebar-foot {
+  display: none;
+}
+
+.sidebar-collapsed .workbench-sidebar > a {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  font-size: 0;
+}
+
+.sidebar-collapsed .workbench-sidebar > a span {
+  font-size: 10px;
+}
+
+.text-workspace.fullscreen,
+.diff-workspace.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: var(--paper);
+}
+
+.text-workspace.fullscreen .suite-toolbar {
+  flex: 0 0 auto;
+}
+
+.text-workspace.fullscreen .suite-editors {
+  min-height: 0;
+  flex: 1;
+}
+
+.text-workspace.fullscreen .suite-editor {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.text-workspace.fullscreen .suite-editor textarea {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.text-workspace.fullscreen .tool-status,
+.diff-workspace.fullscreen .tool-status {
+  flex: 0 0 auto;
+}
+
+.diff-fullscreen-bar {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  color: var(--ink-soft);
+  border: 1px solid var(--line-dark);
+  border-bottom: 0;
+  background: var(--paper-deep);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.diff-fullscreen-bar button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.diff-workspace.fullscreen .diff-inputs {
+  min-height: 0;
+  flex: 1;
+}
+
+.diff-workspace.fullscreen .diff-inputs label {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.diff-workspace.fullscreen .diff-inputs textarea {
+  min-height: 0;
+  flex: 1;
+}
+
+.diff-workspace.fullscreen .diff-result {
+  max-height: 32vh;
+  overflow: auto;
+}
+
+.json-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  width: 100%;
+  max-width: none;
+  overflow: auto;
+  padding: 12px 18px;
+  background: var(--paper);
+}
+
+.json-fullscreen .breadcrumb,
+.json-fullscreen .workbench-heading {
+  display: none;
+}
+
+.json-fullscreen .textarea-wrap,
+.json-fullscreen .json-tree,
+.json-fullscreen .json-validation-report,
+.json-fullscreen .json-grid-panel {
+  height: calc(100vh - 205px);
+  max-height: none;
+}
+
+/* JSON spreadsheet view */
+.editors.grid-mode {
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+}
+
+.json-grid-panel {
+  height: 370px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  background: var(--white);
+}
+
+.json-grid-toolbar {
+  min-height: 37px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.json-grid-toolbar > span,
+.json-grid-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.json-grid-toolbar button {
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+}
+
+.json-grid-scroll {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+.json-grid-scroll table {
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.json-grid-scroll th,
+.json-grid-scroll td {
+  max-width: 280px;
+  height: 34px;
+  overflow: hidden;
+  padding: 0 9px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.json-grid-scroll thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.json-grid-scroll thead th {
+  height: 63px;
+  padding: 5px 7px;
+  background: var(--paper-deep);
+  vertical-align: top;
+}
+
+.json-grid-scroll thead th > div {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.json-grid-scroll thead th span {
+  display: inline-flex;
+}
+
+.json-grid-scroll thead button {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--ink-soft);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.json-grid-scroll thead button:hover {
+  color: var(--ink);
+  background: var(--white);
+}
+
+.json-grid-scroll thead button:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.json-grid-scroll thead input {
+  width: 100%;
+  height: 25px;
+  padding: 0 7px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.json-grid-scroll tbody tr:nth-child(even) td,
+.json-grid-scroll tbody tr:nth-child(even) th {
+  background: #f7f5ef;
+}
+
+.json-grid-scroll .row-number {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  width: 38px;
+  min-width: 38px;
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+  text-align: center;
+}
+
+.json-grid-no-results,
+.json-grid-empty {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  text-align: center;
+  font-size: 10px;
+}
+
+.json-grid-empty strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+/* Dense generator results */
+.password-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.password-cell {
+  min-height: 48px;
+  align-items: center;
+  padding: 6px 8px 6px 0;
+}
+
+.password-cell > span,
+.password-cell code {
+  padding-top: 0;
+}
+
+.password-cell button {
+  min-height: 25px;
+}
+
+/* Compact timestamp direction controls */
+.timestamp-settings {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timestamp-settings .control-label {
+  margin-left: auto;
+}
+
+.timestamp-settings .segmented-control button {
+  padding-inline: 11px;
+  white-space: nowrap;
+}
+
+.lorem-controls {
+  flex-wrap: wrap;
+}
+
+.lorem-controls .control-label {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+@media (max-width: 760px) {
+  .text-workspace.fullscreen,
+  .diff-workspace.fullscreen {
+    padding: 8px;
+  }
+
+  .text-workspace.fullscreen .suite-editors,
+  .diff-workspace.fullscreen .diff-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .editors.grid-mode {
+    grid-template-columns: 1fr;
+  }
+
+  .json-grid-panel {
+    height: 300px;
+  }
+
+  .timestamp-settings .control-label {
+    margin-left: 0;
+  }
+}
+
 /* Hard readability floor: no rendered interface text below 10px. */
 .quick-links span,
 .quick-start-head,

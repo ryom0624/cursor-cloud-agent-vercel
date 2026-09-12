@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { BoundedNumberInput } from "@/components/bounded-number-input";
 import { CopyButton } from "@/components/copy-button";
 import {
   ToolShell,
@@ -298,14 +299,13 @@ export function IdGeneratorSuite() {
       <div className="generator-controls">
         <label className="control-label">
           生成数
-          <input
-            type="number"
+          <BoundedNumberInput
+            key={`id-count-${count}`}
+            ariaLabel="生成数"
             min={1}
             max={100}
             value={count}
-            onChange={(event) =>
-              setCount(Math.min(100, Math.max(1, Number(event.target.value))))
-            }
+            onCommit={setCount}
           />
         </label>
         <button type="button" className="primary-button" onClick={() => generate()}>
@@ -313,7 +313,7 @@ export function IdGeneratorSuite() {
           {mode === "uuid" ? "UUID" : "ULID"}を生成
         </button>
         <CopyButton
-          value={values.join("\n")}
+          value={values.join(", ")}
           label="すべてコピー"
           className="text-button"
         />

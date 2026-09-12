@@ -1,7 +1,7 @@
 "use client";
 
 import { CronExpressionParser } from "cron-parser";
-import { ArrowLeftRight, Clock3 } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ToolShell, ToolStatus } from "@/components/tool-shell";
@@ -97,7 +97,6 @@ export function DateTimeSuite() {
                 Datetime → Timestamp
               </button>
             </div>
-            <ArrowLeftRight size={16} aria-hidden="true" />
             <label className="control-label">
               単位
               <select
