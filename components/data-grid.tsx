@@ -224,6 +224,10 @@ export function DataGrid({
       && column >= bounds.columnStart
       && column <= bounds.columnEnd,
     );
+  const hasCustomWidths = Object.keys(columnWidths).length > 0;
+  const customTableWidth = hasCustomWidths
+    ? 58 + columns.reduce((total, column) => total + (columnWidths[column] ?? 160), 0)
+    : undefined;
 
   const addColumn = () => {
     const name = newColumn.trim();
@@ -320,7 +324,12 @@ export function DataGrid({
           <pre>{rawOutput.content}</pre>
         </div>
       ) : <div className="json-grid-scroll" onMouseLeave={() => setSelecting(false)}>
-        <table className={Object.keys(columnWidths).length ? "has-custom-widths" : ""}>
+        <table
+          className={hasCustomWidths ? "has-custom-widths" : ""}
+          style={customTableWidth
+            ? { width: customTableWidth, minWidth: customTableWidth, maxWidth: customTableWidth }
+            : undefined}
+        >
           <colgroup>
             <col className="row-number-column" />
             {columns.map((column) => (
@@ -481,7 +490,7 @@ export function DataGrid({
       <div className="data-grid-selection-status">
         <span>
           {bounds
-            ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択`
+            ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · Ctrl/⌘+CでCSVコピー`
             : "セルをドラッグして範囲選択"}
         </span>
         <span>列名のグリップをドラッグして移動</span>
