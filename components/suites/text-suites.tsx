@@ -1,7 +1,8 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { Maximize2, Minimize2, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { BoundedNumberInput } from "@/components/bounded-number-input";
 import { CopyButton } from "@/components/copy-button";
 import {
   ToolShell,
@@ -137,46 +138,6 @@ function savePasswordSettings(settings: PasswordSettings) {
   window.dispatchEvent(new Event(passwordStorageEvent));
 }
 
-function PasswordNumberInput({
-  id,
-  value,
-  min,
-  max,
-  onCommit,
-}: {
-  id: string;
-  value: number;
-  min: number;
-  max: number;
-  onCommit: (value: number) => void;
-}) {
-  const [draft, setDraft] = useState(String(value));
-
-  const commit = () => {
-    const next = Math.max(min, Math.min(max, Number(draft) || min));
-    setDraft(String(next));
-    onCommit(next);
-  };
-
-  return (
-    <input
-      id={id}
-      name={id}
-      type="number"
-      inputMode="numeric"
-      min={min}
-      max={max}
-      value={draft}
-      onFocus={(event) => event.currentTarget.select()}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") event.currentTarget.blur();
-      }}
-    />
-  );
-}
-
 export function PasswordSuite() {
   const [preset, setPreset] = useState<PasswordPreset>("custom");
   const [options, setOptions] = useState<PasswordOptions>({
@@ -263,7 +224,7 @@ export function PasswordSuite() {
         <div className="password-basic-settings">
           <label className="password-number-control">
             <span>生成文字列の長さ</span>
-            <PasswordNumberInput
+            <BoundedNumberInput
               key={`password-length-${length}`}
               id="password-length"
               min={8}
@@ -280,7 +241,7 @@ export function PasswordSuite() {
           </label>
           <label className="password-number-control">
             <span>生成する個数</span>
-            <PasswordNumberInput
+            <BoundedNumberInput
               key={`password-count-${count}`}
               id="password-count"
               min={1}
@@ -351,7 +312,7 @@ export function PasswordSuite() {
         <header>
           <span>GENERATED PASSWORDS</span>
           <div>
-            <CopyButton value={passwords.join("\n")} label="すべてコピー" />
+            <CopyButton value={passwords.join(", ")} label="すべてコピー" />
           </div>
         </header>
         {passwords.length ? (
@@ -381,45 +342,132 @@ export function PasswordSuite() {
   );
 }
 
-const loremParagraphs = [
-  "技術は、複雑な作業を静かに支えるためにあります。良い道具は使う人の手を止めず、必要な結果だけを正確に返します。",
-  "DevSmithは、開発の途中で何度も発生する小さな変換や確認を、ひとつの場所で片づけるための作業台です。",
-  "入力したデータはブラウザの外へ送られません。登録や設定を済ませる前に、すぐ作業を始められます。",
-  "読みやすい表示、予測できる操作、明確なエラー。毎日使うものだからこそ、余計な装飾を加えず丁寧に設計します。",
-  "必要な機能を選び、値を入力し、結果をコピーする。それだけで次の仕事へ進めることを大切にしています。",
-];
+type LoremLanguage = "ja" | "en";
+type LoremStyle = "technical" | "novel" | "business" | "casual";
+
+type LoremPattern = {
+  subjects: string[];
+  actions: string[];
+  endings: string[];
+  details: string[];
+};
+
+const loremPatterns: Record<LoremLanguage, Record<LoremStyle, LoremPattern>> = {
+  ja: {
+    technical: {
+      subjects: ["小さな開発チームは", "新しい解析基盤は", "堅牢なAPIは", "静かな自動化処理は", "改善された作業環境は"],
+      actions: ["複雑な入力を段階的に整理し", "失敗の原因を記録しながら検証を続け", "必要なデータだけを安全に変換し", "利用者の操作を妨げずに結果を返し", "日々の反復作業を正確に処理し"],
+      endings: ["次の判断に必要な情報を明確に示します", "保守しやすい仕組みを少しずつ育てます", "予測可能な動作を長く維持します", "開発者が本来の仕事へ集中できる状態を作ります"],
+      details: ["境界値も丁寧に確認します", "処理の過程は追跡可能です", "不要な通信は発生しません", "結果は再利用しやすい形式です", "変更範囲を小さく保ちます", "読み手に伝わる名前を選びます"],
+    },
+    novel: {
+      subjects: ["夜明け前の旅人は", "古い駅舎で待つ少女は", "雨上がりの猫は", "海辺に暮らす時計職人は", "森を抜けた手紙は"],
+      actions: ["遠い街の灯りを静かに見つめ", "忘れていた約束の続きを思い出し", "濡れた石畳に残る足音を追い", "誰にも届かなかった声へ耳を澄まし", "季節の境目に隠れた道を選び"],
+      endings: ["まだ名前のない朝へ歩き始めました", "小さな秘密を胸にしまいました", "風が変わる瞬間を待つことにしました", "昨日とは違う景色を見つけました"],
+      details: ["窓の外では雲がゆっくり流れていました", "遠くで一度だけ鐘が鳴りました", "掌には淡い温度が残っていました", "言葉にしない答えがそこにありました", "影は静かに長く伸びていました", "物語は誰にも気づかれず続いていました"],
+    },
+    business: {
+      subjects: ["プロジェクト担当者は", "運用チームは", "企画部門は", "顧客支援チームは", "品質管理グループは"],
+      actions: ["主要な指標を関係者と共有し", "優先順位と期限をあらためて整理し", "利用状況から改善機会を抽出し", "リスクと対応方針を簡潔にまとめ", "次回リリースの判断材料を確認し"],
+      endings: ["合意した次のアクションへ進みます", "継続的な成果につながる運用を整えます", "意思決定の速度と透明性を高めます", "顧客に届く価値を着実に増やします"],
+      details: ["担当者と期限は明確にします", "判断の根拠を文書に残します", "重要な変更は事前に共有します", "成果は定量と定性の両面で確認します", "未解決事項は次回まで追跡します", "関係者の認識差を早めに解消します"],
+    },
+    casual: {
+      subjects: ["休日の朝は", "近所の小さな店では", "いつもの帰り道で", "友人との短い会話は", "机の上のメモは"],
+      actions: ["温かい飲み物をゆっくり味わい", "気になっていた音楽を流しながら過ごし", "少し遠回りして季節の変化を探し", "思いついたことを気軽に書き留め", "予定を詰め込まず気分に任せ"],
+      endings: ["ささやかな発見を楽しませてくれます", "忙しい一日に余白を作ってくれます", "次に試したいことを自然に思いつかせます", "何でもない時間を心地よく変えます"],
+      details: ["窓から柔らかな光が差し込みます", "香ばしい匂いが通りに広がります", "急がなくても一日はきちんと進みます", "小さな選択が気分を変えてくれます", "新しい習慣はそこから始まります", "今日の出来事を誰かに話したくなります"],
+    },
+  },
+  en: {
+    technical: {
+      subjects: ["The compact engineering team", "A resilient API", "The new analytics pipeline", "A quiet automation worker", "The improved developer workspace"],
+      actions: ["organizes complex input in deliberate stages", "validates each boundary while recording failures", "transforms only the data required by the task", "returns predictable results without interrupting the user", "handles repetitive work with consistent precision"],
+      endings: ["and makes the next decision easier to explain", "while keeping the system straightforward to maintain", "so developers can focus on the work that matters", "and preserves behavior that teams can rely on"],
+      details: ["Boundary cases remain visible", "Every change is easy to trace", "No unnecessary request leaves the browser", "The result uses a reusable format", "Names stay clear for future readers", "The implementation keeps a narrow scope"],
+    },
+    novel: {
+      subjects: ["The traveler before dawn", "A girl waiting in the old station", "The cat after the rain", "A clockmaker beside the sea", "The letter that crossed the forest"],
+      actions: ["watched the distant city lights in silence", "remembered the unfinished part of an old promise", "followed the footsteps left on the wet stones", "listened for a voice that had never arrived", "chose the hidden path between two seasons"],
+      endings: ["and began walking toward an unnamed morning", "before placing the small secret close to heart", "while waiting for the wind to change", "and discovered a view unlike yesterday"],
+      details: ["Clouds moved slowly beyond the window", "A bell sounded once in the distance", "A faint warmth remained in an open hand", "The answer needed no spoken words", "Shadows stretched quietly across the road", "The story continued without asking permission"],
+    },
+    business: {
+      subjects: ["The project owner", "The operations team", "The planning group", "The customer success team", "The quality review board"],
+      actions: ["shared the primary metrics with every stakeholder", "reordered priorities and confirmed each deadline", "identified improvement opportunities from recent usage", "summarized the risks and proposed responses", "reviewed the evidence for the next release"],
+      endings: ["and moved forward with an agreed action plan", "while building a process that supports steady outcomes", "to improve the speed and clarity of decisions", "and increased the value delivered to customers"],
+      details: ["Each task has an owner and deadline", "The rationale remains in the written record", "Important changes are announced in advance", "Results include quantitative and qualitative evidence", "Open questions stay visible until resolved", "Early alignment prevents expensive rework"],
+    },
+    casual: {
+      subjects: ["A quiet weekend morning", "The little shop around the corner", "The familiar walk home", "A short conversation with a friend", "The note left on the desk"],
+      actions: ["made room for a warm drink and an unhurried thought", "played a song that had been waiting all week", "took a longer route to notice the changing season", "captured a new idea before it disappeared", "left the schedule open for a welcome surprise"],
+      endings: ["and turned a small discovery into the best part of the day", "while giving a busy afternoon some breathing room", "and suggested something new to try tomorrow", "so an ordinary moment became unexpectedly pleasant"],
+      details: ["Soft light crossed the window", "A warm scent drifted into the street", "The day moved forward without being rushed", "One small choice changed the entire mood", "A new habit started without ceremony", "The moment felt worth sharing with someone"],
+    },
+  },
+};
+
+function createLoremSentence(
+  language: LoremLanguage,
+  style: LoremStyle,
+  index: number,
+  targetLength: number,
+) {
+  const pattern = loremPatterns[language][style];
+  const subject = pattern.subjects[index % pattern.subjects.length];
+  const action = pattern.actions[Math.floor(index / 5) % pattern.actions.length];
+  const ending = pattern.endings[Math.floor(index / 25) % pattern.endings.length];
+  const punctuation = language === "ja" ? "。" : ".";
+  const separator = language === "ja" ? "、" : ", ";
+  let sentence = `${subject}${language === "ja" ? "" : " "}${action}${separator}${ending}`;
+  let detailIndex = index;
+  while (sentence.length < targetLength - 1) {
+    const detail = pattern.details[detailIndex % pattern.details.length];
+    sentence += `${punctuation}${language === "ja" ? "" : " "}${detail}`;
+    detailIndex += 1;
+  }
+  return `${sentence}${punctuation}`;
+}
 
 export function LoremSuite() {
   const [count, setCount] = useState(3);
   const [unit, setUnit] = useState<"paragraph" | "sentence" | "line">("paragraph");
+  const [language, setLanguage] = useState<LoremLanguage>("ja");
+  const [style, setStyle] = useState<LoremStyle>("technical");
+  const [targetLength, setTargetLength] = useState(80);
   const output = useMemo(() => {
-    if (unit === "paragraph") {
-      return Array.from(
-        { length: count },
-        (_, index) => loremParagraphs[index % loremParagraphs.length],
-      ).join("\n\n");
-    }
-    if (unit === "line") {
-      return Array.from(
-        { length: count },
-        (_, index) => loremParagraphs[index % loremParagraphs.length],
-      ).join("\n");
-    }
-    return Array.from(
+    const sentences = Array.from(
       { length: count },
-      (_, index) => loremParagraphs[index % loremParagraphs.length].split("。")[0] + "。",
-    ).join("");
-  }, [count, unit]);
+      (_, index) => createLoremSentence(language, style, index, targetLength),
+    );
+    return sentences.join(unit === "paragraph" ? "\n\n" : unit === "line" ? "\n" : language === "ja" ? "" : " ");
+  }, [count, language, style, targetLength, unit]);
 
   return (
     <ToolShell
       slug="lorem"
       category="テキスト"
       title="Lorem Ipsum"
-      description="日本語UIに馴染むダミーテキストを、最大100行まで生成します。"
+      description="重複しない日本語・英語のダミーテキストを、最大100件まで生成します。"
       functionCount={1}
     >
-      <div className="generator-controls">
+      <div className="generator-controls lorem-controls">
+        <label className="control-label">
+          言語
+          <select value={language} onChange={(event) => setLanguage(event.target.value as LoremLanguage)}>
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label className="control-label">
+          文体
+          <select value={style} onChange={(event) => setStyle(event.target.value as LoremStyle)}>
+            <option value="technical">技術・プロダクト</option>
+            <option value="novel">小説・情景</option>
+            <option value="business">ビジネス</option>
+            <option value="casual">日常・カジュアル</option>
+          </select>
+        </label>
         <label className="control-label">
           単位
           <select value={unit} onChange={(event) => setUnit(event.target.value as typeof unit)}>
@@ -430,19 +478,31 @@ export function LoremSuite() {
         </label>
         <label className="control-label">
           生成数（最大100）
-          <input
-            type="number"
+          <BoundedNumberInput
+            key={`lorem-count-${count}`}
             min={1}
             max={100}
             value={count}
-            onChange={(event) => setCount(Math.max(1, Math.min(100, Number(event.target.value))))}
+            onCommit={setCount}
+            ariaLabel="生成数"
+          />
+        </label>
+        <label className="control-label">
+          1文の目安
+          <BoundedNumberInput
+            key={`lorem-length-${targetLength}`}
+            min={20}
+            max={240}
+            value={targetLength}
+            onCommit={setTargetLength}
+            ariaLabel="1文の目安文字数"
           />
         </label>
         <CopyButton value={output} label="結果をコピー" className="text-button" />
       </div>
       <textarea className="large-text-input" name="lorem-output" value={output} readOnly />
       <ToolStatus>
-        {count}{unit === "paragraph" ? "段落" : unit === "sentence" ? "文" : "行"}を生成しました（最大100行）
+        {language === "ja" ? "日本語" : "英語"}・{count}{unit === "paragraph" ? "段落" : unit === "sentence" ? "文" : "行"}・各文約{targetLength}文字（最大100件、重複なし）
       </ToolStatus>
     </ToolShell>
   );
@@ -542,8 +602,24 @@ export function RegexSuite() {
 export function DiffSuite() {
   const [before, setBefore] = useState("name: DevSmith\nversion: 0.1.0\nstatus: draft");
   const [after, setAfter] = useState("name: DevSmith\nversion: 1.0.0\nstatus: ready");
+  const [fullscreen, setFullscreen] = useState(false);
   const differences = useMemo(() => diffLines(before, after), [after, before]);
   const changes = differences.filter((line) => line.type !== "same").length;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && fullscreen) {
+        event.preventDefault();
+        setFullscreen(false);
+      }
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFullscreen((current) => !current);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen]);
 
   return (
     <ToolShell
@@ -553,28 +629,37 @@ export function DiffSuite() {
       description="2つのテキストを行単位で比較し、追加・削除を表示します。"
       functionCount={1}
     >
-      <div className="diff-inputs">
-        <label>
-          <span>BEFORE</span>
-          <textarea name="diff-before" value={before} onChange={(event) => setBefore(event.target.value)} />
-        </label>
-        <label>
-          <span>AFTER</span>
-          <textarea name="diff-after" value={after} onChange={(event) => setAfter(event.target.value)} />
-        </label>
+      <div className={`diff-workspace ${fullscreen ? "fullscreen" : ""}`}>
+        <div className="diff-fullscreen-bar">
+          <span>BEFORE / AFTER</span>
+          <button type="button" onClick={() => setFullscreen((current) => !current)}>
+            {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {fullscreen ? "縮小（Esc）" : "全画面（Ctrl/⌘+Shift+F）"}
+          </button>
+        </div>
+        <div className="diff-inputs">
+          <label>
+            <span>BEFORE</span>
+            <textarea name="diff-before" value={before} onChange={(event) => setBefore(event.target.value)} />
+          </label>
+          <label>
+            <span>AFTER</span>
+            <textarea name="diff-after" value={after} onChange={(event) => setAfter(event.target.value)} />
+          </label>
+        </div>
+        <div className="diff-result">
+          <header><span>DIFF RESULT</span><small>{changes} CHANGES</small></header>
+          <pre>
+            {differences.map((line, index) => (
+              <span className={line.type} key={`${line.type}-${index}`}>
+                <b>{line.type === "added" ? "+" : line.type === "removed" ? "−" : " "}</b>
+                {line.value || " "}
+              </span>
+            ))}
+          </pre>
+        </div>
+        <ToolStatus>{changes}行の変更を検出しました</ToolStatus>
       </div>
-      <div className="diff-result">
-        <header><span>DIFF RESULT</span><small>{changes} CHANGES</small></header>
-        <pre>
-          {differences.map((line, index) => (
-            <span className={line.type} key={`${line.type}-${index}`}>
-              <b>{line.type === "added" ? "+" : line.type === "removed" ? "−" : " "}</b>
-              {line.value || " "}
-            </span>
-          ))}
-        </pre>
-      </div>
-      <ToolStatus>{changes}行の変更を検出しました</ToolStatus>
     </ToolShell>
   );
 }
