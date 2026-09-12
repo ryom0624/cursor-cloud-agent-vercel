@@ -117,13 +117,14 @@ export function DataGrid({
     });
   };
 
-  const dropColumn = (target: string) => {
-    if (!draggedColumn || draggedColumn === target) return;
+  const dropColumn = (source: string, target: string) => {
+    if (!source || source === target) return;
     const next = [...columns];
-    const from = next.indexOf(draggedColumn);
+    const from = next.indexOf(source);
     const to = next.indexOf(target);
+    if (from < 0 || to < 0) return;
     next.splice(from, 1);
-    next.splice(to, 0, draggedColumn);
+    next.splice(to, 0, source);
     setColumnOrder(next);
     setDraggedColumn(null);
   };
@@ -248,19 +249,24 @@ export function DataGrid({
                 <th
                   key={column}
                   onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => dropColumn(column)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    dropColumn(event.dataTransfer.getData("text/plain") || draggedColumn || "", column);
+                  }}
                   className={draggedColumn === column ? "dragging" : ""}
                 >
-                  <div>
+                  <div
+                    draggable
+                    onDragStart={(event) => {
+                      setDraggedColumn(column);
+                      event.dataTransfer.setData("text/plain", column);
+                      event.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => setDraggedColumn(null)}
+                    title="ドラッグして列を移動"
+                  >
                     <span
                       className="data-grid-drag-handle"
-                      draggable
-                      onDragStart={(event) => {
-                        setDraggedColumn(column);
-                        event.dataTransfer.effectAllowed = "move";
-                      }}
-                      onDragEnd={() => setDraggedColumn(null)}
-                      title="ドラッグして列を移動"
                     >
                       <GripVertical size={12} />
                       <strong>{column}</strong>
@@ -301,10 +307,10 @@ export function DataGrid({
                 <th className="row-number">
                   <CopyButton
                     value={serializeRows([record], columns, "\t", includeHeader)}
-                    label={`${rowIndex + 1}行目をコピー`}
+                    label={`${originalIndex + 1}行目をコピー`}
                     iconOnly
                   />
-                  <span>{rowIndex + 1}</span>
+                  <span>{originalIndex + 1}</span>
                 </th>
                 {columns.map((column, columnIndex) => (
                   <td

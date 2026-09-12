@@ -2676,7 +2676,7 @@ kbd {
 .editor-resizer {
   position: relative;
   cursor: col-resize;
-  background: var(--paper-deep);
+  background: #d8d4c9;
   border-right: 1px solid var(--line-dark);
   border-left: 1px solid var(--line-dark);
   touch-action: none;
@@ -2685,7 +2685,7 @@ kbd {
 .editor-resizer:hover,
 .editor-resizer:focus {
   outline: 0;
-  background: #d9d4c8;
+  background: var(--rust);
 }
 
 .editor-resizer span {
@@ -2694,7 +2694,7 @@ kbd {
   left: 50%;
   width: 2px;
   height: 36px;
-  background: var(--ink-soft);
+  background: var(--ink);
   transform: translate(-50%, -50%);
 }
 
@@ -2739,6 +2739,14 @@ kbd {
   align-items: center;
   gap: 3px;
   cursor: grab;
+}
+
+.json-grid-scroll thead th > div[draggable="true"] {
+  cursor: grab;
+}
+
+.json-grid-scroll thead th > div[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .data-grid-drag-handle:active {
