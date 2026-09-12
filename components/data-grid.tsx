@@ -122,10 +122,13 @@ export function DataGrid({
     return () => window.removeEventListener("mouseup", stopSelecting);
   }, []);
 
-  const sourceColumns = useMemo(
-    () => Array.from(new Set(records.flatMap((record) => Object.keys(record)))),
-    [records],
-  );
+  const sourceColumns = useMemo(() => {
+    const fromRecords = Array.from(new Set(records.flatMap((record) => Object.keys(record))));
+    if (fromRecords.length) {
+      return fromRecords;
+    }
+    return Object.keys(columnLabels ?? {});
+  }, [columnLabels, records]);
   const columns = useMemo(() => [
     ...columnOrder.filter((column) => sourceColumns.includes(column)),
     ...sourceColumns.filter((column) => !columnOrder.includes(column)),
@@ -407,9 +410,22 @@ export function DataGrid({
   const addColumn = () => {
     const name = newColumn.trim();
     if (!name || columns.includes(name)) return;
-    onRecordsChange?.(records.map((record) => ({ ...record, [name]: "" })));
+    const baseRecords = records.length
+      ? records
+      : [Object.fromEntries(columns.map((column) => [column, ""]))];
+    onRecordsChange?.(baseRecords.map((record) => ({ ...record, [name]: "" })));
     setColumnOrder([...columns, name]);
     setNewColumn("new_column");
+  };
+
+  const addRow = () => {
+    if (!columns.length || !onRecordsChange) {
+      return;
+    }
+    onRecordsChange([
+      ...records,
+      Object.fromEntries(columns.map((column) => [column, ""])),
+    ]);
   };
 
   const stopHeaderGesture = (event: { stopPropagation: () => void; preventDefault?: () => void }) => {
@@ -470,7 +486,7 @@ export function DataGrid({
     setEditingCell(null);
   };
 
-  if (!records.length || !columns.length) {
+  if (!columns.length) {
     return (
       <div className="json-grid-empty">
         <TableProperties size={24} />
@@ -579,6 +595,9 @@ export function DataGrid({
           </label>
           <button type="button" onClick={addColumn} disabled={!newColumn.trim() || columns.includes(newColumn.trim())}>
             <Plus size={14} />列を追加
+          </button>
+          <button type="button" onClick={addRow}>
+            <Plus size={14} />行を追加
           </button>
           {enableDuplicateValidation && (
             <>
@@ -857,7 +876,11 @@ export function DataGrid({
             ))}
           </tbody>
         </table>
-        {!visibleRecords.length && <div className="json-grid-no-results">フィルタに一致する行がありません</div>}
+        {!visibleRecords.length && (
+          <div className="json-grid-no-results">
+            {records.length ? "フィルタに一致する行がありません" : "行がありません。行を追加してください。"}
+          </div>
+        )}
       </div>}
       <div className="data-grid-selection-status">
         <span>
@@ -868,7 +891,7 @@ export function DataGrid({
         <span>グリップ=列移動 · ゴミ箱=列削除 · ピン=固定 · ＊=必須列 · 虫眼鏡=重複チェック</span>
       </div>
       {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0) && (
-        <div className={`data-grid-duplicate-status ${validationHasError ? "error" : ""}`} role="status">
+        <div className={`data-grid-duplicate-status ${validationHasError ? "error" : "ok"}`} role="status">
           <strong>
             {uniqueKey ? `UNIQUE ${labelFor(uniqueKey)}` : requiredColumns.length ? "REQUIRED" : "DUPLICATE CHECK"}
           </strong>

@@ -16,6 +16,7 @@ import {
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BoundedNumberInput } from "@/components/bounded-number-input";
 import { DataGrid, type DataGridRecord } from "@/components/data-grid";
@@ -115,6 +116,70 @@ function lineEndingFromInspection(lineEnding: "CRLF" | "LF" | "CR" | "なし"): 
   return "\n";
 }
 
+type ValidationItem = {
+  ok: boolean;
+  label: string;
+  detail: string;
+  warn?: boolean;
+};
+
+function validationTone(items: ValidationItem[]) {
+  if (items.some((item) => !item.ok && !item.warn)) return "has-error";
+  if (items.some((item) => !item.ok)) return "has-warn";
+  return "all-ok";
+}
+
+function CsvValidationSummary({
+  items,
+  warnings,
+  excelRiskSummary,
+  showDetails,
+  onToggleDetails,
+}: {
+  items: ValidationItem[];
+  warnings: string[];
+  excelRiskSummary: {
+    kinds: number;
+    leadingZero: number;
+    longInteger: number;
+    dateLike: number;
+    scientific: number;
+  };
+  showDetails: boolean;
+  onToggleDetails: () => void;
+}) {
+  return (
+    <div className={`csv-validation-summary ${validationTone(items)}`}>
+      <strong>CSV検証</strong>
+      <ul>
+        {items.map((item) => (
+          <li key={item.label} className={item.ok ? "ok" : item.warn ? "warn" : "error"}>
+            <span aria-hidden="true">{item.ok ? "✓" : "⚠"}</span>
+            {item.label}
+            {item.detail ? ` ${item.detail}` : item.ok ? " 問題なし" : ""}
+          </li>
+        ))}
+      </ul>
+      <button type="button" onClick={onToggleDetails}>
+        {showDetails ? "詳細を閉じる" : "詳細を見る"}
+      </button>
+      {showDetails && (
+        <div className="csv-simple-warnings">
+          <ul>{warnings.length ? warnings.map((warning) => <li key={warning}>{warning}</li>) : <li>詳細な問題は見つかりませんでした。</li>}</ul>
+          {excelRiskSummary.kinds > 0 && (
+            <ul>
+              <li>先頭ゼロ {excelRiskSummary.leadingZero}件</li>
+              <li>16桁以上の整数 {excelRiskSummary.longInteger}件</li>
+              <li>日付変換候補 {excelRiskSummary.dateLike}件</li>
+              <li>scientific notation候補 {excelRiskSummary.scientific}件</li>
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}) {
   const official = mode === "official";
   const [input, setInput] = useState(csvViewerSample);
@@ -138,6 +203,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
   const [excelSheets, setExcelSheets] = useState<ExcelSheet[]>([]);
   const [selectedSheet, setSelectedSheet] = useState("");
   const [fullscreenMode, setFullscreenMode] = useState<"none" | "output" | "split">("none");
+  const [splitPercent, setSplitPercent] = useState(42);
   const [previewNotice, setPreviewNotice] = useState("");
   const [replacementCount, setReplacementCount] = useState(0);
   const [sjisDialog, setSjisDialog] = useState<{
@@ -774,32 +840,13 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
                 <button type="button" onClick={() => setViewerMode("pro")}>Proで文字コードを指定</button>
               </div>
             )}
-            <div className="csv-validation-summary">
-              <strong>CSV検証</strong>
-              <ul>
-                {validationSummary.map((item) => (
-                  <li key={item.label}>
-                    {item.ok ? "✓" : "⚠"} {item.label}{item.detail ? ` ${item.detail}` : ""}
-                  </li>
-                ))}
-              </ul>
-              <button type="button" onClick={() => setShowValidationDetails((current) => !current)}>
-                {showValidationDetails ? "詳細を閉じる" : "詳細を見る"}
-              </button>
-            </div>
-            {showValidationDetails && (
-              <div className="csv-simple-warnings">
-                <ul>{uniqueWarnings.length ? uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>) : <li>詳細な問題は見つかりませんでした。</li>}</ul>
-                {excelRiskSummary.kinds > 0 && (
-                  <ul>
-                    <li>先頭ゼロ {excelRiskSummary.leadingZero}件</li>
-                    <li>16桁以上の整数 {excelRiskSummary.longInteger}件</li>
-                    <li>日付変換候補 {excelRiskSummary.dateLike}件</li>
-                    <li>scientific notation候補 {excelRiskSummary.scientific}件</li>
-                  </ul>
-                )}
-              </div>
-            )}
+            <CsvValidationSummary
+              items={validationSummary}
+              warnings={uniqueWarnings}
+              excelRiskSummary={excelRiskSummary}
+              showDetails={showValidationDetails}
+              onToggleDetails={() => setShowValidationDetails((current) => !current)}
+            />
             <div className="csv-simple-downloads">
               <span>
                 ダウンロード · {hiddenRecords?.length
@@ -894,7 +941,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
               {outputEncoding.startsWith("utf-16") ? "UTF-16 BOMを付ける" : "UTF-8 BOMを付ける"}
             </label>
             {(outputEncoding === "utf-16le" || outputEncoding === "utf-16be") && !includeBom && (
-              <small className="csv-inherit-save">BOMなしは、受信側が文字コードを事前に認識している場合のみ推奨します。</small>
+              <small className="csv-output-note">BOMなしは、受信側が文字コードを事前に認識している場合のみ推奨します。</small>
             )}
             <label className="csv-check">
               <input
@@ -939,18 +986,70 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
         </details>
         )}
 
-      <div className={`csv-output-stage ${fullscreenMode !== "none" ? "fullscreen" : ""} ${fullscreenMode === "split" ? "split" : ""}`}>
+        {viewerMode === "pro" && (
+          <section className="csv-validation-panel">
+            <CsvValidationSummary
+              items={validationSummary}
+              warnings={uniqueWarnings}
+              excelRiskSummary={excelRiskSummary}
+              showDetails={showValidationDetails}
+              onToggleDetails={() => setShowValidationDetails((current) => !current)}
+            />
+          </section>
+        )}
+
+      <div
+        className={`csv-output-stage ${fullscreenMode !== "none" ? "fullscreen" : ""} ${fullscreenMode === "split" ? "split" : ""}`}
+        style={fullscreenMode === "split"
+          ? {
+              ["--csv-split-left" as string]: `${splitPercent}fr`,
+              ["--csv-split-right" as string]: `${100 - splitPercent}fr`,
+            }
+          : undefined}
+      >
         {fullscreenMode === "split" && (
           <section className="csv-fullscreen-input">
             <header><span>INPUT CSV</span><small>{input.length.toLocaleString()} CHARS</small></header>
             <textarea value={input} onChange={(event) => updateInput(event.target.value, "paste")} spellCheck={false} aria-label="全画面CSV入力" />
           </section>
         )}
+        {fullscreenMode === "split" && (
+          <div
+            className="editor-resizer csv-split-resizer"
+            role="separator"
+            aria-label="入力と出力の幅を変更"
+            aria-orientation="vertical"
+            aria-valuemin={25}
+            aria-valuemax={75}
+            aria-valuenow={Math.round(splitPercent)}
+            tabIndex={0}
+            onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => {
+              const container = event.currentTarget.parentElement;
+              if (!container) return;
+              const bounds = container.getBoundingClientRect();
+              const move = (pointerEvent: PointerEvent) => {
+                const next = ((pointerEvent.clientX - bounds.left) / bounds.width) * 100;
+                setSplitPercent(Math.max(25, Math.min(75, next)));
+              };
+              const stop = () => {
+                window.removeEventListener("pointermove", move);
+                window.removeEventListener("pointerup", stop);
+              };
+              window.addEventListener("pointermove", move);
+              window.addEventListener("pointerup", stop);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") setSplitPercent((current) => Math.max(25, current - 5));
+              if (event.key === "ArrowRight") setSplitPercent((current) => Math.min(75, current + 5));
+            }}
+          >
+            <span />
+          </div>
+        )}
         <section className="csv-viewer-output">
           <header>
             <span><FileSpreadsheet size={15} />OUTPUT</span>
             <div>
-              <small>Grid操作 · Raw CSV確認 · 全件保存と表示中エクスポートは別ボタン</small>
               {fullscreenMode === "none" ? (
                 <>
                   <button type="button" onClick={() => setFullscreenMode("output")}><Maximize2 size={14} />全画面</button>
@@ -965,6 +1064,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
                 </>
               )}
             </div>
+            <small>Grid操作 · Raw CSV確認 · 全件保存と表示中エクスポートは別ボタン</small>
           </header>
           <DataGrid
           records={records}
@@ -1073,33 +1173,30 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
         </div>
       )}
 
-      <section className="csv-validation" aria-labelledby="csv-validation-title-beta">
+      <section
+        className={`csv-validation ${validationTone(validationSummary)}`}
+        aria-labelledby="csv-validation-title-beta"
+      >
         <header>
           <span id="csv-validation-title-beta">
-            {uniqueWarnings.length ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+            {validationTone(validationSummary) === "all-ok" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
             CSV検証
           </span>
-          <strong>{uniqueWarnings.length ? `${uniqueWarnings.length}件の注意` : "問題は見つかりませんでした"}</strong>
+          <strong>
+            {validationTone(validationSummary) === "has-error"
+              ? "壊れている箇所があります"
+              : validationTone(validationSummary) === "has-warn"
+                ? `${uniqueWarnings.length || excelRiskSummary.kinds}件の注意`
+                : "問題は見つかりませんでした"}
+          </strong>
         </header>
-        {viewerMode === "simple" ? (
-          <div className="csv-validation-simple">
-            <ul>
-              {validationSummary.map((item) => (
-                <li key={item.label}>{item.ok ? "✓" : "⚠"} {item.label}{item.detail ? ` ${item.detail}` : ""}</li>
-              ))}
-            </ul>
-            <button type="button" onClick={() => setShowValidationDetails((current) => !current)}>
-              {showValidationDetails ? "詳細を閉じる" : "詳細を見る"}
-            </button>
-            {showValidationDetails && uniqueWarnings.length > 0 && (
-              <ul>{uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
-            )}
-          </div>
-        ) : uniqueWarnings.length ? (
-          <ul>{uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
-        ) : (
-          <p>囲み文字、列数、NUL、改行混在、デコード不能、Excel変換リスク、CSV Injection、Shift_JIS変換不能を確認しました。値は自動修正していません。</p>
-        )}
+        <CsvValidationSummary
+          items={validationSummary}
+          warnings={uniqueWarnings}
+          excelRiskSummary={excelRiskSummary}
+          showDetails={showValidationDetails}
+          onToggleDetails={() => setShowValidationDetails((current) => !current)}
+        />
       </section>
 
       <section className="csv-guide" aria-labelledby="csv-guide-title-beta">
