@@ -2768,9 +2768,9 @@ kbd {
 .data-grid-column-resizer {
   position: absolute;
   top: 0;
-  right: -4px;
+  right: 0;
   z-index: 4;
-  width: 9px;
+  width: 14px;
   height: 100%;
   cursor: col-resize;
   touch-action: none;
@@ -2780,14 +2780,15 @@ kbd {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 4px;
+  right: 1px;
   width: 1px;
-  background: transparent;
+  background: var(--line-dark);
   content: "";
 }
 
 .data-grid-column-resizer:hover::after,
 .data-grid-column-resizer:focus::after {
+  width: 2px;
   background: var(--rust);
 }
 
