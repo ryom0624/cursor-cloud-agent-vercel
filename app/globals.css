@@ -2741,11 +2741,12 @@ kbd {
   cursor: grab;
 }
 
-.json-grid-scroll thead th > div[draggable="true"] {
+.json-grid-scroll thead th > div[title="ドラッグして列を移動"] {
   cursor: grab;
+  touch-action: none;
 }
 
-.json-grid-scroll thead th > div[draggable="true"]:active {
+.json-grid-scroll thead th > div[title="ドラッグして列を移動"]:active {
   cursor: grabbing;
 }
 

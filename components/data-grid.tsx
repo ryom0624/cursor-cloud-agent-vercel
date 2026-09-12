@@ -10,7 +10,7 @@ import {
   TableProperties,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 
 export type DataGridRecord = Record<string, unknown>;
@@ -69,6 +69,7 @@ export function DataGrid({
   const [selectionEnd, setSelectionEnd] = useState<CellPosition | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [newColumn, setNewColumn] = useState("new_column");
+  const dragColumnRef = useRef<string | null>(null);
 
   useEffect(() => {
     const stopSelecting = () => setSelecting(false);
@@ -119,13 +120,18 @@ export function DataGrid({
 
   const reorderColumn = (source: string, target: string) => {
     if (!source || source === target) return;
-    const next = [...columns];
-    const from = next.indexOf(source);
-    const to = next.indexOf(target);
-    if (from < 0 || to < 0) return;
-    next.splice(from, 1);
-    next.splice(to, 0, source);
-    setColumnOrder(next);
+    setColumnOrder((currentOrder) => {
+      const ordered = [
+        ...currentOrder.filter((column) => sourceColumns.includes(column)),
+        ...sourceColumns.filter((column) => !currentOrder.includes(column)),
+      ];
+      const from = ordered.indexOf(source);
+      const to = ordered.indexOf(target);
+      if (from < 0 || to < 0) return currentOrder;
+      ordered.splice(from, 1);
+      ordered.splice(to, 0, source);
+      return ordered;
+    });
   };
 
   const bounds = selectionStart && selectionEnd
@@ -247,25 +253,31 @@ export function DataGrid({
               {columns.map((column) => (
                 <th
                   key={column}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDragEnter={() => {
-                    if (draggedColumn) reorderColumn(draggedColumn, column);
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    reorderColumn(event.dataTransfer.getData("text/plain") || draggedColumn || "", column);
-                    setDraggedColumn(null);
-                  }}
+                  data-grid-column={column}
                   className={draggedColumn === column ? "dragging" : ""}
                 >
                   <div
-                    draggable
-                    onDragStart={(event) => {
+                    onPointerDown={(event) => {
+                      if ((event.target as HTMLElement).closest("button,input")) return;
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      dragColumnRef.current = column;
                       setDraggedColumn(column);
-                      event.dataTransfer.setData("text/plain", column);
-                      event.dataTransfer.effectAllowed = "move";
                     }}
-                    onDragEnd={() => setDraggedColumn(null)}
+                    onPointerMove={(event) => {
+                      if (!dragColumnRef.current || event.buttons !== 1) return;
+                      const target = document
+                        .elementFromPoint(event.clientX, event.clientY)
+                        ?.closest<HTMLElement>("[data-grid-column]")
+                        ?.dataset.gridColumn;
+                      if (target) reorderColumn(dragColumnRef.current, target);
+                    }}
+                    onPointerUp={(event) => {
+                      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                      }
+                      dragColumnRef.current = null;
+                      setDraggedColumn(null);
+                    }}
                     title="ドラッグして列を移動"
                   >
                     <span
