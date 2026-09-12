@@ -180,6 +180,16 @@ export function TextWorkspace({
 
   return (
     <div className={`text-workspace ${fullscreen ? "fullscreen" : ""}`}>
+      {fullscreen && (
+        <button
+          type="button"
+          className="fullscreen-exit"
+          onClick={() => setFullscreen(false)}
+        >
+          <Minimize2 size={15} />
+          縮小 <kbd>Esc</kbd>
+        </button>
+      )}
       {toolbar && <div className="suite-toolbar">{toolbar}</div>}
       <div className={`suite-editors ${expanded ? "input-expanded" : ""}`}>
         <section className="suite-editor input-editor">
