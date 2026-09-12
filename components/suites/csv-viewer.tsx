@@ -447,7 +447,7 @@ export function CsvViewerSuite() {
       onTabChange={(tab) => setViewerMode(tab as "simple" | "pro")}
     >
       <div className="csv-viewer-flow">
-        {viewerMode === "pro" && (
+        {viewerMode === "pro" ? (
         <details open className="csv-settings-group">
           <summary><span>INPUT SETTINGS</span><ChevronDown size={15} /></summary>
           <fieldset>
@@ -536,7 +536,7 @@ export function CsvViewerSuite() {
             </label>
           </fieldset>
         </details>
-        )}
+        ) : null}
 
       <section className="csv-viewer-input">
         <header>
@@ -607,7 +607,7 @@ export function CsvViewerSuite() {
         {(repairMessage || previewNotice) && <div className="csv-input-notice">{repairMessage || previewNotice}</div>}
       </section>
 
-        {viewerMode === "simple" && (
+        {viewerMode === "simple" ? (
           <section className="csv-simple-summary">
             <div className="csv-detection">
               <strong>DETECTED</strong>
@@ -627,9 +627,7 @@ export function CsvViewerSuite() {
               <button type="button" onClick={() => void downloadXlsx(records, columns)}>XLSX</button>
             </div>
           </section>
-        )}
-
-        {viewerMode === "pro" && (
+        ) : (
         <details open className="csv-settings-group">
           <summary><span>OUTPUT / DOWNLOAD SETTINGS</span><ChevronDown size={15} /></summary>
           <fieldset>
