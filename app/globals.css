@@ -3407,6 +3407,19 @@ kbd {
   color: var(--ink-soft);
 }
 
+.csv-sample-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.csv-sample-group > span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
 .csv-viewer-input label,
 .csv-viewer-input button {
   min-height: 28px;

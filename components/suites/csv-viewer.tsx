@@ -23,6 +23,7 @@ import {
   decodeCsvBytes,
   encodeCsvText,
   excelCsvPreset,
+  formatCsvOutputMeta,
   formatCsvTimestamp,
   inspectCsv,
   repairUtf8ReadAsShiftJis,
@@ -228,7 +229,6 @@ export function CsvViewerSuite() {
   const [quoteAll, setQuoteAll] = useState(false);
   const [outputQuote, setOutputQuote] = useState<CsvQuote>('"');
   const [outputEscapeMode, setOutputEscapeMode] = useState<CsvEscapeMode>("double");
-  const [excelOpenPreset, setExcelOpenPreset] = useState(false);
   const [viewerMode, setViewerMode] = useState<"simple" | "pro">("simple");
   const [repairError, setRepairError] = useState("");
   const [repairMessage, setRepairMessage] = useState("");
@@ -254,8 +254,7 @@ export function CsvViewerSuite() {
     || !includeBom
     || quoteAll
     || outputQuote !== '"'
-    || outputEscapeMode !== "double"
-    || excelOpenPreset;
+    || outputEscapeMode !== "double";
   const looksMojibake = /[繧縺繝]/.test(input);
   const columns = recordColumns(records);
   const detectedItems = [
@@ -267,16 +266,14 @@ export function CsvViewerSuite() {
     `${columns.length} columns`,
   ];
   const downloadWithCurrentSettings = (targetRecords: DataGridRecord[], columns: string[]) =>
-    downloadCsv(targetRecords, columns, excelOpenPreset
-      ? excelCsvPreset
-      : {
-          encoding: outputEncoding,
-          lineEnding,
-          includeBom: outputEncoding === "utf-8" && includeBom,
-          quoteAll,
-          quote: outputQuote,
-          escapeMode: outputEscapeMode,
-        });
+    downloadCsv(targetRecords, columns, {
+      encoding: outputEncoding,
+      lineEnding,
+      includeBom: outputEncoding === "utf-8" && includeBom,
+      quoteAll,
+      quote: outputQuote,
+      escapeMode: outputEscapeMode,
+    });
   const serializeOutput = (
     targetRecords: DataGridRecord[],
     columns: string[],
@@ -555,15 +552,18 @@ export function CsvViewerSuite() {
                 }}
               />
             </label>
-            <button type="button" onClick={() => loadSample(csvViewerSample)}>
-              <RotateCcw size={14} />標準
-            </button>
-            <button type="button" onClick={() => loadSample(csvViewerJapaneseSample)}>
-              日本語
-            </button>
-            <button type="button" onClick={() => loadSample(csvViewerComplexSample)}>
-              複雑
-            </button>
+            <div className="csv-sample-group" role="group" aria-label="サンプルCSV">
+              <span>サンプル</span>
+              <button type="button" onClick={() => loadSample(csvViewerSample)}>
+                <RotateCcw size={14} />基本
+              </button>
+              <button type="button" onClick={() => loadSample(csvViewerJapaneseSample)}>
+                日本語
+              </button>
+              <button type="button" onClick={() => loadSample(csvViewerComplexSample)}>
+                複雑
+              </button>
+            </div>
             {(viewerMode === "pro" || looksMojibake) && (
             <button type="button" onClick={repairMojibake} title="UTF-8のバイト列をShift_JISとして読んだ文字化けだけを修復します">
               <Wrench size={14} />UTF-8→SJIS誤読を修復
@@ -679,19 +679,6 @@ export function CsvViewerSuite() {
               />
               全フィールドを囲む
             </label>
-            <label className="csv-check">
-              <input
-                type="checkbox"
-                checked={excelOpenPreset}
-                onChange={(event) => setExcelOpenPreset(event.target.checked)}
-              />
-              Excelで開く推奨設定でダウンロード
-            </label>
-            {excelOpenPreset && (
-              <small className="csv-excel-preset-note">
-                CSVはUTF-8 BOM・CRLF・二重引用、XLSXは文字列として出力します。
-              </small>
-            )}
             <div className="csv-detection">
               <strong>DETECTED</strong>
               <span>{detectedEncoding ? detectedEncoding.toUpperCase() : "貼り付けテキスト"}</span>
@@ -740,7 +727,12 @@ export function CsvViewerSuite() {
           }
           rawPreview={(targetRecords, columns) => ({
             content: serializeOutput(targetRecords, columns),
-            meta: `${outputEncoding.toUpperCase()} · ${lineEnding === "\r\n" ? "CRLF" : lineEnding === "\n" ? "LF" : "CR"} · ${outputEncoding === "utf-8" && includeBom ? "BOMあり" : "BOMなし"} · ${outputEscapeMode === "double" ? "引用符二重化" : "バックスラッシュ"}`,
+            meta: formatCsvOutputMeta({
+              encoding: outputEncoding,
+              lineEnding,
+              includeBom,
+              escapeMode: outputEscapeMode,
+            }),
           })}
           onDownloadCsv={downloadWithCurrentSettings}
           onDownloadXlsx={(downloadRecords, columns) => void downloadXlsx(downloadRecords, columns)}

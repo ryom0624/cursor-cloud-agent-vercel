@@ -16,6 +16,7 @@ import {
   decodeCsvBytes,
   encodeCsvText,
   excelCsvPreset,
+  formatCsvOutputMeta,
   formatCsvTimestamp,
   inspectCsv,
   repairUtf8ReadAsShiftJis,
@@ -138,6 +139,21 @@ describe("CSV utilities", () => {
     const rows = serializeCsv([{ name: "DevSmith" }], ["name"], excelCsvPreset);
     expect(rows.startsWith('"name"')).toBe(true);
     expect(encodeCsvText("name", excelCsvPreset.encoding, excelCsvPreset.includeBom)[0]).toBe(0xef);
+  });
+
+  it("formats output preview without UTF-8 BOM on Shift_JIS", () => {
+    expect(formatCsvOutputMeta({
+      encoding: "shift_jis",
+      lineEnding: "\r\n",
+      includeBom: true,
+      escapeMode: "double",
+    })).toBe("出力 Shift_JIS · CRLF · 囲み文字を二重化");
+    expect(formatCsvOutputMeta({
+      encoding: "utf-8",
+      lineEnding: "\n",
+      includeBom: false,
+      escapeMode: "backslash",
+    })).toBe("出力 UTF-8 · LF · BOMなし · バックスラッシュ");
   });
 
   it("formats download timestamps as local calendar digits", () => {

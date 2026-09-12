@@ -318,6 +318,22 @@ export const excelCsvPreset = {
   escapeMode: "double" as CsvEscapeMode,
 };
 
+export function formatCsvOutputMeta(options: {
+  encoding: CsvOutputEncoding;
+  lineEnding: CsvLineEnding;
+  includeBom: boolean;
+  escapeMode: CsvEscapeMode;
+}) {
+  const newline = options.lineEnding === "\r\n" ? "CRLF" : options.lineEnding === "\n" ? "LF" : "CR";
+  const escape = options.escapeMode === "double" ? "囲み文字を二重化" : "バックスラッシュ";
+  const parts = [options.encoding === "shift_jis" ? "Shift_JIS" : "UTF-8", newline];
+  if (options.encoding === "utf-8") {
+    parts.push(options.includeBom ? "BOMあり" : "BOMなし");
+  }
+  parts.push(escape);
+  return `出力 ${parts.join(" · ")}`;
+}
+
 export function formatCsvTimestamp(date = new Date()): string {
   const part = (value: number) => String(value).padStart(2, "0");
   return [
