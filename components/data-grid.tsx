@@ -93,6 +93,7 @@ export function DataGrid({
   const [uniqueKey, setUniqueKey] = useState("");
   const [duplicateColumns, setDuplicateColumns] = useState<string[]>([]);
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
+  const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const dragColumnRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -216,22 +217,24 @@ export function DataGrid({
 
   useEffect(() => {
     const copySelection = (event: KeyboardEvent) => {
-      if (!bounds) return;
+      if (!bounds || viewMode !== "grid") return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (target?.closest("input, textarea, select")) return;
+      if (target?.closest("[contenteditable='true']") && editingCell) return;
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "c") return;
       event.preventDefault();
       void copyText(selectionValue);
     };
     window.addEventListener("keydown", copySelection);
     return () => window.removeEventListener("keydown", copySelection);
-  }, [bounds, selectionValue]);
+  }, [bounds, editingCell, selectionValue, viewMode]);
 
   useEffect(() => {
     const pasteSelection = (event: ClipboardEvent) => {
-      if (!editable || !bounds || !onRecordsChange) return;
+      if (!editable || !bounds || !onRecordsChange || viewMode !== "grid") return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (target?.closest("input, textarea, select")) return;
+      if (target?.closest("[contenteditable='true']") && editingCell) return;
       const clipboard = event.clipboardData?.getData("text/plain") ?? "";
       if (!clipboard) return;
 
@@ -268,7 +271,7 @@ export function DataGrid({
     };
     window.addEventListener("paste", pasteSelection);
     return () => window.removeEventListener("paste", pasteSelection);
-  }, [bounds, columns, editable, indexedRows, onRecordsChange, records]);
+  }, [bounds, columns, editable, editingCell, indexedRows, onRecordsChange, records, viewMode]);
   const isSelected = (row: number, column: number) =>
     Boolean(
       bounds
@@ -605,7 +608,9 @@ export function DataGrid({
                     style={columnStyle(column)}
                     title={displayValue(record[column])}
                     onMouseDown={(event) => {
+                      if (editingCell?.row === rowIndex && editingCell.column === columnIndex) return;
                       event.preventDefault();
+                      setEditingCell(null);
                       setSelectionStart({ row: rowIndex, column: columnIndex });
                       setSelectionEnd({ row: rowIndex, column: columnIndex });
                       setSelecting(true);
@@ -614,12 +619,15 @@ export function DataGrid({
                       if (selecting) setSelectionEnd({ row: rowIndex, column: columnIndex });
                     }}
                     onDoubleClick={(event) => {
-                      if (editable) event.currentTarget.focus();
+                      if (!editable) return;
+                      setEditingCell({ row: rowIndex, column: columnIndex });
+                      event.currentTarget.focus();
                     }}
-                    contentEditable={editable}
+                    contentEditable={editable && editingCell?.row === rowIndex && editingCell.column === columnIndex}
                     suppressContentEditableWarning
                     onBlur={(event) => {
                       if (editable) updateCell(originalIndex, column, event.currentTarget.textContent ?? "");
+                      setEditingCell(null);
                     }}
                   >
                     {displayValue(record[column])}

@@ -3165,33 +3165,10 @@ kbd {
   flex-direction: column;
 }
 
-.csv-viewer-flow > .csv-settings,
-.csv-viewer-flow > .csv-settings > header,
-.csv-viewer-flow > .csv-settings > .csv-settings-grid {
-  display: contents;
-}
-
 .csv-viewer-flow .csv-settings-group {
   border: 1px solid var(--ink);
   margin-bottom: 15px;
   background: var(--white);
-}
-
-.csv-viewer-flow .csv-settings-group:first-child {
-  order: 1;
-}
-
-.csv-viewer-flow .csv-viewer-input {
-  order: 2;
-}
-
-.csv-viewer-flow .csv-settings-group:last-child {
-  order: 3;
-  border-left: 1px solid var(--ink);
-}
-
-.csv-viewer-flow .csv-output-stage {
-  order: 4;
 }
 
 .csv-settings > header,
@@ -3226,6 +3203,49 @@ kbd {
 
 .csv-settings-group {
   min-width: 0;
+}
+
+.csv-settings-group > fieldset {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+}
+
+.csv-settings-group label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.csv-settings-group select,
+.csv-settings-group input[type="number"] {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 9px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.csv-settings-group .csv-check {
+  min-height: 34px;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+
+.csv-settings-group .csv-check input {
+  margin: 0;
 }
 
 .csv-settings-group + .csv-settings-group {

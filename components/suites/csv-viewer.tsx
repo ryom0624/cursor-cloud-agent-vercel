@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Columns2,
-  FileCog,
   FileSpreadsheet,
   FileWarning,
   LoaderCircle,
@@ -350,15 +349,9 @@ export function CsvViewerSuite() {
       functionCount={1}
     >
       <div className="csv-viewer-flow">
-      <section className="csv-settings" aria-labelledby="csv-settings-title">
-        <header>
-          <span id="csv-settings-title"><FileCog size={15} />CSV設定</span>
-          <small>入力と出力の設定を個別に開閉できます。</small>
-        </header>
-        <div className="csv-settings-grid">
-          <details open className="csv-settings-group">
-            <summary><span>INPUT SETTINGS</span><ChevronDown size={15} /></summary>
-            <fieldset>
+        <details open className="csv-settings-group">
+          <summary><span>INPUT SETTINGS</span><ChevronDown size={15} /></summary>
+          <fieldset>
             <label>
               ファイル文字コード
               <select value={fileEncoding} onChange={(event) => changeFileEncoding(event.target.value as CsvFileEncoding)}>
@@ -442,70 +435,8 @@ export function CsvViewerSuite() {
               />
               空行を読み飛ばす
             </label>
-            </fieldset>
-          </details>
-          <details open className="csv-settings-group">
-            <summary><span>OUTPUT / DOWNLOAD SETTINGS</span><ChevronDown size={15} /></summary>
-            <fieldset>
-            <label>
-              出力文字コード
-              <select value={outputEncoding} onChange={(event) => setOutputEncoding(event.target.value as CsvOutputEncoding)}>
-                <option value="utf-8">UTF-8</option>
-                <option value="shift_jis">Shift_JIS / Windows-31J</option>
-              </select>
-            </label>
-            <label>
-              改行コード
-              <select value={lineEnding} onChange={(event) => setLineEnding(event.target.value as CsvLineEnding)}>
-                <option value={"\r\n"}>CRLF（Windows）</option>
-                <option value={"\n"}>LF（macOS / Linux）</option>
-                <option value={"\r"}>CR</option>
-              </select>
-            </label>
-            <label>
-              出力の囲み文字
-              <select value={outputQuote} onChange={(event) => setOutputQuote(event.target.value as CsvQuote)}>
-                <option value={'"'}>ダブルクォート</option>
-                <option value="'">シングルクォート</option>
-                <option value="">なし</option>
-              </select>
-            </label>
-            <label>
-              出力エスケープ
-              <select value={outputEscapeMode} onChange={(event) => setOutputEscapeMode(event.target.value as CsvEscapeMode)}>
-                <option value="double">囲み文字を二重化</option>
-                <option value="backslash">バックスラッシュ</option>
-              </select>
-            </label>
-            <label className="csv-check">
-              <input
-                type="checkbox"
-                checked={includeBom}
-                disabled={outputEncoding === "shift_jis"}
-                onChange={(event) => setIncludeBom(event.target.checked)}
-              />
-              UTF-8 BOMを付ける
-            </label>
-            <label className="csv-check">
-              <input
-                type="checkbox"
-                checked={quoteAll}
-                disabled={!outputQuote}
-                onChange={(event) => setQuoteAll(event.target.checked)}
-              />
-              全フィールドを囲む
-            </label>
-            <div className="csv-detection">
-              <strong>DETECTED</strong>
-              <span>{detectedEncoding ? detectedEncoding.toUpperCase() : "貼り付けテキスト"}</span>
-              <span>{parsed.inspection.delimiter === "\t" ? "TAB" : parsed.inspection.delimiter}</span>
-              <span>{parsed.inspection.lineEnding}</span>
-              <span>{fileHasBom || parsed.inspection.hasBom ? "BOMあり" : "BOMなし"}</span>
-            </div>
-            </fieldset>
-          </details>
-        </div>
-      </section>
+          </fieldset>
+        </details>
 
       <section className="csv-viewer-input">
         <header>
@@ -573,6 +504,67 @@ export function CsvViewerSuite() {
         />
         {(repairMessage || previewNotice) && <div className="csv-input-notice">{repairMessage || previewNotice}</div>}
       </section>
+
+        <details open className="csv-settings-group">
+          <summary><span>OUTPUT / DOWNLOAD SETTINGS</span><ChevronDown size={15} /></summary>
+          <fieldset>
+            <label>
+              出力文字コード
+              <select value={outputEncoding} onChange={(event) => setOutputEncoding(event.target.value as CsvOutputEncoding)}>
+                <option value="utf-8">UTF-8</option>
+                <option value="shift_jis">Shift_JIS / Windows-31J</option>
+              </select>
+            </label>
+            <label>
+              改行コード
+              <select value={lineEnding} onChange={(event) => setLineEnding(event.target.value as CsvLineEnding)}>
+                <option value={"\r\n"}>CRLF（Windows）</option>
+                <option value={"\n"}>LF（macOS / Linux）</option>
+                <option value={"\r"}>CR</option>
+              </select>
+            </label>
+            <label>
+              出力の囲み文字
+              <select value={outputQuote} onChange={(event) => setOutputQuote(event.target.value as CsvQuote)}>
+                <option value={'"'}>ダブルクォート</option>
+                <option value="'">シングルクォート</option>
+                <option value="">なし</option>
+              </select>
+            </label>
+            <label>
+              出力エスケープ
+              <select value={outputEscapeMode} onChange={(event) => setOutputEscapeMode(event.target.value as CsvEscapeMode)}>
+                <option value="double">囲み文字を二重化</option>
+                <option value="backslash">バックスラッシュ</option>
+              </select>
+            </label>
+            <label className="csv-check">
+              <input
+                type="checkbox"
+                checked={includeBom}
+                disabled={outputEncoding === "shift_jis"}
+                onChange={(event) => setIncludeBom(event.target.checked)}
+              />
+              UTF-8 BOMを付ける
+            </label>
+            <label className="csv-check">
+              <input
+                type="checkbox"
+                checked={quoteAll}
+                disabled={!outputQuote}
+                onChange={(event) => setQuoteAll(event.target.checked)}
+              />
+              全フィールドを囲む
+            </label>
+            <div className="csv-detection">
+              <strong>DETECTED</strong>
+              <span>{detectedEncoding ? detectedEncoding.toUpperCase() : "貼り付けテキスト"}</span>
+              <span>{parsed.inspection.delimiter === "\t" ? "TAB" : parsed.inspection.delimiter}</span>
+              <span>{parsed.inspection.lineEnding}</span>
+              <span>{fileHasBom || parsed.inspection.hasBom ? "BOMあり" : "BOMなし"}</span>
+            </div>
+          </fieldset>
+        </details>
 
       <div className={`csv-output-stage ${fullscreenMode !== "none" ? "fullscreen" : ""} ${fullscreenMode === "split" ? "split" : ""}`}>
         {fullscreenMode === "split" && (
