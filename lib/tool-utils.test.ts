@@ -62,12 +62,15 @@ describe("CSV utilities", () => {
       repairedCount: 1,
       failures: [],
     });
-    const mixed = repairUtf8ReadAsShiftJis("id,name,note\n1,縺薙ｓ縺ｫ縺｡縺ｯ,壊れた�文字");
+    const mixed = repairUtf8ReadAsShiftJis("id,name,note\n1,縺薙ｓ縺ｫ縺｡縺ｯ,壊れた�文字\n2,通常,🔧");
     expect(mixed.text).toContain("こんにちは");
     expect(mixed.text).toContain("壊れた�文字");
+    expect(mixed.text).toContain("通常");
+    expect(mixed.text).toContain("🔧");
     expect(mixed.repairedCount).toBe(1);
     expect(mixed.failures).toEqual([
       expect.objectContaining({ row: 2, column: 3, reason: expect.stringContaining("置換文字") }),
+      expect.objectContaining({ row: 3, column: 3, reason: expect.stringContaining("戻せない文字") }),
     ]);
     const emoji = repairUtf8ReadAsShiftJis("id,note\n1,🔧");
     expect(emoji.text).toContain("🔧");

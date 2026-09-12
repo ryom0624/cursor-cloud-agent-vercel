@@ -195,6 +195,10 @@ export type CsvRepairResult = {
   failures: CsvRepairFailure[];
 };
 
+function looksLikeUtf8ReadAsShiftJis(value: string) {
+  return /[繧縺繝｡｢､ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ]/.test(value);
+}
+
 function tryRepairUtf8ReadAsShiftJisChunk(value: string) {
   try {
     const mistakenBytes = Encoding.convert(Encoding.stringToCode(value), {
@@ -219,6 +223,9 @@ function tryRepairUtf8ReadAsShiftJisChunk(value: string) {
 function repairUtf8ReadAsShiftJisValue(value: string): { text: string; repaired: boolean; unrecoverable: boolean } {
   if (!value) return { text: value, repaired: false, unrecoverable: false };
   if (value.includes("\uFFFD")) return { text: value, repaired: false, unrecoverable: true };
+  if (!looksLikeUtf8ReadAsShiftJis(value)) {
+    return { text: value, repaired: false, unrecoverable: /[^\u0000-\u00FF\u3000-\u30FF\u4E00-\u9FFF\uFF00-\uFFEF]/.test(value) };
+  }
   const repaired = tryRepairUtf8ReadAsShiftJisChunk(value);
   if (repaired !== null) return { text: repaired, repaired: repaired !== value, unrecoverable: false };
   return { text: value, repaired: false, unrecoverable: true };
