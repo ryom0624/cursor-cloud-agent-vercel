@@ -6,10 +6,12 @@ export type CsvQuote = '"' | "'" | "";
 export type CsvFileEncoding = "auto" | "utf-8" | "shift_jis";
 export type CsvOutputEncoding = "utf-8" | "shift_jis";
 export type CsvLineEnding = "\n" | "\r\n" | "\r";
+export type CsvEscapeMode = "double" | "backslash";
 
 export type CsvParseOptions = {
   delimiter?: CsvDelimiterSetting;
   quote?: CsvQuote;
+  escapeMode?: CsvEscapeMode;
   trimFields?: boolean;
   skipEmptyLines?: boolean;
 };
@@ -29,6 +31,7 @@ function parseWithDelimiter(
   input: string,
   delimiter: CsvDelimiter,
   quote: CsvQuote,
+  escapeMode: CsvEscapeMode,
   trimFields: boolean,
   skipEmptyLines: boolean,
 ) {
@@ -53,7 +56,10 @@ function parseWithDelimiter(
     const char = input[index];
     const next = input[index + 1];
 
-    if (quote && char === quote && quoted && next === quote) {
+    if (quote && escapeMode === "backslash" && quoted && char === "\\" && next === quote) {
+      field += quote;
+      index += 1;
+    } else if (quote && escapeMode === "double" && char === quote && quoted && next === quote) {
       field += quote;
       index += 1;
     } else if (quote && char === quote) {
@@ -73,10 +79,10 @@ function parseWithDelimiter(
   return { rows, unclosedQuote: quoted };
 }
 
-function detectDelimiter(input: string, quote: CsvQuote): CsvDelimiter {
+function detectDelimiter(input: string, quote: CsvQuote, escapeMode: CsvEscapeMode): CsvDelimiter {
   let best: { delimiter: CsvDelimiter; score: number } = { delimiter: ",", score: -1 };
   for (const delimiter of delimiterCandidates) {
-    const { rows } = parseWithDelimiter(input, delimiter, quote, false, true);
+    const { rows } = parseWithDelimiter(input, delimiter, quote, escapeMode, false, true);
     const widths = rows.slice(0, 20).map((row) => row.length);
     const multiColumn = widths.filter((width) => width > 1);
     if (!multiColumn.length) continue;
@@ -100,13 +106,15 @@ export function inspectCsv(input: string, options: CsvParseOptions = {}): CsvIns
   const hasBom = input.startsWith("\uFEFF");
   const normalized = hasBom ? input.slice(1) : input;
   const quote = options.quote ?? '"';
+  const escapeMode = options.escapeMode ?? "double";
   const delimiter = options.delimiter && options.delimiter !== "auto"
     ? options.delimiter
-    : detectDelimiter(normalized, quote);
+    : detectDelimiter(normalized, quote, escapeMode);
   const result = parseWithDelimiter(
     normalized,
     delimiter,
     quote,
+    escapeMode,
     options.trimFields ?? false,
     options.skipEmptyLines ?? true,
   );
@@ -199,24 +207,42 @@ export function serializeCsv(
     delimiter?: CsvDelimiter;
     quote?: CsvQuote;
     quoteAll?: boolean;
+    escapeMode?: CsvEscapeMode;
     lineEnding?: CsvLineEnding;
     includeHeader?: boolean;
+    finalLineEnding?: boolean;
   } = {},
 ): string {
   const delimiter = options.delimiter ?? ",";
   const quote = options.quote ?? '"';
+  const escapeMode = options.escapeMode ?? "double";
   const lineEnding = options.lineEnding ?? "\n";
   const escape = (value: unknown) => {
     const text = typeof value === "object" && value !== null
       ? JSON.stringify(value)
       : String(value ?? "");
     if (!quote) return text.replaceAll(delimiter, " ").replaceAll(/\r?\n/g, " ");
-    const escaped = text.replaceAll(quote, `${quote}${quote}`);
+    const escaped = escapeMode === "backslash"
+      ? text.replaceAll("\\", "\\\\").replaceAll(quote, `\\${quote}`)
+      : text.replaceAll(quote, `${quote}${quote}`);
     return options.quoteAll || text.includes(delimiter) || text.includes(quote) || /[\r\n]/.test(text)
       ? `${quote}${escaped}${quote}`
       : text;
   };
   const rows = records.map((record) => columns.map((column) => escape(record[column])));
   if (options.includeHeader ?? true) rows.unshift(columns.map(escape));
-  return rows.map((row) => row.join(delimiter)).join(lineEnding);
+  const output = rows.map((row) => row.join(delimiter)).join(lineEnding);
+  return options.finalLineEnding ? `${output}${lineEnding}` : output;
+}
+
+export function formatCsvTimestamp(date = new Date()): string {
+  const part = (value: number) => String(value).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    part(date.getMonth() + 1),
+    part(date.getDate()),
+    part(date.getHours()),
+    part(date.getMinutes()),
+    part(date.getSeconds()),
+  ].join("");
 }

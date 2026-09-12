@@ -15,6 +15,7 @@ import {
 import {
   decodeCsvBytes,
   encodeCsvText,
+  formatCsvTimestamp,
   inspectCsv,
   repairUtf8ReadAsShiftJis,
   serializeCsv,
@@ -52,6 +53,7 @@ describe("CSV utilities", () => {
       encoding: "shift_jis",
       hasBom: false,
     });
+    expect(Array.from(encodeCsvText("開発", "shift_jis", false))).toEqual([0x8a, 0x4a, 0x94, 0xad]);
   });
 
   it("repairs reversible UTF-8 read as Shift_JIS mojibake", () => {
@@ -64,6 +66,15 @@ describe("CSV utilities", () => {
       lineEnding: "\r\n",
       quoteAll: true,
     })).toBe('"id","note"\r\n"01","a,b"');
+    expect(serializeCsv([{ note: 'say "yes"' }], ["note"], {
+      escapeMode: "backslash",
+      finalLineEnding: true,
+    })).toBe('note\n"say \\"yes\\""\n');
+    expect(inspectCsv('note\n"say \\"yes\\""', { escapeMode: "backslash" }).rows[1]).toEqual(['say "yes"']);
+  });
+
+  it("formats download timestamps as local calendar digits", () => {
+    expect(formatCsvTimestamp(new Date(2026, 8, 12, 4, 5, 6))).toBe("20260912040506");
   });
 });
 

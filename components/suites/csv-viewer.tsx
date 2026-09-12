@@ -16,10 +16,12 @@ import { ToolShell, ToolStatus } from "@/components/tool-shell";
 import {
   decodeCsvBytes,
   encodeCsvText,
+  formatCsvTimestamp,
   inspectCsv,
   repairUtf8ReadAsShiftJis,
   serializeCsv,
   type CsvDelimiterSetting,
+  type CsvEscapeMode,
   type CsvFileEncoding,
   type CsvLineEnding,
   type CsvOutputEncoding,
@@ -33,9 +35,23 @@ const csvViewerSample = `id,name,team,status,score,updated_at
 104,Log Pipeline,SRE,paused,74,2026-09-08
 105,Release Notes,Product,active,89,2026-09-07`;
 
+const csvViewerJapaneseSample = `社員ID,氏名,部署,役職,入社日,備考
+1001,山田 太郎,開発部,エンジニア,2022-04-01,API基盤を担当
+1002,佐藤 花子,デザイン部,デザイナー,2021-10-15,UI・UXを担当
+1003,鈴木 一郎,営業部,マネージャー,2020-01-20,国内営業を担当
+1004,高橋 美咲,品質保証部,QAエンジニア,2023-07-03,自動テストを担当`;
+
+const csvViewerComplexSample = `id,name,note,address,amount,formula
+1,"カンマ,を含む名前","通常の1行メモ","東京都千代田区",1200,"=SUM(1,2)"
+2,改行データ,"1行目
+2行目","大阪府大阪市",0,"+cmd"
+3,引用符,"彼は""確認済み""と回答","福岡県福岡市",00125,""
+4,空データ,,"  前後に空白  ",-450,"@external"`;
+
 type ViewerSettings = {
   delimiter: CsvDelimiterSetting;
   quote: CsvQuote;
+  escapeMode: CsvEscapeMode;
   trimFields: boolean;
   skipEmptyLines: boolean;
   headerRow: number;
@@ -45,6 +61,7 @@ type ViewerSettings = {
 const defaultSettings: ViewerSettings = {
   delimiter: "auto",
   quote: '"',
+  escapeMode: "double",
   trimFields: false,
   skipEmptyLines: true,
   headerRow: 1,
@@ -94,21 +111,29 @@ function downloadCsv(
     lineEnding: CsvLineEnding;
     includeBom: boolean;
     quoteAll: boolean;
+    quote: CsvQuote;
+    escapeMode: CsvEscapeMode;
   },
 ) {
   const output = serializeCsv(records, columns, {
     lineEnding: options.lineEnding,
     quoteAll: options.quoteAll,
+    quote: options.quote,
+    escapeMode: options.escapeMode,
+    finalLineEnding: true,
   });
   const bytes = encodeCsvText(output, options.encoding, options.includeBom);
   const content = new Uint8Array(bytes.length);
   content.set(bytes);
-  const url = URL.createObjectURL(new Blob([content.buffer], { type: "text/csv" }));
+  const mimeEncoding = options.encoding === "shift_jis" ? "shift_jis" : "utf-8";
+  const url = URL.createObjectURL(new Blob([content.buffer], { type: `text/csv;charset=${mimeEncoding}` }));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `devsmith-data-${options.encoding}.csv`;
+  anchor.download = `devsmith-data_${formatCsvTimestamp()}.csv`;
+  document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function CsvViewerSuite() {
@@ -122,10 +147,24 @@ export function CsvViewerSuite() {
   const [lineEnding, setLineEnding] = useState<CsvLineEnding>("\r\n");
   const [includeBom, setIncludeBom] = useState(true);
   const [quoteAll, setQuoteAll] = useState(false);
+  const [outputQuote, setOutputQuote] = useState<CsvQuote>('"');
+  const [outputEscapeMode, setOutputEscapeMode] = useState<CsvEscapeMode>("double");
   const [repairError, setRepairError] = useState("");
   const fileBytesRef = useRef<Uint8Array | null>(null);
   const parsed = useMemo(() => parseRecords(input, settings), [input, settings]);
   const records = editedRecords ?? parsed.records;
+  const serializeOutput = (
+    targetRecords: DataGridRecord[],
+    columns: string[],
+    includeHeader = true,
+  ) => serializeCsv(targetRecords, columns, {
+    lineEnding,
+    quoteAll,
+    quote: outputQuote,
+    escapeMode: outputEscapeMode,
+    includeHeader,
+    finalLineEnding: true,
+  });
 
   const updateInput = (value: string) => {
     setInput(value);
@@ -151,6 +190,13 @@ export function CsvViewerSuite() {
     } catch (error) {
       setRepairError(error instanceof Error ? error.message : "文字化けを修復できませんでした。");
     }
+  };
+
+  const loadSample = (value: string) => {
+    fileBytesRef.current = null;
+    setDetectedEncoding(null);
+    setFileHasBom(false);
+    updateInput(value);
   };
 
   return (
@@ -200,6 +246,16 @@ export function CsvViewerSuite() {
                 <option value={'"'}>ダブルクォート</option>
                 <option value="'">シングルクォート</option>
                 <option value="">なし</option>
+              </select>
+            </label>
+            <label>
+              囲み文字のエスケープ
+              <select
+                value={settings.escapeMode}
+                onChange={(event) => setSettings((current) => ({ ...current, escapeMode: event.target.value as CsvEscapeMode }))}
+              >
+                <option value="double">二重化（&quot;&quot;）</option>
+                <option value="backslash">バックスラッシュ（\&quot;）</option>
               </select>
             </label>
             <label>
@@ -260,6 +316,21 @@ export function CsvViewerSuite() {
                 <option value={"\r"}>CR</option>
               </select>
             </label>
+            <label>
+              出力の囲み文字
+              <select value={outputQuote} onChange={(event) => setOutputQuote(event.target.value as CsvQuote)}>
+                <option value={'"'}>ダブルクォート</option>
+                <option value="'">シングルクォート</option>
+                <option value="">なし</option>
+              </select>
+            </label>
+            <label>
+              出力エスケープ
+              <select value={outputEscapeMode} onChange={(event) => setOutputEscapeMode(event.target.value as CsvEscapeMode)}>
+                <option value="double">囲み文字を二重化</option>
+                <option value="backslash">バックスラッシュ</option>
+              </select>
+            </label>
             <label className="csv-check">
               <input
                 type="checkbox"
@@ -270,8 +341,13 @@ export function CsvViewerSuite() {
               UTF-8 BOMを付ける
             </label>
             <label className="csv-check">
-              <input type="checkbox" checked={quoteAll} onChange={(event) => setQuoteAll(event.target.checked)} />
-              全フィールドをダブルクォートで囲む
+              <input
+                type="checkbox"
+                checked={quoteAll}
+                disabled={!outputQuote}
+                onChange={(event) => setQuoteAll(event.target.checked)}
+              />
+              全フィールドを囲む
             </label>
             <div className="csv-detection">
               <strong>DETECTED</strong>
@@ -304,8 +380,14 @@ export function CsvViewerSuite() {
                 }}
               />
             </label>
-            <button type="button" onClick={() => updateInput(csvViewerSample)}>
-              <RotateCcw size={14} />サンプル
+            <button type="button" onClick={() => loadSample(csvViewerSample)}>
+              <RotateCcw size={14} />標準
+            </button>
+            <button type="button" onClick={() => loadSample(csvViewerJapaneseSample)}>
+              日本語
+            </button>
+            <button type="button" onClick={() => loadSample(csvViewerComplexSample)}>
+              複雑
             </button>
             <button type="button" onClick={repairMojibake} title="UTF-8のバイト列をShift_JISとして読んだ文字化けだけを修復します">
               <Wrench size={14} />UTF-8→SJIS誤読を修復
@@ -323,19 +405,28 @@ export function CsvViewerSuite() {
 
       <section className="csv-viewer-output">
         <header>
-          <span><FileSpreadsheet size={15} />OUTPUT GRID</span>
-          <small>ドラッグ範囲選択 · 列ドラッグ移動 · セル直接編集</small>
+          <span><FileSpreadsheet size={15} />OUTPUT</span>
+          <small>Grid操作 · Raw CSV確認 · ダウンロード</small>
         </header>
         <DataGrid
           records={records}
           editable
           onRecordsChange={setEditedRecords}
+          csvSerializer={(targetRecords, columns, includeHeader) =>
+            serializeOutput(targetRecords, columns, includeHeader)
+          }
+          rawPreview={(targetRecords, columns) => ({
+            content: serializeOutput(targetRecords, columns),
+            meta: `${outputEncoding.toUpperCase()} · ${lineEnding === "\r\n" ? "CRLF" : lineEnding === "\n" ? "LF" : "CR"} · ${outputEncoding === "utf-8" && includeBom ? "BOMあり" : "BOMなし"} · ${outputEscapeMode === "double" ? "引用符二重化" : "バックスラッシュ"}`,
+          })}
           onDownloadCsv={(downloadRecords, columns) =>
             downloadCsv(downloadRecords, columns, {
               encoding: outputEncoding,
               lineEnding,
               includeBom: outputEncoding === "utf-8" && includeBom,
               quoteAll,
+              quote: outputQuote,
+              escapeMode: outputEscapeMode,
             })
           }
           emptyMessage="CSVの行がありません"

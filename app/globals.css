@@ -2794,11 +2794,16 @@ kbd {
 
 .json-grid-scroll table.has-custom-widths {
   width: max-content;
+  table-layout: fixed;
 }
 
 .json-grid-scroll table.has-custom-widths th,
 .json-grid-scroll table.has-custom-widths td {
   max-width: none;
+}
+
+.json-grid-scroll table.has-custom-widths .row-number-column {
+  width: 58px;
 }
 
 .json-grid-scroll thead th.dragging {
@@ -2818,6 +2823,17 @@ kbd {
   outline: 2px solid var(--rust);
   background: var(--white) !important;
   white-space: normal;
+}
+
+.json-grid-scroll td.multiline {
+  height: auto;
+  min-height: 34px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  overflow: visible;
+  line-height: 1.55;
+  text-overflow: clip;
+  white-space: pre-wrap;
 }
 
 .json-grid-scroll .row-number {
@@ -3088,6 +3104,87 @@ kbd {
 
 .csv-viewer-output .json-grid-panel {
   height: 460px;
+}
+
+.data-grid-view-tabs {
+  min-height: 36px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: end;
+  gap: 2px;
+  padding: 5px 8px 0;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.data-grid-view-tabs button {
+  min-height: 30px;
+  padding: 0 14px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  border-bottom: 0;
+  background: var(--white);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.data-grid-view-tabs button.active {
+  color: var(--white);
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.data-grid-raw {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--white);
+}
+
+.data-grid-raw > div {
+  min-height: 34px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line-dark);
+  color: var(--ink-soft);
+  background: #f3f0e8;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.data-grid-raw button {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--ink);
+  border: 1px solid var(--line-dark);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.data-grid-raw pre {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: normal;
 }
 
 .csv-validation {

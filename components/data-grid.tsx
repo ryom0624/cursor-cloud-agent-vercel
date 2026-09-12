@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CopyButton } from "@/components/copy-button";
+import { CopyButton, copyText } from "@/components/copy-button";
 
 export type DataGridRecord = Record<string, unknown>;
 
@@ -33,7 +33,7 @@ function delimitedEscape(value: unknown, delimiter: "," | "\t") {
   return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-function serializeRows(
+export function serializeGridRows(
   records: DataGridRecord[],
   columns: string[],
   delimiter: "," | "\t",
@@ -52,6 +52,15 @@ export type DataGridProps = {
   editable?: boolean;
   onRecordsChange?: (records: DataGridRecord[]) => void;
   onDownloadCsv?: (records: DataGridRecord[], columns: string[]) => void;
+  csvSerializer?: (
+    records: DataGridRecord[],
+    columns: string[],
+    includeHeader: boolean,
+  ) => string;
+  rawPreview?: (
+    records: DataGridRecord[],
+    columns: string[],
+  ) => { content: string; meta?: string };
 };
 
 export function DataGrid({
@@ -60,6 +69,8 @@ export function DataGrid({
   editable = false,
   onRecordsChange,
   onDownloadCsv,
+  csvSerializer,
+  rawPreview,
 }: DataGridProps) {
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [sort, setSort] = useState<SortState>(null);
@@ -71,6 +82,7 @@ export function DataGrid({
   const [selecting, setSelecting] = useState(false);
   const [newColumn, setNewColumn] = useState("new_column");
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<"grid" | "raw">("grid");
   const dragColumnRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -111,6 +123,13 @@ export function DataGrid({
     });
   }, [filters, records, sort, sourceColumns]);
   const visibleRecords = indexedRows.map(({ record }) => record);
+  const toCsv = (
+    targetRecords: DataGridRecord[],
+    targetColumns: string[],
+    withHeader: boolean,
+  ) => csvSerializer
+    ? csvSerializer(targetRecords, targetColumns, withHeader)
+    : serializeGridRows(targetRecords, targetColumns, ",", withHeader);
 
   const toggleSort = (column: string) => {
     setSort((current) => {
@@ -146,9 +165,15 @@ export function DataGrid({
     if (!header) return;
     const startX = event.clientX;
     const startWidth = header.getBoundingClientRect().width;
+    const measuredWidths = Object.fromEntries(
+      Array.from(header.closest("table")?.querySelectorAll<HTMLElement>("[data-grid-column]") ?? [])
+        .map((item) => [item.dataset.gridColumn ?? "", Math.round(item.getBoundingClientRect().width)])
+        .filter(([name]) => Boolean(name)),
+    );
+    setColumnWidths(measuredWidths);
     const move = (pointerEvent: PointerEvent) => {
       const width = Math.round(Math.max(96, Math.min(640, startWidth + pointerEvent.clientX - startX)));
-      setColumnWidths((current) => ({ ...current, [column]: width }));
+      setColumnWidths({ ...measuredWidths, [column]: width });
     };
     const stop = () => {
       window.removeEventListener("pointermove", move);
@@ -172,12 +197,25 @@ export function DataGrid({
   const selectionColumns = bounds
     ? columns.slice(bounds.columnStart, bounds.columnEnd + 1)
     : [];
-  const selectionValue = serializeRows(
+  const selectionValue = toCsv(
     selectionRecords,
     selectionColumns,
-    "\t",
     includeHeader,
   );
+  const rawOutput = rawPreview?.(visibleRecords, columns);
+
+  useEffect(() => {
+    const copySelection = (event: KeyboardEvent) => {
+      if (!bounds || !selectionValue) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "c") return;
+      event.preventDefault();
+      void copyText(selectionValue);
+    };
+    window.addEventListener("keydown", copySelection);
+    return () => window.removeEventListener("keydown", copySelection);
+  }, [bounds, selectionValue]);
   const isSelected = (row: number, column: number) =>
     Boolean(
       bounds
@@ -220,6 +258,16 @@ export function DataGrid({
 
   return (
     <div className="json-grid-panel">
+      {rawPreview && (
+        <div className="data-grid-view-tabs" role="tablist" aria-label="出力表示">
+          <button type="button" role="tab" aria-selected={viewMode === "grid"} className={viewMode === "grid" ? "active" : ""} onClick={() => setViewMode("grid")}>
+            Grid
+          </button>
+          <button type="button" role="tab" aria-selected={viewMode === "raw"} className={viewMode === "raw" ? "active" : ""} onClick={() => setViewMode("raw")}>
+            Raw CSV
+          </button>
+        </div>
+      )}
       <div className="json-grid-toolbar data-grid-toolbar">
         <div>
           <CopyButton value={JSON.stringify(visibleRecords, null, 2)} label="表示行 JSON" />
@@ -234,12 +282,13 @@ export function DataGrid({
             />
             ヘッダーあり
           </label>
+          <CopyButton value={toCsv([], columns, true)} label="列名のみ" />
           <CopyButton
-            value={serializeRows(visibleRecords, columns, ",", includeHeader)}
+            value={toCsv(visibleRecords, columns, includeHeader)}
             label="CSVコピー"
           />
           <CopyButton
-            value={serializeRows(visibleRecords, columns, "\t", includeHeader)}
+            value={serializeGridRows(visibleRecords, columns, "\t", includeHeader)}
             label="TSVコピー"
           />
           <CopyButton value={selectionValue} label="選択範囲をコピー" />
@@ -250,7 +299,7 @@ export function DataGrid({
           )}
         </div>
       </div>
-      {editable && (
+      {editable && viewMode === "grid" && (
         <div className="data-grid-column-editor">
           <label>
             列名
@@ -262,7 +311,15 @@ export function DataGrid({
           <small>セルは直接編集できます。列削除は各ヘッダーのごみ箱から行えます。</small>
         </div>
       )}
-      <div className="json-grid-scroll" onMouseLeave={() => setSelecting(false)}>
+      {viewMode === "raw" && rawOutput ? (
+        <div className="data-grid-raw">
+          <div>
+            <span>{rawOutput.meta ?? "DOWNLOAD PREVIEW"}</span>
+            <CopyButton value={rawOutput.content} label="Rawをコピー" />
+          </div>
+          <pre>{rawOutput.content}</pre>
+        </div>
+      ) : <div className="json-grid-scroll" onMouseLeave={() => setSelecting(false)}>
         <table className={Object.keys(columnWidths).length ? "has-custom-widths" : ""}>
           <colgroup>
             <col className="row-number-column" />
@@ -328,7 +385,7 @@ export function DataGrid({
                     </span>
                     <span>
                       <CopyButton
-                        value={serializeRows(visibleRecords, [column], "\t", includeHeader)}
+                        value={toCsv(visibleRecords, [column], includeHeader)}
                         label={`${column}列をコピー`}
                         iconOnly
                       />
@@ -376,7 +433,7 @@ export function DataGrid({
               <tr key={originalIndex}>
                 <th className="row-number">
                   <CopyButton
-                    value={serializeRows([record], columns, "\t", includeHeader)}
+                    value={toCsv([record], columns, includeHeader)}
                     label={`${originalIndex + 1}行目をコピー`}
                     iconOnly
                   />
@@ -385,7 +442,7 @@ export function DataGrid({
                 {columns.map((column, columnIndex) => (
                   <td
                     key={column}
-                    className={isSelected(rowIndex, columnIndex) ? "selected" : ""}
+                    className={`${isSelected(rowIndex, columnIndex) ? "selected" : ""} ${displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") ? "multiline" : ""}`.trim()}
                     style={columnWidths[column]
                       ? {
                           width: columnWidths[column],
@@ -420,7 +477,7 @@ export function DataGrid({
           </tbody>
         </table>
         {!visibleRecords.length && <div className="json-grid-no-results">フィルタに一致する行がありません</div>}
-      </div>
+      </div>}
       <div className="data-grid-selection-status">
         <span>
           {bounds
