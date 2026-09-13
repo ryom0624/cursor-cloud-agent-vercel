@@ -1,19 +1,16 @@
 "use client";
 
 import {
-  Clock3,
   Maximize2,
   Minimize2,
-  PanelLeftClose,
-  PanelRightOpen,
   ShieldCheck,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
-import { tools } from "@/lib/tools";
+import { useRecordToolUse, WorkspaceSidebar } from "@/components/workspace-sidebar";
+import { toolBySlug, wideWorkspaceSlugs } from "@/lib/tools";
 
 type ToolShellProps = {
   slug: string;
@@ -27,18 +24,10 @@ type ToolShellProps = {
   children: ReactNode;
 };
 
-const wideWorkspaceSlugs = new Set([
-  "data-converter",
-  "csv-viewer",
+const extraWideSlugs = new Set([
   "csv-viewer-beta",
   "csv-viewer-legacy",
   "csv-viewer-legacy2",
-  "encoder",
-  "jwt",
-  "hash",
-  "regex",
-  "diff",
-  "text",
 ]);
 
 export function ToolShell({
@@ -53,41 +42,17 @@ export function ToolShell({
   children,
 }: ToolShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const layout = wideWorkspaceSlugs.has(slug) ? "wide" : "form";
+  const tool = toolBySlug[slug];
+  const layout = wideWorkspaceSlugs.has(slug) || extraWideSlugs.has(slug) || tool?.layout === "wide" ? "wide" : "form";
+  useRecordToolUse(slug);
 
   return (
     <main className={`workbench-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="workbench-sidebar">
-        <div className="sidebar-title">
-          <span>WORKSPACES</span>
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-            aria-label={sidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
-            title={sidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
-          >
-            {sidebarCollapsed ? <PanelRightOpen size={15} /> : <PanelLeftClose size={15} />}
-          </button>
-        </div>
-        {tools.map((tool) => (
-          <Link
-            href={tool.href}
-            key={tool.index}
-            className={tool.href === `/tools/${slug}` ? "current" : ""}
-          >
-            <span>{tool.index}</span>
-            {tool.name}
-          </Link>
-        ))}
-        <div className="sidebar-foot">
-          <Clock3 size={14} />
-          <span>
-            入力したデータは
-            <br />
-            外部へ送信されません
-          </span>
-        </div>
-      </aside>
+      <WorkspaceSidebar
+        currentSlug={slug}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((collapsed) => !collapsed)}
+      />
 
       <section className={`workbench-main suite-main layout-${layout}`}>
         <ToolBreadcrumb title={title} />
@@ -98,7 +63,7 @@ export function ToolShell({
           </div>
           <div>
             <div className="workbench-kicker">
-              {category.toUpperCase()} · {functionCount} FUNCTIONS
+              {category.toUpperCase()} · {tool?.functions ?? functionCount} FUNCTIONS
             </div>
             <h1>{title}</h1>
             <p>{description}</p>

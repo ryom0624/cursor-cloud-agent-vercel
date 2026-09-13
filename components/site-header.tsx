@@ -8,11 +8,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { tools } from "@/lib/tools";
+import { listedTools, searchTools } from "@/lib/tools";
+import { featuredTools, useRecentlyUsedTools } from "@/lib/recently-used";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const recent = useRecentlyUsedTools();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,16 +34,9 @@ export function SiteHeader() {
   }, [open]);
 
   const results = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    const matches = normalized
-      ? tools.filter((tool) =>
-          `${tool.name} ${tool.description} ${tool.category}`
-            .toLowerCase()
-            .includes(normalized),
-        )
-      : tools.filter((tool) => tool.featured);
-    return matches.slice(0, 7);
-  }, [query]);
+    if (query.trim()) return searchTools(query, listedTools).slice(0, 8);
+    return (recent.length ? recent : featuredTools()).slice(0, 8);
+  }, [query, recent]);
 
   return (
     <>
@@ -105,7 +100,7 @@ export function SiteHeader() {
             </div>
             <div className="command-results">
               <span className="command-label">
-                {query ? "検索結果" : "よく使う道具"}
+                {query ? "検索結果" : recent.length ? "最近使った道具" : "よく使う道具"}
               </span>
               {results.length ? (
                 results.map((tool) => (

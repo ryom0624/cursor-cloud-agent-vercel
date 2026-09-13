@@ -1,32 +1,19 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { ToolSuite, type SuiteSlug } from "@/components/tool-suite";
-import { tools } from "@/lib/tools";
-
-const slugs: SuiteSlug[] = [
-  "data-converter",
-  "csv-viewer",
-  "csv-viewer-beta",
-  "csv-viewer-legacy",
-  "csv-viewer-legacy2",
-  "encoder",
-  "jwt",
-  "hash",
-  "id-generator",
-  "password",
-  "regex",
-  "diff",
-  "text",
-  "lorem",
-  "date-time",
-  "cron",
-  "number",
-];
+import { ToolSuite } from "@/components/tool-suite";
+import { isSuiteSlug, tools, type SuiteSlug } from "@/lib/tools";
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return slugs.map((slug) => ({ slug }));
+  return tools
+    .filter((tool) => tool.slug !== "json")
+    .map((tool) => ({ slug: tool.slug }))
+    .concat([
+      { slug: "csv-viewer-beta" },
+      { slug: "csv-viewer-legacy" },
+      { slug: "csv-viewer-legacy2" },
+    ]);
 }
 
 export async function generateMetadata({
@@ -68,6 +55,6 @@ export default async function ToolPage({
 }) {
   const { slug } = await params;
   if (slug === "csv-viewer-beta") redirect("/tools/csv-viewer");
-  if (!slugs.includes(slug as SuiteSlug)) notFound();
+  if (!isSuiteSlug(slug)) notFound();
   return <ToolSuite slug={slug as SuiteSlug} />;
 }

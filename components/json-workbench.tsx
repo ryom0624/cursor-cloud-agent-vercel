@@ -3,23 +3,20 @@
 import {
   Braces,
   Check,
-  Clock3,
   Download,
   FileJson,
   Maximize2,
   Minimize2,
-  PanelLeftClose,
-  PanelRightOpen,
   RotateCcw,
   WandSparkles,
 } from "lucide-react";
-import Link from "next/link";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { JsonGrid } from "@/components/json-grid";
-import { pasteAnythingStorageKeys, tools } from "@/lib/tools";
+import { useRecordToolUse, WorkspaceSidebar } from "@/components/workspace-sidebar";
+import { pasteAnythingStorageKeys } from "@/lib/tools";
 
 const sample = `[
   {
@@ -110,6 +107,7 @@ export function JsonWorkbench() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [splitPercent, setSplitPercent] = useState(42);
+  useRecordToolUse("json");
 
   useEffect(() => {
     if (sessionStorage.getItem(pasteAnythingStorageKeys.type) !== "json") return;
@@ -204,32 +202,11 @@ export function JsonWorkbench() {
 
   return (
     <main className={`workbench-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="workbench-sidebar">
-        <div className="sidebar-title">
-          <span>WORKSPACES</span>
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-            aria-label={sidebarCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
-          >
-            {sidebarCollapsed ? <PanelRightOpen size={15} /> : <PanelLeftClose size={15} />}
-          </button>
-        </div>
-        {tools.map((tool) => (
-          <Link
-            href={tool.href}
-            key={tool.index}
-            className={tool.name === "JSON Tools" ? "current" : ""}
-          >
-            <span>{tool.index}</span>
-            {tool.name}
-          </Link>
-        ))}
-        <div className="sidebar-foot">
-          <Clock3 size={14} />
-          <span>最近使った道具は<br />この端末だけに保存されます</span>
-        </div>
-      </aside>
+      <WorkspaceSidebar
+        currentSlug="json"
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((collapsed) => !collapsed)}
+      />
 
       <section className={`workbench-main layout-wide ${fullscreen ? "json-fullscreen" : ""}`}>
         <ToolBreadcrumb title="JSON Tools" />

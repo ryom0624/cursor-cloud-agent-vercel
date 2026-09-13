@@ -18,6 +18,7 @@ import {
   encodeHtml,
   generateUlid,
 } from "@/lib/tool-utils";
+import { takeTextHandoff } from "@/lib/workspace-handoff";
 
 type EncoderMode = "base64" | "url" | "html";
 
@@ -112,6 +113,12 @@ const jwtSample =
 
 export function JwtSuite() {
   const [input, setInput] = useState(jwtSample);
+  useEffect(() => {
+    const handed = takeTextHandoff("devsmith:handoff:jwt");
+    if (!handed) return;
+    const timer = window.setTimeout(() => setInput(handed), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const decoded = useMemo(() => {
     try {
       const [header, payload] = input.trim().split(".");
