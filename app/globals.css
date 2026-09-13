@@ -6085,8 +6085,23 @@ small {
   border-color: var(--ink);
 }
 
+.workbench-main.suite-main:has(.mermaid-workspace) {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 65px);
+  padding-bottom: 24px;
+}
+
+.workbench-main.suite-main:has(.mermaid-workspace) .suite-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .mermaid-toolbar {
   justify-content: space-between;
+  flex: 0 0 auto;
 }
 
 .mermaid-toolbar > div {
@@ -6102,10 +6117,19 @@ small {
   border: 0;
 }
 
+.mermaid-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .mermaid-editors {
   display: grid;
-  min-height: 0;
+  flex: 1;
+  min-height: 560px;
   grid-template-columns: minmax(220px, 42fr) 7px minmax(0, 58fr);
+  grid-template-rows: minmax(560px, 1fr);
   border: 1px solid var(--ink);
   background: var(--white);
 }
@@ -6119,6 +6143,7 @@ small {
 
 .mermaid-viewer header {
   height: auto;
+  flex: 0 0 auto;
   flex-wrap: wrap;
 }
 
@@ -6128,8 +6153,8 @@ small {
 }
 
 .mermaid-editors .suite-editor textarea {
-  height: 390px;
-  min-height: 220px;
+  height: auto;
+  min-height: 0;
   flex: 1;
   resize: none;
 }
@@ -6154,8 +6179,9 @@ small {
 
 .mermaid-viewport {
   position: relative;
-  height: 390px;
-  min-height: 220px;
+  height: auto;
+  min-height: 0;
+  flex: 1;
   overflow: hidden;
   cursor: grab;
   touch-action: none;
@@ -6269,6 +6295,8 @@ small {
 @media (max-width: 760px) {
   .mermaid-editors {
     grid-template-columns: 1fr;
+    min-height: 360px;
+    grid-template-rows: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
   }
 
   .mermaid-editors .editor-resizer {
@@ -6281,7 +6309,8 @@ small {
 
   .mermaid-editors .suite-editor textarea,
   .mermaid-viewport {
-    height: 260px;
+    height: min(48vh, 420px);
+    min-height: 280px;
   }
 
   .mermaid-workspace.fullscreen {
