@@ -856,7 +856,7 @@ export function CsvViewerWorkspaceBeta() {
         )}
       </div>
 
-      <ToolStatus error={parsed.error || repairError || xlsxError}>
+      <ToolStatus error={hasSource ? (parsed.error || repairError || xlsxError) : (repairError || xlsxError)}>
         {parsed.error || !hasSource
           ? undefined
           : `${records.length}行を読み込みました。編集内容はブラウザ内だけに保持されます${asciiCompatible && inputSource === "file" ? " · ASCII互換" : ""}`}
