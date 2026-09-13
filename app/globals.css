@@ -1698,7 +1698,8 @@ kbd {
 .control-label select,
 .cron-expression input,
 .cron-expression select,
-.single-input-bar input {
+.single-input-bar input,
+.single-input-bar select {
   height: 34px;
   min-width: 120px;
   padding: 0 10px;
@@ -2084,6 +2085,107 @@ kbd {
 
 .single-input-bar input {
   flex: 1;
+}
+
+.number-input-bar {
+  flex-wrap: wrap;
+}
+
+.number-input-bar > input {
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+
+.number-input-bar select {
+  flex: 0 0 110px;
+  min-width: 96px;
+}
+
+.number-signed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  color: var(--ink);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.number-signed input[type="checkbox"] {
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.number-output-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.number-output-grid > div {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+
+.number-output-grid > div:nth-child(2n) {
+  border-right: 0;
+}
+
+.number-output-grid > div:nth-last-child(-n+2) {
+  border-bottom: 0;
+}
+
+.number-output-grid > div.is-primary {
+  color: var(--white);
+  background: var(--ink);
+}
+
+.number-output-grid > div.is-primary span {
+  color: #b7bdb9;
+}
+
+.number-output-grid > div.is-primary button {
+  color: var(--white);
+}
+
+.number-output-grid > div.span-all {
+  grid-column: 1 / -1;
+  border-right: 0;
+  grid-template-columns: 92px minmax(0, 1fr) 36px;
+}
+
+.number-output-grid span {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.number-output-grid strong {
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.number-output-grid button {
+  min-height: 32px;
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--ink);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .date-results,
@@ -2764,7 +2866,8 @@ kbd {
 
   .cron-expression input,
   .cron-expression select,
-  .single-input-bar input {
+  .single-input-bar input,
+  .single-input-bar select {
     width: 100%;
   }
 
@@ -5572,15 +5675,94 @@ small {
   }
 
   .number-radix-results > div,
-  .number-result {
+  .number-result,
+  .number-output-grid {
     grid-template-columns: 1fr;
-    padding-top: 10px;
-    padding-bottom: 10px;
+  }
+
+  .number-output-grid > div {
+    border-right: 0;
+    grid-template-columns: 52px minmax(0, 1fr) 36px;
+  }
+
+  .number-output-grid > div:nth-last-child(-n+2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .number-output-grid > div:last-child {
+    border-bottom: 0;
   }
 
   .number-radix-results > div button,
   .number-result button {
     justify-self: start;
+  }
+}
+
+.qr-workspace .qr-form {
+  min-height: 390px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 17px 18px 22px;
+  background:
+    linear-gradient(rgba(28, 33, 30, 0.035) 1px, transparent 1px),
+    var(--white);
+  background-size: 100% 24px;
+}
+
+.qr-workspace .qr-form .control-label {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.qr-workspace .qr-form .control-label input,
+.qr-workspace .qr-form .control-label select {
+  width: 100%;
+  min-width: 0;
+}
+
+.qr-workspace .qr-form .checkbox-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  font-size: 12px;
+}
+
+.qr-workspace .qr-form .checkbox-inline input[type="checkbox"] {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+}
+
+.qr-preview {
+  min-height: 390px;
+  display: grid;
+  place-items: center;
+  padding: 28px 18px;
+  background:
+    linear-gradient(rgba(28, 33, 30, 0.035) 1px, transparent 1px),
+    var(--white);
+  background-size: 100% 24px;
+}
+
+.qr-preview img {
+  width: min(100%, 280px);
+  height: auto;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+
+.qr-preview-empty {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .qr-preview {
+    min-height: 260px;
   }
 }
 

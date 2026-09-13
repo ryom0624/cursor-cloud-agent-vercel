@@ -107,52 +107,47 @@ export function NumberSuite() {
     >
       {tab === "radix" ? (
         <>
-          <div className="number-controls radix-fields">
-            <label className="control-label grow">
-              入力（{fromBase}進）
-              <input
-                value={radixInput}
-                onChange={(event) => setRadixInput(event.target.value)}
-                spellCheck={false}
-                autoComplete="off"
-                name="radix-input"
-              />
-            </label>
-            <label className="control-label">
-              入力の基数
-              <select
-                value={fromBase}
-                onChange={(event) => setFromBase(Number(event.target.value) as Radix)}
-              >
-                {radixBases.map((base) => (
-                  <option key={base} value={base}>{base}進</option>
-                ))}
-              </select>
-            </label>
-            <label className="control-label">
-              ビット幅
-              <select
-                value={bits}
-                onChange={(event) => setBits(Number(event.target.value) as BitWidth)}
-              >
-                {bitWidths.map((width) => (
-                  <option key={width} value={width}>{width} bit</option>
-                ))}
-              </select>
-            </label>
-            <label className="control-label checkbox-inline">
+          <div className="single-input-bar number-input-bar">
+            <label htmlFor="radix-input">入力</label>
+            <input
+              id="radix-input"
+              name="radix-input"
+              value={radixInput}
+              onChange={(event) => setRadixInput(event.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <select
+              aria-label="入力の基数"
+              value={fromBase}
+              onChange={(event) => setFromBase(Number(event.target.value) as Radix)}
+            >
+              {radixBases.map((base) => (
+                <option key={base} value={base}>{base}進</option>
+              ))}
+            </select>
+            <select
+              aria-label="ビット幅"
+              value={bits}
+              onChange={(event) => setBits(Number(event.target.value) as BitWidth)}
+            >
+              {bitWidths.map((width) => (
+                <option key={width} value={width}>{width} bit</option>
+              ))}
+            </select>
+            <label className="number-signed">
               <input
                 type="checkbox"
                 checked={signed}
                 onChange={(event) => setSigned(event.target.checked)}
               />
-              符号付き（2の補数）
+              符号付き
             </label>
           </div>
           {radixResult.error ? (
             <div className="empty-result number-empty">{radixResult.error}</div>
           ) : (
-            <div className="date-results number-radix-results">
+            <div className="number-output-grid">
               {radixBases.map((base) => (
                 <div key={base}>
                   <span>{base}進</span>
@@ -160,33 +155,30 @@ export function NumberSuite() {
                     {base === 2
                       ? groupFromRight(radixResult.outputs[2], 8)
                       : base === 16
-                        ? groupFromRight(radixResult.outputs[16], 4)
+                        ? `0x${groupFromRight(radixResult.outputs[16], 4)}`
                         : radixResult.outputs[base]}
                   </strong>
-                  <CopyButton value={radixResult.outputs[base]} />
+                  <CopyButton iconOnly value={base === 16 ? `0x${radixResult.outputs[16]}` : radixResult.outputs[base]} />
                 </div>
               ))}
-              <div>
-                <span>2進（{bits}bit）</span>
-                <strong className="bit-string">{groupFromRight(radixResult.binaryBits, 8)}</strong>
-                <CopyButton value={radixResult.binaryBits} />
-              </div>
-              <div>
-                <span>16進（ゼロ埋め）</span>
-                <strong>0x{groupFromRight(radixResult.hexPadded, 4)}</strong>
-                <CopyButton value={`0x${radixResult.hexPadded}`} />
-              </div>
               {signed && radixResult.signedValue !== null ? (
                 <div>
-                  <span>符号付き10進</span>
+                  <span>符号付き</span>
                   <strong>{radixResult.signedValue.toString()}</strong>
-                  <CopyButton value={radixResult.signedValue.toString()} />
+                  <CopyButton iconOnly value={radixResult.signedValue.toString()} />
+                </div>
+              ) : null}
+              {signed && radixResult.binaryBits ? (
+                <div className="span-all">
+                  <span>2の補数 {bits}bit</span>
+                  <strong className="bit-string">{groupFromRight(radixResult.binaryBits, 8)}</strong>
+                  <CopyButton iconOnly value={radixResult.binaryBits} />
                 </div>
               ) : null}
             </div>
           )}
           <ToolStatus error={radixResult.error}>
-            {radixResult.warning || "ビット幅はゼロ埋めと2の補数表示に使います。値そのものは切り詰めません。"}
+            {radixResult.warning || "2 / 8 / 10 / 16進を同時に表示します。ビット幅はゼロ埋めに使います。"}
           </ToolStatus>
         </>
       ) : null}
@@ -205,32 +197,33 @@ export function NumberSuite() {
               </button>
             ))}
           </div>
-          <div className="number-controls unit-fields">
-            <label className="control-label grow">
-              値
-              <input
-                value={unitValue}
-                onChange={(event) => setUnitValue(event.target.value)}
-                inputMode="decimal"
-                name="unit-value"
-              />
-            </label>
-            <label className="control-label">
-              変換元
-              <select value={unitFrom} onChange={(event) => setUnitFrom(event.target.value)}>
-                {unitUnits.map((unit) => (
-                  <option key={unit.id} value={unit.id}>{unit.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="control-label">
-              変換先
-              <select value={unitTo} onChange={(event) => setUnitTo(event.target.value)}>
-                {unitUnits.map((unit) => (
-                  <option key={unit.id} value={unit.id}>{unit.label}</option>
-                ))}
-              </select>
-            </label>
+          <div className="single-input-bar number-input-bar">
+            <label htmlFor="unit-value">値</label>
+            <input
+              id="unit-value"
+              name="unit-value"
+              value={unitValue}
+              onChange={(event) => setUnitValue(event.target.value)}
+              inputMode="decimal"
+            />
+            <select
+              aria-label="変換元"
+              value={unitFrom}
+              onChange={(event) => setUnitFrom(event.target.value)}
+            >
+              {unitUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>{unit.label}</option>
+              ))}
+            </select>
+            <select
+              aria-label="変換先"
+              value={unitTo}
+              onChange={(event) => setUnitTo(event.target.value)}
+            >
+              {unitUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>{unit.label}</option>
+              ))}
+            </select>
           </div>
           {unitResult.error ? (
             <div className="empty-result number-empty">{unitResult.error}</div>
@@ -309,50 +302,76 @@ export function NumberSuite() {
 
       {tab === "float" ? (
         <>
-          <div className="number-controls float-fields">
-            <label className="control-label grow">
-              10進数
-              <input
-                value={floatInput}
-                onChange={(event) => setFloatInput(event.target.value)}
-                name="float-input"
-              />
-            </label>
-            <label className="control-label">
-              精度
-              <select
-                value={floatPrecision}
-                onChange={(event) => setFloatPrecision(Number(event.target.value) as FloatPrecision)}
-              >
-                <option value={32}>32 bit（単精度）</option>
-                <option value={64}>64 bit（倍精度）</option>
-              </select>
-            </label>
+          <div className="single-input-bar number-input-bar">
+            <label htmlFor="float-input">10進数</label>
+            <input
+              id="float-input"
+              name="float-input"
+              value={floatInput}
+              onChange={(event) => setFloatInput(event.target.value)}
+            />
+            <select
+              aria-label="精度"
+              value={floatPrecision}
+              onChange={(event) => setFloatPrecision(Number(event.target.value) as FloatPrecision)}
+            >
+              <option value={32}>32 bit</option>
+              <option value={64}>64 bit</option>
+            </select>
           </div>
           {floatResult.error ? (
             <div className="empty-result number-empty">{floatResult.error}</div>
           ) : floatInput.trim() ? (
             <>
-              <div className="number-result">
-                <span>格納される値</span>
-                <strong>{String(floatResult.value)}</strong>
-                <CopyButton value={String(floatResult.value)} />
-              </div>
-              <div className="date-results">
-                <div><span>符号</span><strong>{floatResult.signLabel}</strong></div>
-                <div><span>指数（実数）</span><strong>{floatResult.exponent}</strong></div>
-                <div><span>指数ビット</span><strong className="bit-string">{floatResult.exponentBits}</strong></div>
-                <div><span>仮数ビット</span><strong className="bit-string">{floatResult.fractionBits}</strong></div>
-                <div><span>ビット列</span><strong className="bit-string">{formatFloatBitsGrouped(floatResult.bits)}</strong></div>
-                <div><span>HEX</span><strong>0x{floatResult.hex}</strong></div>
-                <div><span>10進との差</span><strong>{floatResult.decimalError}</strong></div>
-                <div><span>次に大きい値</span><strong>{floatResult.nextUp}</strong></div>
-                <div><span>次に小さい値</span><strong>{floatResult.nextDown}</strong></div>
+              <div className="number-output-grid">
+                <div className="is-primary">
+                  <span>格納値</span>
+                  <strong>{String(floatResult.value)}</strong>
+                  <CopyButton iconOnly value={String(floatResult.value)} />
+                </div>
+                <div>
+                  <span>符号</span>
+                  <strong>{floatResult.signLabel}</strong>
+                </div>
+                <div>
+                  <span>指数</span>
+                  <strong>{floatResult.exponent}</strong>
+                </div>
+                <div>
+                  <span>HEX</span>
+                  <strong>0x{floatResult.hex}</strong>
+                  <CopyButton iconOnly value={`0x${floatResult.hex}`} />
+                </div>
+                <div>
+                  <span>10進との差</span>
+                  <strong>{floatResult.decimalError}</strong>
+                </div>
+                <div>
+                  <span>次に大きい</span>
+                  <strong>{floatResult.nextUp}</strong>
+                </div>
+                <div>
+                  <span>次に小さい</span>
+                  <strong>{floatResult.nextDown}</strong>
+                </div>
+                <div>
+                  <span>指数ビット</span>
+                  <strong className="bit-string">{floatResult.exponentBits}</strong>
+                </div>
+                <div className="span-all">
+                  <span>仮数ビット</span>
+                  <strong className="bit-string">{floatResult.fractionBits}</strong>
+                </div>
+                <div className="span-all">
+                  <span>ビット列</span>
+                  <strong className="bit-string">{formatFloatBitsGrouped(floatResult.bits)}</strong>
+                  <CopyButton iconOnly value={floatResult.bits} />
+                </div>
               </div>
               <ToolStatus>{floatResult.note}</ToolStatus>
             </>
           ) : (
-            <div className="empty-result">数値を入力してください</div>
+            <div className="empty-result number-empty">数値を入力してください</div>
           )}
         </>
       ) : null}
@@ -389,50 +408,50 @@ export function NumberSuite() {
               逆算
             </button>
           </div>
-          <div className="number-controls percent-inputs">
-            <label className="control-label grow">
-              {percentMode === "ratio" ? "部分" : percentMode === "reverse" ? "現在値" : "基準（A / 以前）"}
-              <input
-                value={percentA}
-                onChange={(event) => setPercentA(event.target.value)}
-                inputMode="decimal"
-                name="percent-a"
-              />
+          <div className="single-input-bar number-input-bar">
+            <label htmlFor="percent-a">
+              {percentMode === "ratio" ? "部分" : percentMode === "reverse" ? "現在値" : "基準"}
             </label>
-            <label className="control-label grow">
+            <input
+              id="percent-a"
+              name="percent-a"
+              value={percentA}
+              onChange={(event) => setPercentA(event.target.value)}
+              inputMode="decimal"
+            />
+            <label htmlFor="percent-b">
               {percentMode === "ratio"
                 ? "全体"
                 : percentMode === "reverse"
-                  ? "目標値"
+                  ? "目標"
                   : percentMode === "change"
                     ? "新しい値"
-                    : "比較値 B"}
-              <input
-                value={percentB}
-                onChange={(event) => setPercentB(event.target.value)}
-                inputMode="decimal"
-                name="percent-b"
-              />
+                    : "比較 B"}
             </label>
+            <input
+              id="percent-b"
+              name="percent-b"
+              value={percentB}
+              onChange={(event) => setPercentB(event.target.value)}
+              inputMode="decimal"
+            />
           </div>
           {percentResult.error ? (
             <div className="empty-result number-empty">{percentResult.error}</div>
           ) : (
-            <>
-              <div className="number-result">
-                <span>RESULT</span>
+            <div className="number-output-grid">
+              <div className="is-primary">
+                <span>結果</span>
                 <strong>{percentResult.primary}</strong>
-                <CopyButton value={percentResult.primary} />
+                <CopyButton iconOnly value={percentResult.primary} />
               </div>
-              <div className="date-results">
-                {percentResult.lines.map((line) => (
-                  <div key={line.label}>
-                    <span>{line.label}</span>
-                    <strong>{line.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </>
+              {percentResult.lines.map((line) => (
+                <div key={line.label}>
+                  <span>{line.label}</span>
+                  <strong>{line.value}</strong>
+                </div>
+              ))}
+            </div>
           )}
           <ToolStatus error={percentResult.error}>
             {percentMode === "reverse"
