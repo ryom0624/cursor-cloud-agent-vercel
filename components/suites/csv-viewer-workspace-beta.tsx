@@ -27,10 +27,12 @@ import {
   decodeCsvBytes,
   defaultViewerSettings,
   delimiterToken,
+  describeExcelRisks,
   diagnoseExcelRisks,
   encodeCsvText,
   encodingLabel,
   excelCellToText,
+  excelRiskLabel,
   excelOrientedCsvPreset,
   findSjisUnmappableInRecords,
   formatCsvTimestamp,
@@ -59,6 +61,8 @@ import {
   type ViewerSettings,
 } from "@/lib/csv-utils-beta";
 import { spreadsheetOpenError } from "@/lib/csv-workspace-open";
+
+const VALIDATION_DETAIL_LIMIT = 8;
 
 const csvViewerSample = `id,name,team,status,score,updated_at
 101,DevSmith,Platform,active,98,2026-09-11
@@ -204,6 +208,9 @@ export function CsvViewerWorkspaceBeta() {
     ...(xlsxLimitErrors.length ? xlsxLimitErrors : []),
   ];
   const uniqueWarnings = Array.from(new Set(extraWarnings));
+  const excelRiskExamples = excelRisks.slice(0, VALIDATION_DETAIL_LIMIT);
+  const hiddenExcelRiskCount = Math.max(0, excelRisks.length - excelRiskExamples.length);
+  const detailCount = uniqueWarnings.length + excelRisks.length;
   const problemCount = [
     structureIssues.length,
     encodingIssues.length,
@@ -609,7 +616,7 @@ export function CsvViewerWorkspaceBeta() {
   const diagnostics = [
     { ok: structureIssues.length === 0, label: "CSV構造", detail: structureIssues.length ? `${structureIssues.length}件` : "正常" },
     { ok: encodingIssues.length === 0, label: "文字コード", detail: encodingIssues.length ? `${encodingIssues.length}件` : "正常" },
-    { ok: excelRiskSummary.kinds === 0, label: "Excelリスク", detail: excelRiskSummary.kinds ? `${excelRiskSummary.kinds}種類` : "なし", warn: excelRiskSummary.kinds > 0 },
+    { ok: excelRiskSummary.kinds === 0, label: "Excelリスク", detail: describeExcelRisks(excelRisks) || "なし", warn: excelRiskSummary.kinds > 0 },
     { ok: sjisUnmappable.length === 0, label: "Shift_JIS変換不可", detail: sjisUnmappable.length ? `${sjisUnmappable.length}セル` : "なし", warn: sjisUnmappable.length > 0 },
     { ok: injectionCount === 0, label: "CSV Injection", detail: injectionCount ? `${injectionCount}件` : "なし", warn: injectionCount > 0 },
   ];
@@ -820,27 +827,40 @@ export function CsvViewerWorkspaceBeta() {
             <footer className={`csv-ws-footer ${hasProblems ? "has-warn" : "all-ok"}`}>
               <div className={`csv-ws-diag ${hasProblems ? "has-warn" : "all-ok"}`}>
                 {hasProblems ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
-                <span>{hasProblems ? `${Math.max(problemCount, uniqueWarnings.length || 1)}件の問題` : "問題は見つかりませんでした"}</span>
+                <span>{hasProblems ? `${Math.max(problemCount, detailCount || 1)}件の問題` : "問題は見つかりませんでした"}</span>
                 {hasProblems && (
                   <button type="button" onClick={() => setShowDiagnostics((open) => !open)}>
-                    {showDiagnostics ? "詳細を閉じる" : "詳細を見る"}
+                    {showDiagnostics ? "詳細を閉じる" : `詳細を見る${detailCount ? `（${detailCount}件）` : ""}`}
                   </button>
                 )}
               </div>
               {showDiagnostics && hasProblems && (
                 <div className="csv-ws-diag-details">
-                  <ul>
+                  <ul className="csv-ws-diag-chips">
                     {diagnostics.map((item) => (
                       <li key={item.label} className={item.ok ? "ok" : item.warn ? "warn" : "error"}>
                         {item.ok ? "✓" : "⚠"} {item.label} {item.detail}
                       </li>
                     ))}
                   </ul>
-                  {uniqueWarnings.length > 0 && (
+                  {excelRiskSummary.kinds > 0 && (
+                    <p className="csv-ws-diag-note">
+                      {describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値や日付として読むと、値が変わることがあります。
+                    </p>
+                  )}
+                  {(uniqueWarnings.length > 0 || excelRiskExamples.length > 0) && (
                     <ul className="csv-ws-warning-list">
-                      {uniqueWarnings.slice(0, 6).map((warning) => <li key={warning}>{warning}</li>)}
+                      {uniqueWarnings.map((warning) => <li key={warning}>{warning}</li>)}
+                      {excelRiskExamples.map((hit) => (
+                        <li key={`${hit.kind}-${hit.row}-${hit.column}-${hit.columnKey}`}>
+                          {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}
+                          {" "}
+                          <code>{hit.value}</code>
+                        </li>
+                      ))}
                     </ul>
                   )}
+                  {hiddenExcelRiskCount > 0 && <small className="csv-ws-diag-more">ほか{hiddenExcelRiskCount}件</small>}
                 </div>
               )}
             </footer>

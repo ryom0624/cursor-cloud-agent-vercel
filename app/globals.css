@@ -5532,7 +5532,7 @@ small {
   margin-top: 8px;
 }
 
-.csv-ws-diag-details ul {
+.csv-ws-diag-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 10px;
@@ -5541,23 +5541,53 @@ small {
   list-style: none;
 }
 
-.csv-ws-diag-details li {
+.csv-ws-diag-chips li {
   padding: 2px 7px;
   border: 1px solid currentColor;
   font-size: 10px;
 }
 
-.csv-ws-diag-details li.ok { color: #2f5d3a; background: #e7f1e8; }
-.csv-ws-diag-details li.warn { color: #6b4f12; background: #fff4d8; }
-.csv-ws-diag-details li.error { color: #722b1f; background: #fde8e2; }
+.csv-ws-diag-chips li.ok { color: #2f5d3a; background: #e7f1e8; }
+.csv-ws-diag-chips li.warn { color: #6b4f12; background: #fff4d8; }
+.csv-ws-diag-chips li.error { color: #722b1f; background: #fde8e2; }
 
-.csv-ws-warning-list {
-  display: block !important;
-  margin-top: 6px !important;
-  padding-left: 16px !important;
-  list-style: disc !important;
+.csv-ws-diag-note,
+.csv-ws-diag-more {
+  margin: 8px 0 0;
   color: var(--ink-soft);
   font-size: 11px;
+  line-height: 1.6;
+}
+
+.csv-ws-diag-more {
+  display: block;
+  font-size: 10px;
+}
+
+.csv-ws-warning-list {
+  display: block;
+  margin: 6px 0 0;
+  padding-left: 16px;
+  list-style: disc;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-ws-warning-list li {
+  display: list-item;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.csv-ws-warning-list code {
+  margin-left: 8px;
+  padding: 0 5px;
+  border: 1px solid #c9a15b;
+  background: #fff8e8;
+  font-family: var(--mono);
+  font-size: 10px;
 }
 
 .csv-ws-alert,
