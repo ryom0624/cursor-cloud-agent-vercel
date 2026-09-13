@@ -1000,7 +1000,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value={"\n"}>LF（macOS / Linux）</option>
                   <option value={"\r"}>CR</option>
                 </select>
-                <small className="csv-ws-hint">行の終わりの記号です。ExcelならCRLFが無難です。</small>
+                <small className="csv-ws-hint">行末の記号です。ExcelならCRLFです。</small>
               </label>
               <label>
                 囲み文字
@@ -1032,13 +1032,25 @@ export function CsvViewerWorkspaceBeta() {
                     <input type="checkbox" checked={quoteAll} disabled={!outputQuote} onChange={(event) => setQuoteAll(event.target.checked)} />
                     すべての値を囲む
                   </span>
-                  <small className="csv-ws-hint">カンマを含まない値も囲み文字で囲みます。</small>
+                  <small className="csv-ws-hint">カンマのない値も囲みます。</small>
                 </label>
               </div>
             </fieldset>
             <p className="csv-output-note">{lineEndingToken(lineEnding)} · {outputEncoding}</p>
             <div className="csv-ws-dialog-actions">
               <button type="button" onClick={() => setDialog("none")}>閉じる</button>
+              <button
+                type="button"
+                className="primary"
+                disabled={unknownEncodingBlocksExport}
+                onClick={() => {
+                  const full = recordsForFullExport();
+                  downloadWithCurrentSettings(full.records, full.columns);
+                  if (!unknownEncodingBlocksExport) setDialog("none");
+                }}
+              >
+                <Download size={14} />この設定でダウンロード
+              </button>
             </div>
           </section>
         </div>
