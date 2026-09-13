@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  Columns2,
   Download,
   FileSpreadsheet,
   FileWarning,
@@ -81,7 +82,7 @@ const csvViewerComplexSample = `id,name,note,address,amount,formula
 5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`;
 
 type ExcelSheet = { name: string; csv: string };
-type WorkspaceView = "viewer" | "raw";
+type WorkspaceView = "viewer" | "raw" | "split";
 type DialogKind = "none" | "paste" | "reinterpret" | "output" | "samples";
 
 function previewCsv(text: string, settings: ViewerSettings) {
@@ -157,6 +158,8 @@ export function CsvViewerWorkspaceBeta() {
   const [previewActive, setPreviewActive] = useState(false);
   const [hiddenRecords, setHiddenRecords] = useState<DataGridRecord[] | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [labelOverrides, setLabelOverrides] = useState<Record<string, string>>({});
+  const [splitPercent, setSplitPercent] = useState(42);
   const fileBytesRef = useRef<Uint8Array | null>(null);
   const fullFileTextRef = useRef<string | null>(null);
   const loadCancelledRef = useRef(false);
@@ -167,13 +170,16 @@ export function CsvViewerWorkspaceBeta() {
     const extraColumns = recordColumns(records).filter((column) => !parsed.columns.includes(column));
     return [...parsed.columns, ...extraColumns];
   }, [parsed.columns, records]);
-  const headerValues = columns.map((column, index) => parsed.headerValues[index] ?? column);
   const columnLabels = useMemo(() => ({
     ...parsed.columnLabels,
     ...Object.fromEntries(
       columns.filter((column) => !parsed.columns.includes(column)).map((column) => [column, column]),
     ),
-  }), [columns, parsed.columnLabels, parsed.columns]);
+    ...labelOverrides,
+  }), [columns, labelOverrides, parsed.columnLabels, parsed.columns]);
+  const headerValues = columns.map((column, index) =>
+    labelOverrides[column] ?? parsed.headerValues[index] ?? columnLabels[column] ?? column,
+  );
   const looksMojibake = /[繧縺繝]/.test(input);
   const excelRisks = useMemo(() => diagnoseExcelRisks(records, columns), [columns, records]);
   const excelRiskSummary = summarizeExcelRisks(excelRisks);
@@ -369,6 +375,51 @@ export function CsvViewerWorkspaceBeta() {
       setHiddenRecords(null);
       setSourceName("貼り付けデータ");
     }
+    setLabelOverrides({});
+  };
+
+  const clearWorkspace = () => {
+    if (!window.confirm("表示中のデータを閉じて最初の画面に戻ります。編集内容は破棄されます。よろしいですか？")) {
+      return;
+    }
+    fileBytesRef.current = null;
+    fullFileTextRef.current = null;
+    setInput("");
+    setHasSource(false);
+    setSourceName("貼り付けデータ");
+    setWorkspaceView("viewer");
+    setDialog("none");
+    setDownloadOpen(false);
+    setShowDiagnostics(false);
+    setEditedRecords(null);
+    setSettings(defaultViewerSettings);
+    setFileEncoding("auto");
+    setDetectedEncoding(null);
+    setFileHasBom(null);
+    setInputSource("paste");
+    setRepairError("");
+    setRepairMessage("");
+    setExcelSheets([]);
+    setSelectedSheet("");
+    setPreviewNotice("");
+    setReplacementCount(0);
+    setDetectionWarnings([]);
+    setAsciiCompatible(false);
+    setPreviewActive(false);
+    setHiddenRecords(null);
+    setXlsxError("");
+    setLabelOverrides({});
+    setOutputEncoding("utf-8");
+    setLineEnding("\r\n");
+    setIncludeBom(true);
+    setQuoteAll(false);
+    setOutputQuote('"');
+    setOutputEscapeMode("double");
+    setSplitPercent(42);
+    setFullscreen(false);
+    setSjisDialog(null);
+    setPendingLargeFile(null);
+    setPasteDraft("");
   };
 
   useEffect(() => {
@@ -451,6 +502,7 @@ export function CsvViewerWorkspaceBeta() {
     setPreviewActive(false);
     setHiddenRecords(null);
     fullFileTextRef.current = null;
+    setLabelOverrides({});
     updateInput(value, "paste");
     setDialog("none");
   };
@@ -621,64 +673,44 @@ export function CsvViewerWorkspaceBeta() {
             <header className="csv-ws-header">
               <div className="csv-ws-title-row">
                 <strong className="csv-ws-filename">{filenameLabel}</strong>
-                <div className="csv-ws-tabs" role="tablist" aria-label="表示">
-                  <button type="button" role="tab" aria-selected={workspaceView === "viewer"} className={workspaceView === "viewer" ? "active" : ""} onClick={() => setWorkspaceView("viewer")}>Viewer</button>
-                  <button type="button" role="tab" aria-selected={workspaceView === "raw"} className={workspaceView === "raw" ? "active" : ""} onClick={() => setWorkspaceView("raw")}>Raw</button>
-                </div>
-                <div className="csv-ws-actions">
-                  <button type="button" onClick={() => setDialog("reinterpret")}>再解釈</button>
-                  <button type="button" onClick={() => fileInputRef.current?.click()}>別ファイルを開く</button>
-                  <div className="csv-ws-download">
-                    <button type="button" onClick={() => setDownloadOpen((open) => !open)} aria-expanded={downloadOpen}>
-                      <Download size={14} />Download
-                      <ChevronDown size={14} />
+                <div className="csv-ws-header-tools">
+                  <div className="csv-ws-tabs" role="tablist" aria-label="表示">
+                    <button type="button" role="tab" aria-selected={workspaceView === "viewer"} className={workspaceView === "viewer" ? "active" : ""} onClick={() => setWorkspaceView("viewer")}>Viewer</button>
+                    <button type="button" role="tab" aria-selected={workspaceView === "raw"} className={workspaceView === "raw" ? "active" : ""} onClick={() => setWorkspaceView("raw")}>Raw</button>
+                    <button type="button" role="tab" aria-selected={workspaceView === "split"} className={workspaceView === "split" ? "active" : ""} onClick={() => setWorkspaceView("split")}>
+                      <Columns2 size={13} />左右
                     </button>
-                    {downloadOpen && (
-                      <div className="csv-ws-menu" role="menu">
-                        <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => { const full = recordsForFullExport(); downloadCsv(full.records, full.columns, utf8CsvPreset); setDownloadOpen(false); }}>UTF-8 CSV</button>
-                        <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => { const full = recordsForFullExport(); downloadCsv(full.records, full.columns, excelOrientedCsvPreset); setDownloadOpen(false); }}>Excel向けCSV</button>
-                        <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => { const full = recordsForFullExport(); void downloadXlsxSafe(full.records, full.columns); setDownloadOpen(false); }}>XLSX</button>
-                        {inputSource === "file" && (
-                          <button type="button" onClick={() => { const full = recordsForFullExport(); downloadInherited(full.records, full.columns); setDownloadOpen(false); }}>入力形式を引き継いで保存</button>
-                        )}
-                        <button type="button" onClick={() => { setDialog("output"); setDownloadOpen(false); }}>詳細な出力設定</button>
-                      </div>
-                    )}
                   </div>
-                  <button type="button" onClick={() => setFullscreen((current) => !current)}>
-                    {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                    {fullscreen ? "縮小" : "全画面"}
-                  </button>
+                  <div className="csv-ws-actions">
+                    <button type="button" onClick={() => setDialog("reinterpret")}>再解釈</button>
+                    <button type="button" onClick={() => fileInputRef.current?.click()}>別ファイルを開く</button>
+                    <div className="csv-ws-download">
+                      <button type="button" onClick={() => setDownloadOpen((open) => !open)} aria-expanded={downloadOpen}>
+                        <Download size={14} />Download
+                        <ChevronDown size={14} />
+                      </button>
+                      {downloadOpen && (
+                        <div className="csv-ws-menu" role="menu">
+                          <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => { const full = recordsForFullExport(); downloadCsv(full.records, full.columns, utf8CsvPreset); setDownloadOpen(false); }}>UTF-8 CSV</button>
+                          <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => { const full = recordsForFullExport(); downloadCsv(full.records, full.columns, excelOrientedCsvPreset); setDownloadOpen(false); }}>Excel向けCSV</button>
+                          <button type="button" disabled={unknownEncodingBlocksExport} onClick={() => { const full = recordsForFullExport(); void downloadXlsxSafe(full.records, full.columns); setDownloadOpen(false); }}>XLSX</button>
+                          {inputSource === "file" && (
+                            <button type="button" onClick={() => { const full = recordsForFullExport(); downloadInherited(full.records, full.columns); setDownloadOpen(false); }}>入力形式を引き継いで保存</button>
+                          )}
+                          <button type="button" onClick={() => { setDialog("output"); setDownloadOpen(false); }}>詳細な出力設定</button>
+                        </div>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => setFullscreen((current) => !current)}>
+                      {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                      {fullscreen ? "縮小" : "全画面"}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="csv-ws-meta-row">
                 <p className="csv-ws-detected">{detectedLine}</p>
-                <div className={`csv-ws-diag ${hasProblems ? "has-warn" : "all-ok"}`}>
-                  {hasProblems ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
-                  <span>{hasProblems ? `${Math.max(problemCount, uniqueWarnings.length || 1)}件の問題` : "問題は見つかりませんでした"}</span>
-                  {hasProblems && (
-                    <button type="button" onClick={() => setShowDiagnostics((open) => !open)}>
-                      {showDiagnostics ? "詳細を閉じる" : "詳細を見る"}
-                    </button>
-                  )}
-                </div>
               </div>
-              {showDiagnostics && hasProblems && (
-                <div className="csv-ws-diag-details">
-                  <ul>
-                    {diagnostics.map((item) => (
-                      <li key={item.label} className={item.ok ? "ok" : item.warn ? "warn" : "error"}>
-                        {item.ok ? "✓" : "⚠"} {item.label} {item.detail}
-                      </li>
-                    ))}
-                  </ul>
-                  {uniqueWarnings.length > 0 && (
-                    <ul className="csv-ws-warning-list">
-                      {uniqueWarnings.slice(0, 6).map((warning) => <li key={warning}>{warning}</li>)}
-                    </ul>
-                  )}
-                </div>
-              )}
               {unknownEncoding && (
                 <div className="csv-ws-alert">
                   <strong>⚠ 文字コードを自動判定できませんでした</strong>
@@ -710,18 +742,63 @@ export function CsvViewerWorkspaceBeta() {
               {(previewNotice || repairMessage) && <p className="csv-ws-notice">{previewNotice || repairMessage}</p>}
             </header>
 
-            <div className="csv-ws-stage">
-              {workspaceView === "viewer" ? (
+            <div
+              className={`csv-ws-stage ${workspaceView === "split" ? "is-split" : ""}`}
+              style={workspaceView === "split"
+                ? {
+                    ["--csv-ws-split-left" as string]: `${splitPercent}fr`,
+                    ["--csv-ws-split-right" as string]: `${100 - splitPercent}fr`,
+                  }
+                : undefined}
+            >
+              {workspaceView !== "viewer" && (
+                <section className="csv-ws-raw" aria-label="現在のデータのRaw">
+                  <p>現在のデータのRawです。元ファイルそのものではありません。Gridの編集が反映されます。読み取り専用です。</p>
+                  <textarea readOnly value={workingRaw} spellCheck={false} aria-label="現在のデータのRaw" />
+                </section>
+              )}
+              {workspaceView === "split" && (
+                <div
+                  className="csv-ws-split-resizer"
+                  role="separator"
+                  aria-label="RawとGridの幅を変更"
+                  aria-orientation="vertical"
+                  aria-valuemin={25}
+                  aria-valuemax={75}
+                  aria-valuenow={Math.round(splitPercent)}
+                  onPointerDown={(event) => {
+                    const container = event.currentTarget.parentElement;
+                    if (!container) return;
+                    const bounds = container.getBoundingClientRect();
+                    const move = (pointerEvent: PointerEvent) => {
+                      const next = ((pointerEvent.clientX - bounds.left) / bounds.width) * 100;
+                      setSplitPercent(Math.max(25, Math.min(75, next)));
+                    };
+                    const stop = () => {
+                      window.removeEventListener("pointermove", move);
+                      window.removeEventListener("pointerup", stop);
+                    };
+                    window.addEventListener("pointermove", move);
+                    window.addEventListener("pointerup", stop);
+                  }}
+                />
+              )}
+              {workspaceView !== "raw" && (
                 <DataGrid
                   records={records}
                   editable
                   enableDuplicateValidation
+                  enableRowDelete
+                  enableColumnRename
+                  onRenameColumn={(column, nextLabel) => {
+                    setLabelOverrides((current) => ({ ...current, [column]: nextLabel }));
+                  }}
                   columnLabels={columnLabels}
                   exportSplit
                   allExportCount={hiddenRecords?.length ? records.length + hiddenRecords.length : undefined}
                   onRecordsChange={setEditedRecords}
-                  onReset={() => setEditedRecords(null)}
-                  resetDisabled={!editedRecords}
+                  onReset={clearWorkspace}
+                  resetTitle="表示中のデータを閉じて最初の画面に戻ります"
                   csvSerializer={(targetRecords, targetColumns, includeHeader) =>
                     serializeOutput(targetRecords, targetColumns, includeHeader)
                   }
@@ -737,14 +814,36 @@ export function CsvViewerWorkspaceBeta() {
                   onDownloadXlsx={(downloadRecords, downloadColumns) => void downloadXlsxSafe(downloadRecords, downloadColumns)}
                   emptyMessage={excelSheets.length > 1 && !selectedSheet ? "シートを選択してください" : "CSVの行がありません"}
                 />
-              ) : (
-                <section className="csv-ws-raw" aria-label="現在のデータのRaw">
-                  <p>現在のデータのRawです。元ファイルそのものではありません。Gridの編集が反映されます。読み取り専用です。</p>
-                  <textarea readOnly value={workingRaw} spellCheck={false} aria-label="現在のデータのRaw" />
-                </section>
               )}
               {dragging && <div className="csv-ws-drop-overlay">別ファイルをドロップ</div>}
             </div>
+            <footer className={`csv-ws-footer ${hasProblems ? "has-warn" : "all-ok"}`}>
+              <div className={`csv-ws-diag ${hasProblems ? "has-warn" : "all-ok"}`}>
+                {hasProblems ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+                <span>{hasProblems ? `${Math.max(problemCount, uniqueWarnings.length || 1)}件の問題` : "問題は見つかりませんでした"}</span>
+                {hasProblems && (
+                  <button type="button" onClick={() => setShowDiagnostics((open) => !open)}>
+                    {showDiagnostics ? "詳細を閉じる" : "詳細を見る"}
+                  </button>
+                )}
+              </div>
+              {showDiagnostics && hasProblems && (
+                <div className="csv-ws-diag-details">
+                  <ul>
+                    {diagnostics.map((item) => (
+                      <li key={item.label} className={item.ok ? "ok" : item.warn ? "warn" : "error"}>
+                        {item.ok ? "✓" : "⚠"} {item.label} {item.detail}
+                      </li>
+                    ))}
+                  </ul>
+                  {uniqueWarnings.length > 0 && (
+                    <ul className="csv-ws-warning-list">
+                      {uniqueWarnings.slice(0, 6).map((warning) => <li key={warning}>{warning}</li>)}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </footer>
           </section>
         )}
 
@@ -769,7 +868,7 @@ export function CsvViewerWorkspaceBeta() {
             <h2 id="csv-ws-paste-title">CSVを貼り付け</h2>
             <p>貼り付けテキストに元の文字コード・BOMはありません。判定対象外として読みます。</p>
             <textarea value={pasteDraft} onChange={(event) => setPasteDraft(event.target.value)} spellCheck={false} placeholder="ヘッダーを含むCSVを貼り付け" aria-label="貼り付けCSV" />
-            <div>
+            <div className="csv-ws-dialog-actions">
               <button type="button" onClick={() => setDialog("none")}>キャンセル</button>
               <button type="button" className="primary" onClick={applyPaste}>読み込む</button>
             </div>
@@ -786,7 +885,9 @@ export function CsvViewerWorkspaceBeta() {
               <button type="button" onClick={() => loadSample(csvViewerJapaneseSample)}>日本語</button>
               <button type="button" onClick={() => loadSample(csvViewerComplexSample)}>複雑</button>
             </div>
-            <button type="button" onClick={() => setDialog("none")}>閉じる</button>
+            <div className="csv-ws-dialog-actions">
+              <button type="button" onClick={() => setDialog("none")}>閉じる</button>
+            </div>
           </section>
         </div>
       )}
@@ -841,16 +942,18 @@ export function CsvViewerWorkspaceBeta() {
                 読込開始行
                 <BoundedNumberInput value={settings.dataStartRow} min={settings.headerRow + 1} max={100001} onCommit={(value) => setSettings((current) => ({ ...current, dataStartRow: value }))} />
               </label>
-              <label className="csv-check">
-                <input type="checkbox" checked={settings.skipEmptyLines} onChange={(event) => setSettings((current) => ({ ...current, skipEmptyLines: event.target.checked }))} />
-                空行をskip
-              </label>
-              <label className="csv-check">
-                <input type="checkbox" checked={settings.trimFields} onChange={(event) => setSettings((current) => ({ ...current, trimFields: event.target.checked }))} />
-                Trim
-              </label>
+              <div className="csv-ws-settings-checks">
+                <label className="csv-check">
+                  <input type="checkbox" checked={settings.skipEmptyLines} onChange={(event) => setSettings((current) => ({ ...current, skipEmptyLines: event.target.checked }))} />
+                  空行をskip
+                </label>
+                <label className="csv-check">
+                  <input type="checkbox" checked={settings.trimFields} onChange={(event) => setSettings((current) => ({ ...current, trimFields: event.target.checked }))} />
+                  Trim
+                </label>
+              </div>
             </fieldset>
-            <div>
+            <div className="csv-ws-dialog-actions">
               <button type="button" onClick={() => setDialog("none")}>キャンセル</button>
               <button type="button" className="primary" onClick={reinterpret}>再読込</button>
             </div>
@@ -899,17 +1002,19 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="backslash">バックスラッシュ</option>
                 </select>
               </label>
-              <label className="csv-check">
-                <input type="checkbox" checked={includeBom} disabled={outputEncoding === "shift_jis"} onChange={(event) => setIncludeBom(event.target.checked)} />
-                {outputEncoding.startsWith("utf-16") ? "UTF-16 BOM" : "UTF-8 BOM"}
-              </label>
-              <label className="csv-check">
-                <input type="checkbox" checked={quoteAll} disabled={!outputQuote} onChange={(event) => setQuoteAll(event.target.checked)} />
-                全フィールドを囲む
-              </label>
+              <div className="csv-ws-settings-checks">
+                <label className="csv-check">
+                  <input type="checkbox" checked={includeBom} disabled={outputEncoding === "shift_jis"} onChange={(event) => setIncludeBom(event.target.checked)} />
+                  {outputEncoding.startsWith("utf-16") ? "UTF-16 BOM" : "UTF-8 BOM"}
+                </label>
+                <label className="csv-check">
+                  <input type="checkbox" checked={quoteAll} disabled={!outputQuote} onChange={(event) => setQuoteAll(event.target.checked)} />
+                  全フィールドを囲む
+                </label>
+              </div>
             </fieldset>
             <p className="csv-output-note">{lineEndingToken(lineEnding)} · {outputEncoding}</p>
-            <div>
+            <div className="csv-ws-dialog-actions">
               <button type="button" onClick={() => setDialog("none")}>閉じる</button>
             </div>
           </section>
@@ -922,7 +1027,7 @@ export function CsvViewerWorkspaceBeta() {
             <FileWarning size={24} />
             <h2 id="csv-ws-large-title">大容量ファイルです</h2>
             <p>{pendingLargeFile.name}（{(pendingLargeFile.size / 1024 / 1024).toFixed(1)}MB）。10MB以上で注意しています。</p>
-            <div>
+            <div className="csv-ws-dialog-actions">
               <button type="button" onClick={() => setPendingLargeFile(null)}>キャンセル</button>
               <button type="button" onClick={() => void processFile(pendingLargeFile, true)}>先頭{PREVIEW_ROW_LIMIT.toLocaleString()}行</button>
               <button type="button" className="primary" onClick={() => void processFile(pendingLargeFile)}>全件読み込む</button>
@@ -945,7 +1050,7 @@ export function CsvViewerWorkspaceBeta() {
                 </li>
               ))}
             </ul>
-            <div>
+            <div className="csv-ws-dialog-actions">
               <button type="button" onClick={() => {
                 downloadCsv(sjisDialog.records, sjisDialog.columns, utf8CsvPreset);
                 setSjisDialog(null);

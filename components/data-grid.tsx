@@ -8,6 +8,7 @@ import {
   Download,
   GripVertical,
   KeyRound,
+  Pencil,
   Pin,
   PinOff,
   Plus,
@@ -106,6 +107,11 @@ export type DataGridProps = {
   enableDuplicateValidation?: boolean;
   onReset?: () => void;
   resetDisabled?: boolean;
+  resetLabel?: string;
+  resetTitle?: string;
+  enableRowDelete?: boolean;
+  enableColumnRename?: boolean;
+  onRenameColumn?: (column: string, nextLabel: string) => void;
 };
 
 export function DataGrid({
@@ -125,6 +131,11 @@ export function DataGrid({
   enableDuplicateValidation = false,
   onReset,
   resetDisabled = false,
+  resetLabel = "出力をリセット",
+  resetTitle = "Gridの編集を破棄し、いまの入力CSVの解析結果に戻します",
+  enableRowDelete = false,
+  enableColumnRename = false,
+  onRenameColumn,
 }: DataGridProps) {
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const [sort, setSort] = useState<SortState>(null);
@@ -142,6 +153,8 @@ export function DataGrid({
   const [duplicateColumns, setDuplicateColumns] = useState<string[]>([]);
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
+  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const dragColumnRef = useRef<string | null>(null);
   const editingCellRef = useRef<CellPosition | null>(null);
   const selectionEndRef = useRef<CellPosition | null>(null);
@@ -447,8 +460,9 @@ export function DataGrid({
       && column <= bounds.columnEnd,
     );
   const hasCustomWidths = Object.keys(columnWidths).length > 0;
+  const rowNumberWidth = enableRowDelete ? 82 : 58;
   const customTableWidth = hasCustomWidths
-    ? 58 + columns.reduce((total, column) => total + (columnWidths[column] ?? 160), 0)
+    ? rowNumberWidth + columns.reduce((total, column) => total + (columnWidths[column] ?? 160), 0)
     : undefined;
   const checkedColumns = useMemo(() => Array.from(new Set([
     ...(uniqueKey ? [uniqueKey] : []),
@@ -485,7 +499,7 @@ export function DataGrid({
     );
   };
   const pinnedOffsets = useMemo(() => {
-    let left = 58;
+    let left = rowNumberWidth;
     const offsets: Record<string, number> = {};
     columns.forEach((column) => {
       if (!pinnedColumns.includes(column)) return;
@@ -493,7 +507,7 @@ export function DataGrid({
       left += columnWidths[column] ?? 160;
     });
     return offsets;
-  }, [columnWidths, columns, pinnedColumns]);
+  }, [columnWidths, columns, pinnedColumns, rowNumberWidth]);
 
   const freezeCurrentWidths = (table: HTMLTableElement | null) => {
     if (!table) return {};
@@ -572,6 +586,18 @@ export function DataGrid({
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
+  };
+
+  const deleteRow = (originalIndex: number) => {
+    if (!onRecordsChange) return;
+    onRecordsChange(records.filter((_, index) => index !== originalIndex));
+  };
+
+  const commitColumnRename = (column: string) => {
+    const next = renameDraft.trim();
+    setRenamingColumn(null);
+    if (!next || next === labelFor(column)) return;
+    onRenameColumn?.(column, next);
   };
 
   const deleteColumn = (column: string) => {
@@ -723,9 +749,9 @@ export function DataGrid({
               type="button"
               onClick={onReset}
               disabled={resetDisabled}
-              title="Gridの編集を破棄し、いまの入力CSVの解析結果に戻します"
+              title={resetTitle}
             >
-              <RotateCcw size={14} />出力をリセット
+              <RotateCcw size={14} />{resetLabel}
             </button>
           )}
         </div>
@@ -796,7 +822,7 @@ export function DataGrid({
         </div>
       ) : <div className="json-grid-scroll" onMouseLeave={() => setSelecting(false)}>
         <table
-          className={hasCustomWidths ? "has-custom-widths" : ""}
+          className={`${hasCustomWidths ? "has-custom-widths" : ""} ${enableRowDelete ? "has-row-delete" : ""}`.trim()}
           style={customTableWidth
             ? { width: customTableWidth, minWidth: customTableWidth, maxWidth: customTableWidth }
             : undefined}
@@ -834,7 +860,40 @@ export function DataGrid({
                       onPointerDown={(event) => startColumnDrag(event, column)}
                     >
                       <GripVertical size={12} />
-                      <strong>{labelFor(column)}</strong>
+                      {enableColumnRename && renamingColumn === column ? (
+                        <input
+                          className="data-grid-rename"
+                          value={renameDraft}
+                          aria-label={`${labelFor(column)}列名を編集`}
+                          onPointerDown={stopHeaderGesture}
+                          onMouseDown={stopHeaderGesture}
+                          onChange={(event) => setRenameDraft(event.target.value)}
+                          onBlur={() => commitColumnRename(column)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitColumnRename(column);
+                            }
+                            if (event.key === "Escape") setRenamingColumn(null);
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        <strong
+                          className={enableColumnRename ? "is-renamable" : undefined}
+                          title={enableColumnRename ? "クリックして列名を編集" : undefined}
+                          onPointerDown={enableColumnRename ? stopHeaderGesture : undefined}
+                          onMouseDown={enableColumnRename ? stopHeaderGesture : undefined}
+                          onClick={enableColumnRename ? (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setRenamingColumn(column);
+                            setRenameDraft(labelFor(column));
+                          } : undefined}
+                        >
+                          {labelFor(column)}
+                        </strong>
+                      )}
                     </span>
                     <span
                       className="data-grid-column-actions"
@@ -846,6 +905,19 @@ export function DataGrid({
                         label={`${labelFor(column)}列をコピー`}
                         iconOnly
                       />
+                      {enableColumnRename && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRenamingColumn(column);
+                            setRenameDraft(labelFor(column));
+                          }}
+                          aria-label={`${labelFor(column)}列名を編集`}
+                          title="列名を編集"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      )}
                       <button type="button" onClick={() => toggleSort(column)} aria-label={`${labelFor(column)}列をソート`}>
                         {sort?.column === column
                           ? sort.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
@@ -945,6 +1017,17 @@ export function DataGrid({
                     iconOnly
                   />
                   <span>{originalIndex + 1}</span>
+                  {editable && enableRowDelete && (
+                    <button
+                      type="button"
+                      className="data-grid-delete-row"
+                      onClick={() => deleteRow(originalIndex)}
+                      aria-label={`${originalIndex + 1}行目を削除`}
+                      title="この行を削除"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </th>
                 {columns.map((column, columnIndex) => (
                   <td

@@ -2930,6 +2930,29 @@ kbd {
   color: var(--ink) !important;
 }
 
+.data-grid-rename {
+  width: 100%;
+  min-width: 72px;
+  min-height: 24px;
+  padding: 0 4px;
+  border: 1px solid var(--ink);
+  font: inherit;
+}
+
+.json-grid-scroll table.has-row-delete .row-number-column,
+.json-grid-scroll table.has-row-delete .row-number {
+  width: 82px;
+  min-width: 82px;
+}
+
+.data-grid-delete-row:hover {
+  color: var(--rust-dark);
+}
+
+.data-grid-column-heading strong.is-renamable {
+  cursor: pointer;
+}
+
 .data-grid-export-hint {
   color: var(--ink-soft);
   font-size: 10px;
@@ -5395,11 +5418,20 @@ small {
 
 .csv-ws-empty-actions,
 .csv-ws-sample-list,
-.csv-ws-dialog > div {
+.csv-ws-dialog-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.csv-ws-empty-actions,
+.csv-ws-sample-list {
   justify-content: center;
+}
+
+.csv-ws-dialog-actions {
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 
 .csv-ws-header {
@@ -5410,6 +5442,7 @@ small {
 
 .csv-ws-title-row,
 .csv-ws-meta-row,
+.csv-ws-header-tools,
 .csv-ws-actions {
   display: flex;
   flex-wrap: wrap;
@@ -5421,9 +5454,16 @@ small {
   justify-content: space-between;
 }
 
+.csv-ws-header-tools,
+.csv-ws-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
 .csv-ws-filename {
   min-width: 0;
   font-size: 13px;
+  line-height: 30px;
 }
 
 .csv-ws-tabs {
@@ -5439,13 +5479,26 @@ small {
 .csv-ws-alert button,
 .csv-ws-sample-list button,
 .csv-ws-dialog button {
+  height: 30px;
   min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 10px;
   color: var(--ink);
   border: 1px solid var(--line-dark);
   background: var(--white);
   cursor: pointer;
   font-size: 10px;
+  line-height: 1;
+}
+
+.csv-ws-tabs button svg,
+.csv-ws-actions button svg,
+.csv-ws-dialog button svg {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .csv-ws-tabs button {
@@ -5523,8 +5576,42 @@ small {
   min-height: 360px;
 }
 
+.csv-ws-stage.is-split {
+  display: grid;
+  grid-template-columns: minmax(180px, var(--csv-ws-split-left, 42fr)) 8px minmax(0, var(--csv-ws-split-right, 58fr));
+  min-height: 0;
+}
+
+.csv-ws-split-resizer {
+  min-width: 8px;
+  cursor: col-resize;
+  background: var(--paper-deep);
+  border-left: 1px solid var(--line-dark);
+  border-right: 1px solid var(--line-dark);
+}
+
 .csv-ws-stage .json-grid-panel {
   height: min(68vh, 640px);
+}
+
+.csv-ws-stage.is-split .json-grid-panel,
+.csv-ws-stage.is-split .csv-ws-raw {
+  height: min(68vh, 640px);
+  min-width: 0;
+}
+
+.csv-ws-footer {
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--line-dark);
+  background: var(--paper-deep);
+}
+
+.csv-ws-footer.has-warn {
+  background: #f6e6c8;
+}
+
+.csv-ws-footer.all-ok {
+  background: #dce8de;
 }
 
 .csv-workspace-beta.is-fullscreen .csv-ws-stage .json-grid-panel {
@@ -5565,6 +5652,13 @@ small {
 
 .csv-ws-download {
   position: relative;
+  display: flex;
+  align-items: center;
+  height: 30px;
+}
+
+.csv-ws-download > button {
+  height: 30px;
 }
 
 .csv-ws-menu {
@@ -5620,7 +5714,7 @@ small {
   border: 0;
 }
 
-.csv-ws-settings label,
+.csv-ws-settings > label:not(.csv-check),
 .csv-ws-sheet {
   display: flex;
   flex-direction: column;
@@ -5634,16 +5728,46 @@ small {
   min-height: 30px;
 }
 
+.csv-ws-settings-checks {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  min-height: 30px;
+}
+
+.csv-ws-settings .csv-ws-settings-checks label.csv-check {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 30px;
+  font-size: 11px;
+}
+
+.csv-ws-settings .csv-ws-settings-checks label.csv-check input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
 @media (max-width: 760px) {
   .csv-ws-title-row,
   .csv-ws-meta-row,
+  .csv-ws-header-tools,
   .csv-ws-actions {
     align-items: stretch;
   }
 
+  .csv-ws-header-tools,
   .csv-ws-actions,
   .csv-ws-tabs {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .csv-ws-stage .json-grid-panel,
