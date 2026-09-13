@@ -18,6 +18,7 @@ import {
   TextSuite,
 } from "@/components/suites/text-suites";
 import { NumberSuite } from "@/components/suites/number-suites";
+import { QrSuite } from "@/components/suites/qr-suite";
 import { CronSuite, DateTimeSuite } from "@/components/suites/time-suites";
 
 export const suiteSlugs = [
@@ -31,6 +32,7 @@ export const suiteSlugs = [
   "hash",
   "id-generator",
   "password",
+  "qr",
   "regex",
   "diff",
   "text",
@@ -64,6 +66,8 @@ export function ToolSuite({ slug }: { slug: SuiteSlug }) {
       return <IdGeneratorSuite />;
     case "password":
       return <PasswordSuite />;
+    case "qr":
+      return <QrSuite />;
     case "regex":
       return <RegexSuite />;
     case "diff":

@@ -151,6 +151,16 @@ export const tools: Tool[] = [
     index: "15",
     featured: true,
   },
+  {
+    name: "QR Code",
+    description: "テキスト、Wi-Fi、連絡先からQRコードを生成",
+    category: "生成",
+    functions: 3,
+    href: "/tools/qr",
+    accent: "墨",
+    index: "16",
+    featured: true,
+  },
 ];
 
 export const toolCount = tools.length;
