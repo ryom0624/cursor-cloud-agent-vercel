@@ -986,7 +986,7 @@ export function DataGrid({
                         <MoreHorizontal size={12} />
                       </button>
                       {menuOpen && (
-                        <div className="data-grid-column-menu" role="menu">
+                        <div className="data-grid-column-menu" role="menu" data-column-header-menu={column}>
                           {enableColumnRename && (
                             <button
                               type="button"

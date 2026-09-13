@@ -2915,7 +2915,6 @@ kbd {
 .data-grid-column-heading {
   position: relative;
   min-width: 0;
-  overflow: hidden;
 }
 
 .data-grid-column-heading .data-grid-drag-handle {
@@ -4661,7 +4660,7 @@ kbd {
 
 .json-grid-scroll thead .data-grid-column-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: 26px;
   right: 0;
   z-index: 30;
   min-width: 228px;
