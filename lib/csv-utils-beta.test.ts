@@ -30,6 +30,8 @@ import {
   isLongIntegerRisk,
   isScientificRisk,
   describeExcelRisks,
+  describeExcelRiskChange,
+  describeExcelRiskEffects,
   locateReplacementCharacters,
   parseCsvTable,
   rowsToCsv,
@@ -263,6 +265,11 @@ describe("P0 Excel conversion risks", () => {
     expect(hits.filter((hit) => hit.kind === "dateLike")).toHaveLength(1);
     expect(hits.filter((hit) => hit.kind === "scientific")).toHaveLength(1);
     expect(describeExcelRisks(hits)).toBe("先頭ゼロ 1件 · 16桁以上の整数 1件 · 日付変換候補 1件 · 指数表記 1件");
+    expect(describeExcelRiskChange("leadingZero", "00123")).toContain("00123 → 123");
+    expect(describeExcelRiskChange("longInteger", "123456789012345678")).toContain("下位桁が丸められる");
+    expect(describeExcelRiskChange("dateLike", "2026-09-11")).toContain("日付");
+    expect(describeExcelRiskChange("scientific", "1E10")).toContain("10000000000");
+    expect(describeExcelRiskEffects(hits)).toContain("先頭の0が消える");
   });
 });
 

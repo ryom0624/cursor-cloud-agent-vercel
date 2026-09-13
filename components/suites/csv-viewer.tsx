@@ -1,7 +1,7 @@
 "use client";
 
-import { CsvViewerBetaSuite } from "@/components/suites/csv-viewer-beta";
+import { CsvViewerWorkspaceBeta } from "@/components/suites/csv-viewer-workspace-beta";
 
 export function CsvViewerSuite() {
-  return <CsvViewerBetaSuite mode="official" />;
+  return <CsvViewerWorkspaceBeta variant="official" />;
 }

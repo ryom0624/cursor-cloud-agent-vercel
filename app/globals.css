@@ -5363,6 +5363,10 @@ small {
   font-size: 11px;
 }
 
+.csv-ws-banner.is-official {
+  color: var(--ink-soft);
+}
+
 .csv-ws-banner strong {
   padding: 0 7px;
   color: var(--white);

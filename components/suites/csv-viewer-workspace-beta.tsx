@@ -27,6 +27,8 @@ import {
   decodeCsvBytes,
   defaultViewerSettings,
   delimiterToken,
+  describeExcelRiskChange,
+  describeExcelRiskEffects,
   describeExcelRisks,
   diagnoseExcelRisks,
   encodeCsvText,
@@ -121,7 +123,12 @@ function confirmDiscardEdits(dirty: boolean) {
   return !dirty || window.confirm("現在の編集を破棄しますか？");
 }
 
-export function CsvViewerWorkspaceBeta() {
+export function CsvViewerWorkspaceBeta({
+  variant = "beta",
+}: {
+  variant?: "official" | "beta";
+} = {}) {
+  const official = variant === "official";
   const [input, setInput] = useState("");
   const [hasSource, setHasSource] = useState(false);
   const [sourceName, setSourceName] = useState("貼り付けデータ");
@@ -202,7 +209,7 @@ export function CsvViewerWorkspaceBeta() {
   const extraWarnings = [
     ...parsed.warnings,
     ...detectionWarnings,
-    ...(injectionCount ? [`表計算ソフトで数式として実行され得る値が${injectionCount}件あります。値は変更していません。`] : []),
+    ...(injectionCount ? [`表計算ソフトで数式として実行され得る値が${injectionCount}件あります。開くと計算やコマンドとして動くことがあります。値は変更していません。`] : []),
     ...encodingIssues,
     ...(excelRowOverflow ? ["Excel向けCSVは1,048,576行を超えるとExcelで完全表示できない可能性があります。"] : []),
     ...(xlsxLimitErrors.length ? xlsxLimitErrors : []),
@@ -623,17 +630,28 @@ export function CsvViewerWorkspaceBeta() {
 
   return (
     <ToolShell
-      slug="csv-viewer-beta"
+      slug={official ? "csv-viewer" : "csv-viewer-beta"}
       category="データ"
-      title="CSV Viewer Beta"
-      description="CSVを開いて中身を見る次期Viewerです。正式版の解析を再利用し、Gridを主役にしています。"
+      title={official ? "CSV Viewer" : "CSV Viewer Beta"}
+      description={official
+        ? "CSVを開いて中身を見る。文字化け・Excel変換事故を検出し、ブラウザ内で編集・保存します。"
+        : "CSVを開いて中身を見る次期Viewerです。正式版の解析を再利用し、Gridを主役にしています。"}
       functionCount={1}
     >
       <div className={`csv-workspace-beta ${fullscreen ? "is-fullscreen" : ""}`}>
-        <header className="csv-ws-banner">
-          <strong>BETA</strong>
-          <p>Grid中心の次期UIです。解析は正式版と同じです。</p>
-          <Link href="/tools/csv-viewer">正式版を開く</Link>
+        <header className={`csv-ws-banner ${official ? "is-official" : ""}`}>
+          {official ? (
+            <>
+              <p>CSVをブラウザ内で開いて確認します。入力は外部に送りません。</p>
+              <Link href="/tools/csv-viewer-legacy2">前世代（Legacy 2）</Link>
+            </>
+          ) : (
+            <>
+              <strong>BETA</strong>
+              <p>Grid中心の次期UIです。解析は正式版と同じです。</p>
+              <Link href="/tools/csv-viewer">正式版を開く</Link>
+            </>
+          )}
         </header>
 
         <input
@@ -845,7 +863,7 @@ export function CsvViewerWorkspaceBeta() {
                   </ul>
                   {excelRiskSummary.kinds > 0 && (
                     <p className="csv-ws-diag-note">
-                      {describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値や日付として読むと、値が変わることがあります。
+                      {describeExcelRisks(excelRisks)}を検出しました。{describeExcelRiskEffects(excelRisks)}。表計算ソフトが数値や日付として読むと、このように値が変わります。
                     </p>
                   )}
                   {(uniqueWarnings.length > 0 || excelRiskExamples.length > 0) && (
@@ -855,7 +873,7 @@ export function CsvViewerWorkspaceBeta() {
                         <li key={`${hit.kind}-${hit.row}-${hit.column}-${hit.columnKey}`}>
                           {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}
                           {" "}
-                          <code>{hit.value}</code>
+                          <code>{describeExcelRiskChange(hit.kind, hit.value)}</code>
                         </li>
                       ))}
                     </ul>
@@ -948,7 +966,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="'">シングルクォート（&apos;）</option>
                   <option value="">なし</option>
                 </select>
-                <small className="csv-ws-hint">値を囲む記号です。普通は " です。</small>
+                <small className="csv-ws-hint">値を囲む記号です。普通は &quot; です。</small>
               </label>
               <label>
                 囲み文字のエスケープ
@@ -956,7 +974,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="double">二重化（&quot;&quot;）</option>
                   <option value="backslash">バックスラッシュ（\&quot;）</option>
                 </select>
-                <small className="csv-ws-hint">値の中の " の書き方です。</small>
+                <small className="csv-ws-hint">値の中の &quot; の書き方です。</small>
               </label>
               <label>
                 ヘッダー行
@@ -1037,7 +1055,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="double">二重化（&quot;&quot;）</option>
                   <option value="backslash">バックスラッシュ（\&quot;）</option>
                 </select>
-                <small className="csv-ws-hint">値の中の " の書き方です。</small>
+                <small className="csv-ws-hint">値の中の &quot; の書き方です。</small>
               </label>
               <div className="csv-ws-settings-checks">
                 <label className="csv-check">

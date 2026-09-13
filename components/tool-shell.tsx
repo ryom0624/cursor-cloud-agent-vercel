@@ -32,6 +32,7 @@ const wideWorkspaceSlugs = new Set([
   "csv-viewer",
   "csv-viewer-beta",
   "csv-viewer-legacy",
+  "csv-viewer-legacy2",
   "encoder",
   "jwt",
   "hash",

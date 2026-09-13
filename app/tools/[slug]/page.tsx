@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ToolSuite, type SuiteSlug } from "@/components/tool-suite";
 import { tools } from "@/lib/tools";
 
@@ -8,6 +8,7 @@ const slugs: SuiteSlug[] = [
   "csv-viewer",
   "csv-viewer-beta",
   "csv-viewer-legacy",
+  "csv-viewer-legacy2",
   "encoder",
   "jwt",
   "hash",
@@ -36,14 +37,20 @@ export async function generateMetadata({
   const { slug } = await params;
   if (slug === "csv-viewer-beta") {
     return {
-      title: "CSV Viewer Beta | DevSmith",
-      description: "CSVを開いて中身を見る次期Viewerです。入力データを外部送信せず、ブラウザ内で処理します。",
+      title: "CSV Viewer | DevSmith",
+      description: "CSVを開いて中身を見る。入力データを外部送信せず、ブラウザ内で処理します。",
     };
   }
   if (slug === "csv-viewer-legacy") {
     return {
       title: "CSV Viewer Legacy | DevSmith",
       description: "正式版昇格前の安定版です。障害時のrollback確認用です。入力データを外部送信せず、ブラウザ内で処理します。",
+    };
+  }
+  if (slug === "csv-viewer-legacy2") {
+    return {
+      title: "CSV Viewer Legacy 2 | DevSmith",
+      description: "Grid中心化前の正式版です。障害時の確認用です。入力データを外部送信せず、ブラウザ内で処理します。",
     };
   }
   const tool = tools.find((item) => item.href === `/tools/${slug}`);
@@ -60,6 +67,7 @@ export default async function ToolPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (slug === "csv-viewer-beta") redirect("/tools/csv-viewer");
   if (!slugs.includes(slug as SuiteSlug)) notFound();
   return <ToolSuite slug={slug as SuiteSlug} />;
 }

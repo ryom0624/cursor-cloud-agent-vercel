@@ -29,6 +29,8 @@ import {
   defaultViewerSettings,
   delimiterLabel,
   delimiterToken,
+  describeExcelRiskChange,
+  describeExcelRiskEffects,
   describeExcelRisks,
   diagnoseExcelRisks,
   encodeCsvText,
@@ -92,7 +94,7 @@ const csvViewerExcelRiskSample = `id,zip,phone,amount
 2,0000000001,0312345678,1.2e3
 3,1500001,08000000000,98`;
 
-type ViewerMode = "beta" | "official";
+type ViewerMode = "beta" | "official" | "legacy2";
 
 type ExcelSheet = { name: string; csv: string };
 
@@ -192,7 +194,7 @@ function CsvValidationSummary({
               {examples.map((hit) => (
                 <li key={`${hit.kind}-${hit.row}-${hit.column}`}>
                   {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}{" "}
-                  <code>{hit.value}</code>
+                  <code>{describeExcelRiskChange(hit.kind, hit.value)}</code>
                 </li>
               ))}
             </ul>
@@ -206,6 +208,8 @@ function CsvValidationSummary({
 
 export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}) {
   const official = mode === "official";
+  const legacy2 = mode === "legacy2";
+  const suiteSlug = legacy2 ? "csv-viewer-legacy2" : official ? "csv-viewer" : "csv-viewer-beta";
   const [input, setInput] = useState(csvViewerSample);
   const [editedRecords, setEditedRecords] = useState<DataGridRecord[] | null>(null);
   const [settings, setSettings] = useState(defaultViewerSettings);
@@ -646,10 +650,12 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
 
   return (
     <ToolShell
-      slug={official ? "csv-viewer" : "csv-viewer-beta"}
+      slug={suiteSlug}
       category="データ"
-      title={official ? "CSV Viewer" : "CSV Viewer Beta"}
-      description={official
+      title={legacy2 ? "CSV Viewer Legacy 2" : official ? "CSV Viewer" : "CSV Viewer Beta"}
+      description={legacy2
+        ? "Grid中心化前の正式版です。障害時の確認用で、通常のツール一覧には出ません。"
+        : official
         ? "CSVを貼り付けるかファイルで開き、文字化け・Excel変換事故・データ破壊を事前に検出します。"
         : "現行CSV Viewerを基準にした次期版です。解析・変換の安全性を改善しています。"}
       functionCount={1}
@@ -661,7 +667,14 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
       onTabChange={(tab) => setViewerMode(tab as "simple" | "pro")}
     >
       <div className="csv-viewer-flow">
-        {!official && (
+        {legacy2 && (
+        <section className="csv-beta-banner" aria-label="Legacy 2注意">
+          <strong>LEGACY 2</strong>
+          <p>Grid中心化前の正式版です。通常は新しいCSV Viewerを使ってください。</p>
+          <Link href="/tools/csv-viewer">正式版CSV Viewerを開く</Link>
+        </section>
+        )}
+        {!official && !legacy2 && (
         <section className="csv-beta-banner" aria-label="Beta注意">
           <strong>BETA</strong>
           <p>Beta版です。CSV解析・変換機能を改善中です。重要なデータは出力結果を確認してから使用してください。</p>
@@ -911,7 +924,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             {excelRiskSummary.kinds > 0 && (
               <div className="csv-excel-risk">
                 <strong>⚠ Excelで値が変わる可能性があります</strong>
-                <p>{describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値や日付として読むと、値が変わることがあります。</p>
+                <p>{describeExcelRisks(excelRisks)}を検出しました。{describeExcelRiskEffects(excelRisks)}。表計算ソフトが数値や日付として読むと、このように値が変わります。</p>
                 <button type="button" onClick={() => {
                   const full = recordsForFullExport();
                   void downloadXlsxSafe(full.records, full.columns);
@@ -1234,7 +1247,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
       <section className="csv-guide" aria-labelledby="csv-guide-title-beta">
         <div className="csv-guide-heading">
           <span>GUIDE / TROUBLESHOOTING</span>
-          <h2 id="csv-guide-title-beta">{official ? "安全なCSV取り扱い" : "Betaの安全なCSV取り扱い"}</h2>
+          <h2 id="csv-guide-title-beta">{legacy2 ? "Legacy 2の安全なCSV取り扱い" : official ? "安全なCSV取り扱い" : "Betaの安全なCSV取り扱い"}</h2>
           <p>CSV内容の自動修正、黙った文字置換、根拠のない文字コード断定は行いません。通常はUTF-8を推奨します。UTF-16は既存システムとの互換用途としてProで利用できます。</p>
         </div>
         <div className="csv-guide-grid">

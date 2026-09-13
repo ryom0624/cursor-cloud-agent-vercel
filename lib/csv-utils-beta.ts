@@ -960,6 +960,43 @@ export function describeExcelRisks(hits: ExcelRiskHit[]) {
     .join(" · ");
 }
 
+export function excelRiskAfterValue(kind: ExcelRiskKind, value: string) {
+  const text = value.trim();
+  if (kind === "dateLike") return "日付（シリアル値）";
+  const numeric = Number(text);
+  return Number.isFinite(numeric) ? String(numeric) : "";
+}
+
+export function describeExcelRiskChange(kind: ExcelRiskKind, value: string) {
+  const after = excelRiskAfterValue(kind, value);
+  if (kind === "leadingZero") {
+    return after && after !== value.trim()
+      ? `${value} → ${after}（先頭の0が消える）`
+      : "先頭の0が消える";
+  }
+  if (kind === "longInteger") {
+    return after && after !== value.trim()
+      ? `${value} → ${after}（下位桁が丸められる）`
+      : "下位桁が丸められ、元の整数ではなくなる";
+  }
+  if (kind === "dateLike") {
+    return `${value} → 日付（シリアル値になり、表示やコピー結果が変わる）`;
+  }
+  return after && after !== value.trim()
+    ? `${value} → ${after}（指数表記が通常の数値になる）`
+    : "指数表記が通常の数値になり、元の書き方が消える";
+}
+
+export function describeExcelRiskEffects(hits: ExcelRiskHit[]) {
+  return (Object.keys(excelRiskLabels) as ExcelRiskKind[])
+    .filter((kind) => hits.some((hit) => hit.kind === kind))
+    .map((kind) => {
+      const example = hits.find((hit) => hit.kind === kind)?.value ?? "";
+      return describeExcelRiskChange(kind, example);
+    })
+    .join(" / ");
+}
+
 export function locateReplacementCharacters(
   records: Array<Record<string, unknown>>,
   columns: string[],

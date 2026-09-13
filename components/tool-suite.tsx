@@ -2,8 +2,8 @@
 
 import { DataConverterSuite } from "@/components/suites/data-converter";
 import { CsvViewerSuite } from "@/components/suites/csv-viewer";
-import { CsvViewerWorkspaceBeta } from "@/components/suites/csv-viewer-workspace-beta";
 import { CsvViewerLegacySuite } from "@/components/suites/csv-viewer-legacy";
+import { CsvViewerLegacy2Suite } from "@/components/suites/csv-viewer-legacy2";
 import {
   EncoderSuite,
   HashSuite,
@@ -25,6 +25,7 @@ export const suiteSlugs = [
   "csv-viewer",
   "csv-viewer-beta",
   "csv-viewer-legacy",
+  "csv-viewer-legacy2",
   "encoder",
   "jwt",
   "hash",
@@ -48,9 +49,11 @@ export function ToolSuite({ slug }: { slug: SuiteSlug }) {
     case "csv-viewer":
       return <CsvViewerSuite />;
     case "csv-viewer-beta":
-      return <CsvViewerWorkspaceBeta />;
+      return <CsvViewerSuite />;
     case "csv-viewer-legacy":
       return <CsvViewerLegacySuite />;
+    case "csv-viewer-legacy2":
+      return <CsvViewerLegacy2Suite />;
     case "encoder":
       return <EncoderSuite />;
     case "jwt":
