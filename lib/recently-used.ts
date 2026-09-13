@@ -19,16 +19,26 @@ export function readRecentlyUsedSlugs(): string[] {
   }
 }
 
+const EMPTY_TOOLS: Tool[] = [];
+let cachedKey = "";
+let cachedTools: Tool[] = EMPTY_TOOLS;
+
 export function readRecentlyUsedTools(): Tool[] {
-  return readRecentlyUsedSlugs()
+  const slugs = readRecentlyUsedSlugs();
+  const key = slugs.join(",");
+  if (key === cachedKey) return cachedTools;
+  cachedKey = key;
+  cachedTools = slugs
     .map((slug) => toolBySlug[slug])
     .filter((tool): tool is Tool => Boolean(tool));
+  return cachedTools;
 }
 
 export function recordRecentlyUsed(slug: string) {
   if (typeof window === "undefined") return;
   if (!toolBySlug[slug]) return;
   const next = [slug, ...readRecentlyUsedSlugs().filter((item) => item !== slug)].slice(0, LIMIT);
+  cachedKey = "";
   window.localStorage.setItem(recentlyUsedStorageKey, JSON.stringify(next));
   window.dispatchEvent(new Event(recentlyUsedEvent));
 }
@@ -47,5 +57,5 @@ function subscribeRecentlyUsed(callback: () => void) {
 }
 
 export function useRecentlyUsedTools() {
-  return useSyncExternalStore(subscribeRecentlyUsed, readRecentlyUsedTools, () => []);
+  return useSyncExternalStore(subscribeRecentlyUsed, readRecentlyUsedTools, () => EMPTY_TOOLS);
 }
