@@ -302,50 +302,76 @@ export function NumberSuite() {
 
       {tab === "float" ? (
         <>
-          <div className="number-controls float-fields">
-            <label className="control-label grow">
-              10進数
-              <input
-                value={floatInput}
-                onChange={(event) => setFloatInput(event.target.value)}
-                name="float-input"
-              />
-            </label>
-            <label className="control-label">
-              精度
-              <select
-                value={floatPrecision}
-                onChange={(event) => setFloatPrecision(Number(event.target.value) as FloatPrecision)}
-              >
-                <option value={32}>32 bit（単精度）</option>
-                <option value={64}>64 bit（倍精度）</option>
-              </select>
-            </label>
+          <div className="single-input-bar number-input-bar">
+            <label htmlFor="float-input">10進数</label>
+            <input
+              id="float-input"
+              name="float-input"
+              value={floatInput}
+              onChange={(event) => setFloatInput(event.target.value)}
+            />
+            <select
+              aria-label="精度"
+              value={floatPrecision}
+              onChange={(event) => setFloatPrecision(Number(event.target.value) as FloatPrecision)}
+            >
+              <option value={32}>32 bit</option>
+              <option value={64}>64 bit</option>
+            </select>
           </div>
           {floatResult.error ? (
             <div className="empty-result number-empty">{floatResult.error}</div>
           ) : floatInput.trim() ? (
             <>
-              <div className="number-result">
-                <span>格納される値</span>
-                <strong>{String(floatResult.value)}</strong>
-                <CopyButton value={String(floatResult.value)} />
-              </div>
-              <div className="date-results">
-                <div><span>符号</span><strong>{floatResult.signLabel}</strong></div>
-                <div><span>指数（実数）</span><strong>{floatResult.exponent}</strong></div>
-                <div><span>指数ビット</span><strong className="bit-string">{floatResult.exponentBits}</strong></div>
-                <div><span>仮数ビット</span><strong className="bit-string">{floatResult.fractionBits}</strong></div>
-                <div><span>ビット列</span><strong className="bit-string">{formatFloatBitsGrouped(floatResult.bits)}</strong></div>
-                <div><span>HEX</span><strong>0x{floatResult.hex}</strong></div>
-                <div><span>10進との差</span><strong>{floatResult.decimalError}</strong></div>
-                <div><span>次に大きい値</span><strong>{floatResult.nextUp}</strong></div>
-                <div><span>次に小さい値</span><strong>{floatResult.nextDown}</strong></div>
+              <div className="number-output-grid">
+                <div className="is-primary">
+                  <span>格納値</span>
+                  <strong>{String(floatResult.value)}</strong>
+                  <CopyButton iconOnly value={String(floatResult.value)} />
+                </div>
+                <div>
+                  <span>符号</span>
+                  <strong>{floatResult.signLabel}</strong>
+                </div>
+                <div>
+                  <span>指数</span>
+                  <strong>{floatResult.exponent}</strong>
+                </div>
+                <div>
+                  <span>HEX</span>
+                  <strong>0x{floatResult.hex}</strong>
+                  <CopyButton iconOnly value={`0x${floatResult.hex}`} />
+                </div>
+                <div>
+                  <span>10進との差</span>
+                  <strong>{floatResult.decimalError}</strong>
+                </div>
+                <div>
+                  <span>次に大きい</span>
+                  <strong>{floatResult.nextUp}</strong>
+                </div>
+                <div>
+                  <span>次に小さい</span>
+                  <strong>{floatResult.nextDown}</strong>
+                </div>
+                <div>
+                  <span>指数ビット</span>
+                  <strong className="bit-string">{floatResult.exponentBits}</strong>
+                </div>
+                <div className="span-all">
+                  <span>仮数ビット</span>
+                  <strong className="bit-string">{floatResult.fractionBits}</strong>
+                </div>
+                <div className="span-all">
+                  <span>ビット列</span>
+                  <strong className="bit-string">{formatFloatBitsGrouped(floatResult.bits)}</strong>
+                  <CopyButton iconOnly value={floatResult.bits} />
+                </div>
               </div>
               <ToolStatus>{floatResult.note}</ToolStatus>
             </>
           ) : (
-            <div className="empty-result">数値を入力してください</div>
+            <div className="empty-result number-empty">数値を入力してください</div>
           )}
         </>
       ) : null}
@@ -382,50 +408,50 @@ export function NumberSuite() {
               逆算
             </button>
           </div>
-          <div className="number-controls percent-inputs">
-            <label className="control-label grow">
-              {percentMode === "ratio" ? "部分" : percentMode === "reverse" ? "現在値" : "基準（A / 以前）"}
-              <input
-                value={percentA}
-                onChange={(event) => setPercentA(event.target.value)}
-                inputMode="decimal"
-                name="percent-a"
-              />
+          <div className="single-input-bar number-input-bar">
+            <label htmlFor="percent-a">
+              {percentMode === "ratio" ? "部分" : percentMode === "reverse" ? "現在値" : "基準"}
             </label>
-            <label className="control-label grow">
+            <input
+              id="percent-a"
+              name="percent-a"
+              value={percentA}
+              onChange={(event) => setPercentA(event.target.value)}
+              inputMode="decimal"
+            />
+            <label htmlFor="percent-b">
               {percentMode === "ratio"
                 ? "全体"
                 : percentMode === "reverse"
-                  ? "目標値"
+                  ? "目標"
                   : percentMode === "change"
                     ? "新しい値"
-                    : "比較値 B"}
-              <input
-                value={percentB}
-                onChange={(event) => setPercentB(event.target.value)}
-                inputMode="decimal"
-                name="percent-b"
-              />
+                    : "比較 B"}
             </label>
+            <input
+              id="percent-b"
+              name="percent-b"
+              value={percentB}
+              onChange={(event) => setPercentB(event.target.value)}
+              inputMode="decimal"
+            />
           </div>
           {percentResult.error ? (
             <div className="empty-result number-empty">{percentResult.error}</div>
           ) : (
-            <>
-              <div className="number-result">
-                <span>RESULT</span>
+            <div className="number-output-grid">
+              <div className="is-primary">
+                <span>結果</span>
                 <strong>{percentResult.primary}</strong>
-                <CopyButton value={percentResult.primary} />
+                <CopyButton iconOnly value={percentResult.primary} />
               </div>
-              <div className="date-results">
-                {percentResult.lines.map((line) => (
-                  <div key={line.label}>
-                    <span>{line.label}</span>
-                    <strong>{line.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </>
+              {percentResult.lines.map((line) => (
+                <div key={line.label}>
+                  <span>{line.label}</span>
+                  <strong>{line.value}</strong>
+                </div>
+              ))}
+            </div>
           )}
           <ToolStatus error={percentResult.error}>
             {percentMode === "reverse"

@@ -2144,6 +2144,19 @@ kbd {
   border-bottom: 0;
 }
 
+.number-output-grid > div.is-primary {
+  color: var(--white);
+  background: var(--ink);
+}
+
+.number-output-grid > div.is-primary span {
+  color: #b7bdb9;
+}
+
+.number-output-grid > div.is-primary button {
+  color: var(--white);
+}
+
 .number-output-grid > div.span-all {
   grid-column: 1 / -1;
   border-right: 0;
