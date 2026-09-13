@@ -510,12 +510,12 @@ export function MermaidViewerSuite() {
           onFiles(event.dataTransfer.files);
         }}
       >
-        {fullscreen && (
+        {fullscreen ? (
           <button type="button" className="fullscreen-exit" onClick={exitOverlay}>
             <Minimize2 size={15} />
             縮小 <kbd>Esc</kbd>
           </button>
-        )}
+        ) : null}
 
         <div className="suite-toolbar mermaid-toolbar">
           <div>
@@ -689,18 +689,18 @@ export function MermaidViewerSuite() {
               role="application"
               aria-label="Mermaidプレビュー。ドラッグで移動、ピンチまたはホイールで拡大縮小"
             >
-              {!source && (
+              {!source ? (
                 <div className="mermaid-empty">
                   <strong>図がありません</strong>
                   <span>左側にMermaid記法を入力するか、.mmd / .md ファイルをドロップしてください。</span>
                 </div>
-              )}
-              {shownError && (
+              ) : null}
+              {shownError ? (
                 <div className="mermaid-error">
                   <strong>構文を確認してください</strong>
                   <span>{shownError}</span>
                 </div>
-              )}
+              ) : null}
               <div
                 ref={stageRef}
                 className="mermaid-stage"
@@ -708,7 +708,7 @@ export function MermaidViewerSuite() {
               >
                 <div ref={svgHostRef} />
               </div>
-              {fileDrag && <div className="mermaid-drop-overlay">ファイルをドロップして開く</div>}
+              {fileDrag ? <div className="mermaid-drop-overlay">ファイルをドロップして開く</div> : null}
             </div>
           </section>
         </div>
