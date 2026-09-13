@@ -5705,6 +5705,21 @@ small {
   font-size: 16px;
 }
 
+.csv-ws-dialog-lead {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.csv-ws-hint {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 .csv-ws-settings {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -5732,19 +5747,25 @@ small {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 16px 28px;
-  min-height: 30px;
+  align-items: flex-start;
+  gap: 12px 28px;
 }
 
 .csv-ws-settings .csv-ws-settings-checks label.csv-check {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0;
+  min-height: 0;
+  font-size: 11px;
+}
+
+.csv-ws-check-line {
   display: inline-flex;
-  flex-direction: row;
   align-items: center;
   gap: 8px;
-  margin: 0;
-  min-height: 30px;
-  font-size: 11px;
+  min-height: 22px;
 }
 
 .csv-ws-settings .csv-ws-settings-checks label.csv-check input[type="checkbox"] {

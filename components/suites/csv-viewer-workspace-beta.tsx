@@ -896,60 +896,72 @@ export function CsvViewerWorkspaceBeta() {
         <div className="csv-ws-backdrop" role="presentation">
           <section className="csv-ws-dialog csv-ws-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="csv-ws-reinterpret-title">
             <h2 id="csv-ws-reinterpret-title">再解釈</h2>
-            <p>同じsourceの読み方を変えて再parseします。通常は自動判定のままで十分です。</p>
+            <p className="csv-ws-dialog-lead">開いているデータを、別の読み方でもう一度読み込みます。文字化けや列のずれがあるときだけ変えてください。</p>
             <fieldset className="csv-ws-settings">
               <label>
                 文字コード
                 <select value={fileEncoding} onChange={(event) => setFileEncoding(event.target.value as CsvFileEncoding)}>
                   <option value="auto">自動判定</option>
                   <option value="utf-8">UTF-8</option>
-                  <option value="shift_jis">Shift_JIS</option>
-                  <option value="utf-16le">UTF-16LE</option>
-                  <option value="utf-16be">UTF-16BE</option>
+                  <option value="shift_jis">Shift_JIS（日本語Windows）</option>
+                  <option value="utf-16le">UTF-16LE（リトルエンディアン）</option>
+                  <option value="utf-16be">UTF-16BE（ビッグエンディアン）</option>
                 </select>
+                <small className="csv-ws-hint">文字の読み方です。文字化けするときだけ指定します。</small>
               </label>
               <label>
                 区切り文字
                 <select value={settings.delimiter} onChange={(event) => setSettings((current) => ({ ...current, delimiter: event.target.value as CsvDelimiterSetting }))}>
                   <option value="auto">自動判定</option>
-                  <option value=",">カンマ</option>
+                  <option value=",">カンマ（,）</option>
                   <option value={"\t"}>タブ</option>
-                  <option value=";">セミコロン</option>
-                  <option value="|">縦棒</option>
+                  <option value=";">セミコロン（;）</option>
+                  <option value="|">縦棒（|）</option>
                   <option value=" ">スペース</option>
                 </select>
+                <small className="csv-ws-hint">列と列のあいだの記号です。</small>
               </label>
               <label>
                 囲み文字
                 <select value={settings.quote} onChange={(event) => setSettings((current) => ({ ...current, quote: event.target.value as CsvQuote }))}>
-                  <option value={'"'}>ダブルクォート</option>
-                  <option value="'">シングルクォート</option>
+                  <option value={'"'}>ダブルクォート（&quot;）</option>
+                  <option value="'">シングルクォート（&apos;）</option>
                   <option value="">なし</option>
                 </select>
+                <small className="csv-ws-hint">値を囲んでいる記号です。通常はダブルクォートです。</small>
               </label>
               <label>
-                Escape
+                囲み文字のエスケープ
                 <select value={settings.escapeMode} onChange={(event) => setSettings((current) => ({ ...current, escapeMode: event.target.value as CsvEscapeMode }))}>
-                  <option value="double">double</option>
-                  <option value="backslash">backslash</option>
+                  <option value="double">二重化（&quot;&quot;）</option>
+                  <option value="backslash">バックスラッシュ（\&quot;）</option>
                 </select>
+                <small className="csv-ws-hint">囲み文字そのものを値に書くときの逃げ方です。</small>
               </label>
               <label>
                 ヘッダー行
                 <BoundedNumberInput value={settings.headerRow} min={1} max={100000} onCommit={(value) => setSettings((current) => ({ ...current, headerRow: value, dataStartRow: Math.max(current.dataStartRow, value + 1) }))} />
+                <small className="csv-ws-hint">列名が書いてある行番号です。</small>
               </label>
               <label>
                 読込開始行
                 <BoundedNumberInput value={settings.dataStartRow} min={settings.headerRow + 1} max={100001} onCommit={(value) => setSettings((current) => ({ ...current, dataStartRow: value }))} />
+                <small className="csv-ws-hint">データとして読み始める行です。</small>
               </label>
               <div className="csv-ws-settings-checks">
                 <label className="csv-check">
-                  <input type="checkbox" checked={settings.skipEmptyLines} onChange={(event) => setSettings((current) => ({ ...current, skipEmptyLines: event.target.checked }))} />
-                  空行をskip
+                  <span className="csv-ws-check-line">
+                    <input type="checkbox" checked={settings.skipEmptyLines} onChange={(event) => setSettings((current) => ({ ...current, skipEmptyLines: event.target.checked }))} />
+                    空行を読み飛ばす
+                  </span>
+                  <small className="csv-ws-hint">何も書いていない行は無視します。</small>
                 </label>
                 <label className="csv-check">
-                  <input type="checkbox" checked={settings.trimFields} onChange={(event) => setSettings((current) => ({ ...current, trimFields: event.target.checked }))} />
-                  Trim
+                  <span className="csv-ws-check-line">
+                    <input type="checkbox" checked={settings.trimFields} onChange={(event) => setSettings((current) => ({ ...current, trimFields: event.target.checked }))} />
+                    前後の空白を削除
+                  </span>
+                  <small className="csv-ws-hint">値の前後にあるスペースを取り除きます。</small>
                 </label>
               </div>
             </fieldset>
@@ -965,6 +977,7 @@ export function CsvViewerWorkspaceBeta() {
         <div className="csv-ws-backdrop" role="presentation">
           <section className="csv-ws-dialog csv-ws-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="csv-ws-output-title">
             <h2 id="csv-ws-output-title">詳細な出力設定</h2>
+            <p className="csv-ws-dialog-lead">保存するときの書き方です。開いているデータの読み方は変わりません。</p>
             <fieldset className="csv-ws-settings">
               <label>
                 出力文字コード
@@ -974,42 +987,52 @@ export function CsvViewerWorkspaceBeta() {
                   if (next === "utf-16le" || next === "utf-16be") setIncludeBom(true);
                 }}>
                   <option value="utf-8">UTF-8</option>
-                  <option value="shift_jis">Shift_JIS</option>
-                  <option value="utf-16le">UTF-16LE</option>
-                  <option value="utf-16be">UTF-16BE</option>
+                  <option value="shift_jis">Shift_JIS（日本語Windows）</option>
+                  <option value="utf-16le">UTF-16LE（リトルエンディアン）</option>
+                  <option value="utf-16be">UTF-16BE（ビッグエンディアン）</option>
                 </select>
+                <small className="csv-ws-hint">保存ファイルの文字の書き方です。</small>
               </label>
               <label>
                 改行コード
                 <select value={lineEnding} onChange={(event) => setLineEnding(event.target.value as CsvLineEnding)}>
-                  <option value={"\r\n"}>CRLF</option>
-                  <option value={"\n"}>LF</option>
+                  <option value={"\r\n"}>CRLF（Windows）</option>
+                  <option value={"\n"}>LF（macOS / Linux）</option>
                   <option value={"\r"}>CR</option>
                 </select>
+                <small className="csv-ws-hint">行の終わりの記号です。ExcelならCRLFが無難です。</small>
               </label>
               <label>
                 囲み文字
                 <select value={outputQuote} onChange={(event) => setOutputQuote(event.target.value as CsvQuote)}>
-                  <option value={'"'}>ダブルクォート</option>
-                  <option value="'">シングルクォート</option>
+                  <option value={'"'}>ダブルクォート（&quot;）</option>
+                  <option value="'">シングルクォート（&apos;）</option>
                   <option value="">なし</option>
                 </select>
+                <small className="csv-ws-hint">値を囲んで書き出す記号です。</small>
               </label>
               <label>
-                Escape
+                囲み文字のエスケープ
                 <select value={outputEscapeMode} onChange={(event) => setOutputEscapeMode(event.target.value as CsvEscapeMode)}>
-                  <option value="double">二重化</option>
-                  <option value="backslash">バックスラッシュ</option>
+                  <option value="double">二重化（&quot;&quot;）</option>
+                  <option value="backslash">バックスラッシュ（\&quot;）</option>
                 </select>
+                <small className="csv-ws-hint">囲み文字そのものを値に書くときの逃げ方です。</small>
               </label>
               <div className="csv-ws-settings-checks">
                 <label className="csv-check">
-                  <input type="checkbox" checked={includeBom} disabled={outputEncoding === "shift_jis"} onChange={(event) => setIncludeBom(event.target.checked)} />
-                  {outputEncoding.startsWith("utf-16") ? "UTF-16 BOM" : "UTF-8 BOM"}
+                  <span className="csv-ws-check-line">
+                    <input type="checkbox" checked={includeBom} disabled={outputEncoding === "shift_jis"} onChange={(event) => setIncludeBom(event.target.checked)} />
+                    {outputEncoding.startsWith("utf-16") ? "UTF-16 BOMを付ける" : "UTF-8 BOMを付ける"}
+                  </span>
+                  <small className="csv-ws-hint">Excelで文字化けしにくくする印です。</small>
                 </label>
                 <label className="csv-check">
-                  <input type="checkbox" checked={quoteAll} disabled={!outputQuote} onChange={(event) => setQuoteAll(event.target.checked)} />
-                  全フィールドを囲む
+                  <span className="csv-ws-check-line">
+                    <input type="checkbox" checked={quoteAll} disabled={!outputQuote} onChange={(event) => setQuoteAll(event.target.checked)} />
+                    すべての値を囲む
+                  </span>
+                  <small className="csv-ws-hint">カンマを含まない値も囲み文字で囲みます。</small>
                 </label>
               </div>
             </fieldset>
