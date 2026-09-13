@@ -2,6 +2,7 @@
 
 import { DataConverterSuite } from "@/components/suites/data-converter";
 import { CsvViewerSuite } from "@/components/suites/csv-viewer";
+import { CsvViewerWorkspaceBeta } from "@/components/suites/csv-viewer-workspace-beta";
 import { CsvViewerLegacySuite } from "@/components/suites/csv-viewer-legacy";
 import {
   EncoderSuite,
@@ -47,7 +48,7 @@ export function ToolSuite({ slug }: { slug: SuiteSlug }) {
     case "csv-viewer":
       return <CsvViewerSuite />;
     case "csv-viewer-beta":
-      return <CsvViewerSuite />;
+      return <CsvViewerWorkspaceBeta />;
     case "csv-viewer-legacy":
       return <CsvViewerLegacySuite />;
     case "encoder":

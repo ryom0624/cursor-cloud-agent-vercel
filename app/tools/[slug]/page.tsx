@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ToolSuite, type SuiteSlug } from "@/components/tool-suite";
 import { tools } from "@/lib/tools";
 
@@ -36,8 +36,8 @@ export async function generateMetadata({
   const { slug } = await params;
   if (slug === "csv-viewer-beta") {
     return {
-      title: "CSV Viewer | DevSmith",
-      description: "CSVを貼り付けるかファイルで開き、文字化け・Excel変換事故・データ破壊を事前に検出します。入力データを外部送信せず、ブラウザ内で処理します。",
+      title: "CSV Viewer Beta | DevSmith",
+      description: "CSVを開いて中身を見る次期Viewerです。入力データを外部送信せず、ブラウザ内で処理します。",
     };
   }
   if (slug === "csv-viewer-legacy") {
@@ -61,6 +61,5 @@ export default async function ToolPage({
 }) {
   const { slug } = await params;
   if (!slugs.includes(slug as SuiteSlug)) notFound();
-  if (slug === "csv-viewer-beta") redirect("/tools/csv-viewer");
   return <ToolSuite slug={slug as SuiteSlug} />;
 }
