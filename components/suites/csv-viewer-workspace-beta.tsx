@@ -907,7 +907,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="utf-16le">UTF-16LE（リトルエンディアン）</option>
                   <option value="utf-16be">UTF-16BE（ビッグエンディアン）</option>
                 </select>
-                <small className="csv-ws-hint">文字の読み方です。文字化けするときだけ指定します。</small>
+                <small className="csv-ws-hint">文字化けするときだけ指定します。</small>
               </label>
               <label>
                 区切り文字
@@ -928,7 +928,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="'">シングルクォート（&apos;）</option>
                   <option value="">なし</option>
                 </select>
-                <small className="csv-ws-hint">値を囲んでいる記号です。通常はダブルクォートです。</small>
+                <small className="csv-ws-hint">値を囲む記号です。普通は " です。</small>
               </label>
               <label>
                 囲み文字のエスケープ
@@ -936,17 +936,17 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="double">二重化（&quot;&quot;）</option>
                   <option value="backslash">バックスラッシュ（\&quot;）</option>
                 </select>
-                <small className="csv-ws-hint">囲み文字そのものを値に書くときの逃げ方です。</small>
+                <small className="csv-ws-hint">値の中の " の書き方です。</small>
               </label>
               <label>
                 ヘッダー行
                 <BoundedNumberInput value={settings.headerRow} min={1} max={100000} onCommit={(value) => setSettings((current) => ({ ...current, headerRow: value, dataStartRow: Math.max(current.dataStartRow, value + 1) }))} />
-                <small className="csv-ws-hint">列名が書いてある行番号です。</small>
+                <small className="csv-ws-hint">列名がある行の番号です。</small>
               </label>
               <label>
                 読込開始行
                 <BoundedNumberInput value={settings.dataStartRow} min={settings.headerRow + 1} max={100001} onCommit={(value) => setSettings((current) => ({ ...current, dataStartRow: value }))} />
-                <small className="csv-ws-hint">データとして読み始める行です。</small>
+                <small className="csv-ws-hint">データとして読む最初の行です。</small>
               </label>
               <div className="csv-ws-settings-checks">
                 <label className="csv-check">
@@ -954,14 +954,14 @@ export function CsvViewerWorkspaceBeta() {
                     <input type="checkbox" checked={settings.skipEmptyLines} onChange={(event) => setSettings((current) => ({ ...current, skipEmptyLines: event.target.checked }))} />
                     空行を読み飛ばす
                   </span>
-                  <small className="csv-ws-hint">何も書いていない行は無視します。</small>
+                  <small className="csv-ws-hint">空の行は無視します。</small>
                 </label>
                 <label className="csv-check">
                   <span className="csv-ws-check-line">
                     <input type="checkbox" checked={settings.trimFields} onChange={(event) => setSettings((current) => ({ ...current, trimFields: event.target.checked }))} />
                     前後の空白を削除
                   </span>
-                  <small className="csv-ws-hint">値の前後にあるスペースを取り除きます。</small>
+                  <small className="csv-ws-hint">前後のスペースを除きます。</small>
                 </label>
               </div>
             </fieldset>
@@ -1017,7 +1017,7 @@ export function CsvViewerWorkspaceBeta() {
                   <option value="double">二重化（&quot;&quot;）</option>
                   <option value="backslash">バックスラッシュ（\&quot;）</option>
                 </select>
-                <small className="csv-ws-hint">囲み文字そのものを値に書くときの逃げ方です。</small>
+                <small className="csv-ws-hint">値の中の " の書き方です。</small>
               </label>
               <div className="csv-ws-settings-checks">
                 <label className="csv-check">
