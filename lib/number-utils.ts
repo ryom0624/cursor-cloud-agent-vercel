@@ -1,5 +1,5 @@
 export type Radix = 2 | 8 | 10 | 16;
-export type BitWidth = 8 | 16 | 32 | 64;
+export type BitWidth = 8 | 16 | 32 | 64 | 128;
 
 const bitMask = (bits: BitWidth) => (BigInt(1) << BigInt(bits)) - BigInt(1);
 
@@ -28,7 +28,15 @@ function parseDigits(input: string, base: Radix): bigint | null {
     if (base === 10 && normalized.startsWith("-")) {
       return BigInt(normalized);
     }
-    return BigInt(base === 16 ? `0x${normalized}` : base === 2 ? `0b${normalized}` : normalized);
+    return BigInt(
+      base === 16
+        ? `0x${normalized}`
+        : base === 2
+          ? `0b${normalized}`
+          : base === 8
+            ? `0o${normalized}`
+            : normalized,
+    );
   } catch {
     return null;
   }
@@ -51,6 +59,7 @@ export function toTwosComplementBits(value: bigint, bits: BitWidth) {
 
 export type RadixConversion = {
   error: string;
+  warning: string;
   signedValue: bigint | null;
   unsignedRaw: bigint | null;
   outputs: Record<Radix, string>;
@@ -58,58 +67,84 @@ export type RadixConversion = {
   hexPadded: string;
 };
 
+function emptyRadix(error: string): RadixConversion {
+  return {
+    error,
+    warning: "",
+    signedValue: null,
+    unsignedRaw: null,
+    outputs: { 2: "", 8: "", 10: "", 16: "" },
+    binaryBits: "",
+    hexPadded: "",
+  };
+}
+
+export function groupFromRight(value: string, size: number) {
+  if (!value) return "";
+  const chunks: string[] = [];
+  for (let index = value.length; index > 0; index -= size) {
+    chunks.unshift(value.slice(Math.max(0, index - size), index));
+  }
+  return chunks.join(" ");
+}
+
 export function convertRadix(
   input: string,
   fromBase: Radix,
   signed: boolean,
   bits: BitWidth,
 ): RadixConversion {
-  const emptyOutputs: Record<Radix, string> = { 2: "", 8: "", 10: "", 16: "" };
   const parsed = parseDigits(input, fromBase);
   if (parsed === null) {
-    return {
-      error: "有効な数値を入力してください。",
-      signedValue: null,
-      unsignedRaw: null,
-      outputs: emptyOutputs,
-      binaryBits: "",
-      hexPadded: "",
-    };
+    return emptyRadix("有効な数値を入力してください。");
   }
 
-  let unsignedRaw: bigint;
-  if (fromBase === 10 && parsed < BigInt(0)) {
-    const width = BigInt(bits);
-    unsignedRaw = (parsed + (BigInt(1) << width)) & bitMask(bits);
-  } else if (parsed < BigInt(0)) {
-    return {
-      error: "2進・8進・16進では符号付きのマイナス表記は使えません。10進で入力してください。",
-      signedValue: null,
-      unsignedRaw: null,
-      outputs: emptyOutputs,
-      binaryBits: "",
-      hexPadded: "",
-    };
-  } else {
-    unsignedRaw = parsed & bitMask(bits);
+  if (parsed < BigInt(0) && fromBase !== 10) {
+    return emptyRadix(
+      "2進・8進・16進では符号付きのマイナス表記は使えません。10進で入力してください。",
+    );
   }
 
-  const signedValue = maskToBitWidth(unsignedRaw, bits, signed);
-  const outputs: Record<Radix, string> = {
-    2: unsignedRaw.toString(2),
-    8: unsignedRaw.toString(8),
-    10: signed ? signedValue.toString(10) : unsignedRaw.toString(10),
-    16: unsignedRaw.toString(16).toUpperCase(),
-  };
+  const width = BigInt(bits);
+  const unsignedMax = bitMask(bits);
+  const signedMin = -(BigInt(1) << (width - BigInt(1)));
+  const signedMax = (BigInt(1) << (width - BigInt(1))) - BigInt(1);
 
+  let magnitude = parsed;
+  let warning = "";
+
+  if (parsed < BigInt(0)) {
+    if (parsed < signedMin) {
+      return emptyRadix(
+        `値が ${bits}bit 符号付きの範囲（${signedMin.toString()}〜${signedMax.toString()}）を超えています。ビット幅を広げてください。`,
+      );
+    }
+    magnitude = parsed + (BigInt(1) << width);
+  } else if (parsed > unsignedMax) {
+    warning = `${bits}bit の範囲を超えているため、ゼロ埋めせず全桁を表示しています。`;
+  }
+
+  const fitsInWidth = magnitude <= unsignedMax;
+  const signedValue = signed && fitsInWidth ? maskToBitWidth(magnitude, bits, true) : parsed;
+  const decimalOutput = signed ? signedValue.toString(10) : parsed.toString(10);
+  const hexBody = magnitude.toString(16).toUpperCase();
   const digitWidth = Math.ceil(bits / 4);
+
   return {
     error: "",
+    warning,
     signedValue,
-    unsignedRaw,
-    outputs,
-    binaryBits: toTwosComplementBits(unsignedRaw, bits),
-    hexPadded: unsignedRaw.toString(16).toUpperCase().padStart(digitWidth, "0"),
+    unsignedRaw: magnitude,
+    outputs: {
+      2: magnitude.toString(2),
+      8: magnitude.toString(8),
+      10: decimalOutput,
+      16: hexBody,
+    },
+    binaryBits: fitsInWidth
+      ? toTwosComplementBits(magnitude, bits)
+      : magnitude.toString(2),
+    hexPadded: fitsInWidth ? hexBody.padStart(digitWidth, "0") : hexBody,
   };
 }
 

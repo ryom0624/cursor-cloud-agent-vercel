@@ -15,6 +15,27 @@ describe("radix conversion", () => {
     expect(result.binaryBits).toBe("11111111");
   });
 
+  it("converts values larger than 255 without truncating", () => {
+    const result = convertRadix("4096", 10, false, 64);
+    expect(result.error).toBe("");
+    expect(result.outputs[10]).toBe("4096");
+    expect(result.outputs[16]).toBe("1000");
+    expect(result.outputs[2]).toBe("1000000000000");
+  });
+
+  it("keeps values that overflow the selected width instead of masking", () => {
+    const result = convertRadix("256", 10, false, 8);
+    expect(result.error).toBe("");
+    expect(result.outputs[10]).toBe("256");
+    expect(result.outputs[16]).toBe("100");
+    expect(result.warning).toContain("8bit");
+  });
+
+  it("parses octal as base 8 rather than decimal", () => {
+    const result = convertRadix("10", 8, false, 64);
+    expect(result.outputs[10]).toBe("8");
+  });
+
   it("interprets signed two's complement", () => {
     const result = convertRadix("-1", 10, true, 8);
     expect(result.signedValue).toBe(BigInt(-1));

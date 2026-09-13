@@ -11,6 +11,7 @@ import {
   evaluateExpression,
   formatFloatBitsGrouped,
   formatUnitNumber,
+  groupFromRight,
   type BitWidth,
   type FloatPrecision,
   type PercentMode,
@@ -29,7 +30,7 @@ const radixTabs: { id: NumberTab; label: string }[] = [
   { id: "percent", label: "パーセント" },
 ];
 
-const bitWidths: BitWidth[] = [8, 16, 32, 64];
+const bitWidths: BitWidth[] = [8, 16, 32, 64, 128];
 const radixBases: Radix[] = [2, 8, 10, 16];
 
 const expressionSamples = [
@@ -42,10 +43,10 @@ const expressionSamples = [
 export function NumberSuite() {
   const [tab, setTab] = useState<NumberTab>("radix");
 
-  const [radixInput, setRadixInput] = useState("255");
+  const [radixInput, setRadixInput] = useState("4096");
   const [fromBase, setFromBase] = useState<Radix>(10);
   const [signed, setSigned] = useState(false);
-  const [bits, setBits] = useState<BitWidth>(8);
+  const [bits, setBits] = useState<BitWidth>(64);
 
   const [unitCategory, setUnitCategory] = useState<UnitCategory>("bytes");
   const [unitValue, setUnitValue] = useState("1048576");
@@ -155,37 +156,44 @@ export function NumberSuite() {
               {radixBases.map((base) => (
                 <div key={base}>
                   <span>{base}進</span>
-                  <strong>{radixResult.outputs[base]}</strong>
+                  <strong>
+                    {base === 2
+                      ? groupFromRight(radixResult.outputs[2], 8)
+                      : base === 16
+                        ? groupFromRight(radixResult.outputs[16], 4)
+                        : radixResult.outputs[base]}
+                  </strong>
                   <CopyButton value={radixResult.outputs[base]} />
                 </div>
               ))}
               <div>
                 <span>2進（{bits}bit）</span>
-                <strong className="bit-string">{radixResult.binaryBits}</strong>
+                <strong className="bit-string">{groupFromRight(radixResult.binaryBits, 8)}</strong>
                 <CopyButton value={radixResult.binaryBits} />
               </div>
               <div>
                 <span>16進（ゼロ埋め）</span>
-                <strong>0x{radixResult.hexPadded}</strong>
+                <strong>0x{groupFromRight(radixResult.hexPadded, 4)}</strong>
                 <CopyButton value={`0x${radixResult.hexPadded}`} />
               </div>
               {signed && radixResult.signedValue !== null ? (
                 <div>
                   <span>符号付き10進</span>
                   <strong>{radixResult.signedValue.toString()}</strong>
+                  <CopyButton value={radixResult.signedValue.toString()} />
                 </div>
               ) : null}
             </div>
           )}
           <ToolStatus error={radixResult.error}>
-            マイナス値は10進入力時に2の補数へ変換します
+            {radixResult.warning || "ビット幅はゼロ埋めと2の補数表示に使います。値そのものは切り詰めません。"}
           </ToolStatus>
         </>
       ) : null}
 
       {tab === "unit" ? (
         <>
-          <div className="segmented-control" aria-label="単位カテゴリ">
+          <div className="segmented-control wrap" aria-label="単位カテゴリ">
             {(Object.keys(unitCategories) as UnitCategory[]).map((category) => (
               <button
                 key={category}
@@ -349,7 +357,7 @@ export function NumberSuite() {
 
       {tab === "percent" ? (
         <>
-          <div className="segmented-control" aria-label="パーセント計算の種類">
+          <div className="segmented-control wrap" aria-label="パーセント計算の種類">
             <button
               type="button"
               className={percentMode === "change" ? "active" : ""}
