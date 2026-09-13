@@ -67,27 +67,11 @@ import {
   type SjisUnmappable,
   type ViewerSettings,
 } from "@/lib/csv-utils-beta";
-
-const csvViewerSample = `id,name,team,status,score,updated_at
-101,DevSmith,Platform,active,98,2026-09-11
-102,API Gateway,Backend,review,87,2026-09-10
-103,Design Tokens,Design System,active,92,2026-09-09
-104,Log Pipeline,SRE,paused,74,2026-09-08
-105,Release Notes,Product,active,89,2026-09-07`;
-
-const csvViewerJapaneseSample = `社員ID,氏名,部署,役職,入社日,備考
-1001,山田 太郎,開発部,エンジニア,2022-04-01,API基盤を担当
-1002,佐藤 花子,デザイン部,デザイナー,2021-10-15,UI・UXを担当
-1003,鈴木 一郎,営業部,マネージャー,2020-01-20,国内営業を担当
-1004,高橋 美咲,品質保証部,QAエンジニア,2023-07-03,自動テストを担当`;
-
-const csvViewerComplexSample = `id,name,note,address,amount,formula
-1,"カンマ,を含む名前","通常の1行メモ","東京都千代田区",1200,"=SUM(1,2)"
-2,改行データ,"1行目
-2行目","大阪府大阪市",0,"+cmd"
-3,引用符,"彼は""確認済み""と回答","福岡県福岡市",00125,""
-4,空データ,,"  前後に空白  ",-450,"@external"
-5,  前後空白あり  ,未引用の空白も保持,  東京都  ,00300,plain`;
+import {
+  csvViewerComplexSample,
+  csvViewerJapaneseSample,
+  csvViewerSample,
+} from "@/lib/csv-viewer-samples";
 
 const csvViewerExcelRiskSample = `id,zip,phone,amount
 1,00123,09012345678,1E10
