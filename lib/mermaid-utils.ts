@@ -156,6 +156,31 @@ export function formatZoomPercent(zoom: number): string {
   return `${Math.round(clampZoom(zoom) * 100)}%`;
 }
 
+export function parseSvgLength(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.endsWith("%")) return null;
+  const parsed = Number.parseFloat(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function diagramSizeFromSvgAttrs(attrs: {
+  width?: string | null;
+  height?: string | null;
+  viewBox?: string | null;
+}): { width: number; height: number } | null {
+  if (attrs.viewBox) {
+    const parts = attrs.viewBox.trim().split(/[\s,]+/).map(Number);
+    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      return { width: parts[2], height: parts[3] };
+    }
+  }
+  const width = parseSvgLength(attrs.width);
+  const height = parseSvgLength(attrs.height);
+  if (width && height) return { width, height };
+  return null;
+}
+
 export function mermaidErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     const line = error.message.split("\n").find((value) => value.trim());

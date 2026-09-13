@@ -10,6 +10,8 @@ import {
   MAX_MERMAID_ZOOM,
   mermaidErrorMessage,
   MIN_MERMAID_ZOOM,
+  parseSvgLength,
+  diagramSizeFromSvgAttrs,
   zoomAroundPoint,
 } from "./mermaid-utils";
 
@@ -55,6 +57,12 @@ describe("mermaid viewport math", () => {
       pan: { x: -100, y: -40 },
     });
     expect(formatZoomPercent(1.42)).toBe("142%");
+    expect(parseSvgLength("100%")).toBeNull();
+    expect(parseSvgLength("1234.5px")).toBe(1234.5);
+    expect(diagramSizeFromSvgAttrs({ width: "100%", height: "100%", viewBox: "0 0 800 420" })).toEqual({
+      width: 800,
+      height: 420,
+    });
   });
 
   it("fits content inside the viewport with padding", () => {

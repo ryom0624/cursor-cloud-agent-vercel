@@ -6117,6 +6117,16 @@ small {
   flex-direction: column;
 }
 
+.mermaid-viewer header {
+  height: auto;
+  flex-wrap: wrap;
+}
+
+.mermaid-viewer header > div {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .mermaid-editors .suite-editor textarea {
   height: 390px;
   min-height: 220px;
@@ -6170,7 +6180,8 @@ small {
 
 .mermaid-stage svg {
   display: block;
-  max-width: none;
+  max-width: none !important;
+  height: auto;
 }
 
 .mermaid-empty,

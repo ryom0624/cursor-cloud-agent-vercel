@@ -27,6 +27,7 @@ import {
   fitTransform,
   formatZoomPercent,
   mermaidErrorMessage,
+  diagramSizeFromSvgAttrs,
   zoomAroundPoint,
   type Point,
 } from "@/lib/mermaid-utils";
@@ -116,6 +117,33 @@ function pointerCenter(a: Point, b: Point): Point {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+function prepareRenderedSvg(svg: SVGSVGElement) {
+  const fromBox = (() => {
+    try {
+      const box = svg.getBBox();
+      if (box.width > 0 && box.height > 0) return { width: box.width, height: box.height };
+    } catch {
+      return null;
+    }
+    return null;
+  })();
+  const size =
+    diagramSizeFromSvgAttrs({
+      width: svg.getAttribute("width"),
+      height: svg.getAttribute("height"),
+      viewBox: svg.getAttribute("viewBox"),
+    }) ??
+    fromBox ??
+    { width: 640, height: 360 };
+  svg.style.maxWidth = "none";
+  svg.style.maxHeight = "none";
+  svg.setAttribute("width", String(size.width));
+  svg.setAttribute("height", String(size.height));
+  svg.style.width = `${size.width}px`;
+  svg.style.height = `${size.height}px`;
+  return size;
+}
+
 export function MermaidViewerSuite() {
   const [input, setInput] = useState(mermaidViewerDefaultSample.source);
   const [activeSampleId, setActiveSampleId] = useState(mermaidViewerDefaultSample.id);
@@ -166,15 +194,9 @@ export function MermaidViewerSuite() {
       applyTransform(1, { x: 24, y: 24 });
       return;
     }
-    let width = Number.parseFloat(svg.getAttribute("width") ?? "");
-    let height = Number.parseFloat(svg.getAttribute("height") ?? "");
-    if (!Number.isFinite(width) || !Number.isFinite(height)) {
-      const box = svg.getBBox();
-      width = box.width;
-      height = box.height;
-    }
+    const size = prepareRenderedSvg(svg);
     const bounds = viewport.getBoundingClientRect();
-    const fitted = fitTransform(width, height, bounds.width, bounds.height);
+    const fitted = fitTransform(size.width, size.height, bounds.width, bounds.height);
     applyTransform(fitted.zoom, fitted.pan);
   }, [applyTransform]);
 
@@ -216,11 +238,15 @@ export function MermaidViewerSuite() {
         const { svg } = await mermaid.render(`devsmithMermaid${mermaidRenderId}`, source);
         if (cancelled) return;
         if (svgHostRef.current) svgHostRef.current.innerHTML = svg;
+        const rendered = svgHostRef.current?.querySelector("svg");
+        if (rendered) prepareRenderedSvg(rendered);
         setSvgMarkup(svg);
         setError("");
         if (fitOnRenderRef.current) {
           fitOnRenderRef.current = false;
-          window.requestAnimationFrame(() => fitToView());
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => fitToView());
+          });
         }
       } catch (caught) {
         if (cancelled) return;
@@ -510,13 +536,6 @@ export function MermaidViewerSuite() {
           onFiles(event.dataTransfer.files);
         }}
       >
-        {fullscreen ? (
-          <button type="button" className="fullscreen-exit" onClick={exitOverlay}>
-            <Minimize2 size={15} />
-            縮小 <kbd>Esc</kbd>
-          </button>
-        ) : null}
-
         <div className="suite-toolbar mermaid-toolbar">
           <div>
             <label className="editor-file-button">
