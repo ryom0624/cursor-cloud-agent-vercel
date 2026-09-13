@@ -3052,6 +3052,17 @@ kbd {
   white-space: pre-wrap;
 }
 
+.json-grid-scroll td.wrap-text {
+  height: auto;
+  min-height: 34px;
+  overflow: hidden;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .json-grid-scroll .row-number {
   width: 58px;
   min-width: 58px;
