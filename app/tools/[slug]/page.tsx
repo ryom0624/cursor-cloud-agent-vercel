@@ -9,6 +9,7 @@ const slugs: SuiteSlug[] = [
   "csv-viewer-beta",
   "csv-viewer-legacy",
   "csv-viewer-legacy2",
+  "mermaid",
   "encoder",
   "jwt",
   "hash",
