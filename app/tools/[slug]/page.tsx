@@ -14,6 +14,7 @@ const slugs: SuiteSlug[] = [
   "hash",
   "id-generator",
   "password",
+  "qr",
   "regex",
   "diff",
   "text",

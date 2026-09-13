@@ -36,6 +36,7 @@ const wideWorkspaceSlugs = new Set([
   "encoder",
   "jwt",
   "hash",
+  "qr",
   "regex",
   "diff",
   "text",
