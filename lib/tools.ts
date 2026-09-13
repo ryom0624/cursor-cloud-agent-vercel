@@ -168,6 +168,9 @@ export const tools: Tool[] = [
     href: "/tools/qr",
     accent: "墨",
     index: "17",
+    featured: true,
+  },
+];
 
 export const toolCount = tools.length;
 
