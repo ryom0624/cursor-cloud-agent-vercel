@@ -29,6 +29,7 @@ import {
   defaultViewerSettings,
   delimiterLabel,
   delimiterToken,
+  describeExcelRisks,
   diagnoseExcelRisks,
   encodeCsvText,
   excelRiskExplanation,
@@ -1117,14 +1118,6 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             </div>
             <small>Grid操作 · Raw CSV確認 · 全件保存と表示中エクスポートは別ボタン</small>
           </header>
-          <CsvExcelRiskNotice
-            hits={excelRisks}
-            columnLabels={columnLabels}
-            onSaveXlsx={() => {
-              const full = recordsForFullExport();
-              void downloadXlsxSafe(full.records, full.columns);
-            }}
-          />
           <DataGrid
           records={records}
           editable
@@ -1235,22 +1228,37 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
       )}
 
       <section
-        className={`csv-validation ${validationTone(validationSummary)}`}
+        className={`csv-validation ${
+          validationTone(validationSummary) === "has-error"
+            ? "has-error"
+            : excelRisks.length || validationTone(validationSummary) === "has-warn"
+              ? "has-warn"
+              : "all-ok"
+        }`}
         aria-labelledby="csv-validation-title-beta"
       >
         <header>
           <span id="csv-validation-title-beta">
-            {validationTone(validationSummary) === "all-ok" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+            {validationTone(validationSummary) === "has-error" || excelRisks.length
+              ? <AlertTriangle size={16} />
+              : <CheckCircle2 size={16} />}
             CSV検証
           </span>
           <strong>
             {validationTone(validationSummary) === "has-error"
               ? "壊れている箇所があります"
-              : validationTone(validationSummary) === "has-warn"
-                ? `${uniqueWarnings.length}件の注意`
-                : "問題は見つかりませんでした"}
+              : describeExcelRisks(excelRisks)
+                || (uniqueWarnings.length ? `${uniqueWarnings.length}件の注意` : "問題は見つかりませんでした")}
           </strong>
         </header>
+        <CsvExcelRiskNotice
+          hits={excelRisks}
+          columnLabels={columnLabels}
+          onSaveXlsx={() => {
+            const full = recordsForFullExport();
+            void downloadXlsxSafe(full.records, full.columns);
+          }}
+        />
       </section>
 
       <section className="csv-guide" aria-labelledby="csv-guide-title-beta">

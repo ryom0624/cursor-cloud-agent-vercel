@@ -3657,10 +3657,10 @@ kbd {
   background: #f7f1e4;
 }
 
-.csv-viewer-output .csv-excel-risk-output {
-  margin: 0 12px 12px;
-  padding: 12px 14px;
-  border: 1px solid #c9a15b;
+.csv-validation .csv-excel-risk-output {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid #c9a15b;
 }
 
 .csv-excel-risk-kinds {
