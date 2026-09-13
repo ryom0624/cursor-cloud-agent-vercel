@@ -21,8 +21,9 @@ import {
   toolCount,
   tools,
 } from "@/lib/tools";
+import { looksLikeMermaid } from "@/lib/mermaid-utils";
 
-type PasteType = "json" | "csv" | "tsv" | "jwt" | "url" | "timestamp" | "base64" | "text";
+type PasteType = "json" | "csv" | "tsv" | "jwt" | "url" | "timestamp" | "base64" | "mermaid" | "text";
 
 type PasteDetection = {
   type: PasteType;
@@ -34,6 +35,7 @@ type PasteDetection = {
 
 const detections: Record<PasteType, Omit<PasteDetection, "type" | "reason">> = {
   json: { label: "JSON", tool: "JSON Tools", href: "/tools/json" },
+  mermaid: { label: "MERMAID", tool: "Mermaid Viewer", href: "/tools/mermaid" },
   csv: { label: "CSV", tool: "CSV Viewer", href: "/tools/csv-viewer" },
   tsv: { label: "TSV", tool: "CSV Viewer", href: "/tools/csv-viewer" },
   jwt: { label: "JWT", tool: "JWT Decoder", href: "/tools/jwt" },
@@ -94,6 +96,10 @@ function detectPaste(value: string): PasteDetection | null {
     return result("json", "JSON.parseで構文を正しく解析できました。");
   } catch {
     // Continue with the remaining local checks.
+  }
+
+  if (looksLikeMermaid(input)) {
+    return result("mermaid", "Mermaid記法のダイアグラム定義を検出しました。");
   }
 
   const lines = input.split(/\r?\n/).filter((line) => line.trim());
@@ -232,7 +238,7 @@ export function HomeMock() {
         <textarea
           value={pasteValue}
           onChange={(event) => setPasteValue(event.target.value)}
-          placeholder="JSON、CSV / TSV、JWT、URL、Unix timestamp、Base64、テキストを貼り付け"
+          placeholder="JSON、CSV / TSV、Mermaid、JWT、URL、Unix timestamp、Base64、テキストを貼り付け"
           aria-label="判定するデータを貼り付け"
           spellCheck={false}
         />

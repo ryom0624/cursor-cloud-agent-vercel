@@ -39,13 +39,22 @@ export const tools: Tool[] = [
     index: "03",
   },
   {
+    name: "Mermaid Viewer",
+    description: "Mermaid記法のプレビュー、拡大縮小、全画面確認",
+    category: "データ",
+    functions: 1,
+    href: "/tools/mermaid",
+    accent: "藍",
+    index: "04",
+  },
+  {
     name: "Encoder / Decoder",
     description: "Base64、URL、HTML Entity",
     category: "エンコード",
     functions: 3,
     href: "/tools/encoder",
     accent: "苔",
-    index: "04",
+    index: "05",
     featured: true,
   },
   {
@@ -55,7 +64,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/jwt",
     accent: "藤",
-    index: "05",
+    index: "06",
   },
   {
     name: "Hash Tools",
@@ -64,7 +73,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/hash",
     accent: "墨",
-    index: "06",
+    index: "07",
   },
   {
     name: "ID Generator",
@@ -73,7 +82,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/id-generator",
     accent: "藍",
-    index: "07",
+    index: "08",
     featured: true,
   },
   {
@@ -83,7 +92,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/password",
     accent: "朱",
-    index: "08",
+    index: "09",
   },
   {
     name: "Regex Tester",
@@ -92,7 +101,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/regex",
     accent: "苔",
-    index: "09",
+    index: "10",
     featured: true,
   },
   {
@@ -102,7 +111,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/diff",
     accent: "藤",
-    index: "10",
+    index: "11",
   },
   {
     name: "Text Tools",
@@ -111,7 +120,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/text",
     accent: "墨",
-    index: "11",
+    index: "12",
   },
   {
     name: "Lorem Ipsum",
@@ -120,7 +129,7 @@ export const tools: Tool[] = [
     functions: 1,
     href: "/tools/lorem",
     accent: "藍",
-    index: "12",
+    index: "13",
   },
   {
     name: "Date & Time",
@@ -129,7 +138,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/date-time",
     accent: "朱",
-    index: "13",
+    index: "14",
     featured: true,
   },
   {
@@ -139,7 +148,7 @@ export const tools: Tool[] = [
     functions: 2,
     href: "/tools/cron",
     accent: "苔",
-    index: "14",
+    index: "15",
   },
   {
     name: "Number Tools",
@@ -148,7 +157,7 @@ export const tools: Tool[] = [
     functions: 5,
     href: "/tools/number",
     accent: "藤",
-    index: "15",
+    index: "16",
     featured: true,
   },
 ];

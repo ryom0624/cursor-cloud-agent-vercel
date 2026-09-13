@@ -4383,7 +4383,8 @@ kbd {
 }
 
 .text-workspace.fullscreen,
-.diff-workspace.fullscreen {
+.diff-workspace.fullscreen,
+.mermaid-workspace.fullscreen {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -4865,7 +4866,8 @@ kbd {
 
 @media (max-width: 760px) {
   .text-workspace.fullscreen,
-  .diff-workspace.fullscreen {
+  .diff-workspace.fullscreen,
+  .mermaid-workspace.fullscreen {
     padding: 8px;
   }
 
@@ -6074,5 +6076,214 @@ small {
   .csv-ws-stage .json-grid-panel,
   .csv-ws-raw {
     height: 70vh;
+  }
+}
+
+.mermaid-samples button.active {
+  color: var(--white);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.mermaid-toolbar {
+  justify-content: space-between;
+}
+
+.mermaid-toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.mermaid-toolbar .clear-button {
+  color: var(--rust-dark);
+  background: transparent;
+  border: 0;
+}
+
+.mermaid-editors {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(220px, 42fr) 7px minmax(0, 58fr);
+  border: 1px solid var(--ink);
+  background: var(--white);
+}
+
+.mermaid-editors .suite-editor {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mermaid-editors .suite-editor textarea {
+  height: 390px;
+  min-height: 220px;
+  flex: 1;
+  resize: none;
+}
+
+.mermaid-editors.pane-editor {
+  grid-template-columns: 1fr;
+}
+
+.mermaid-editors.pane-editor .editor-resizer,
+.mermaid-editors.pane-editor .mermaid-viewer {
+  display: none;
+}
+
+.mermaid-editors.pane-viewer {
+  grid-template-columns: 1fr;
+}
+
+.mermaid-editors.pane-viewer .editor-resizer,
+.mermaid-editors.pane-viewer .input-editor {
+  display: none;
+}
+
+.mermaid-viewport {
+  position: relative;
+  height: 390px;
+  min-height: 220px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    linear-gradient(rgba(28, 33, 30, 0.035) 1px, transparent 1px),
+    var(--white);
+  background-size: 100% 24px;
+  user-select: none;
+}
+
+.mermaid-viewport.is-panning {
+  cursor: grabbing;
+}
+
+.mermaid-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.mermaid-stage svg {
+  display: block;
+  max-width: none;
+}
+
+.mermaid-empty,
+.mermaid-error {
+  position: absolute;
+  z-index: 1;
+  inset: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px;
+  pointer-events: none;
+  border: 1px solid var(--line-dark);
+  background: rgba(252, 251, 247, 0.92);
+}
+
+.mermaid-error {
+  border-color: var(--rust);
+  background: rgba(242, 223, 216, 0.94);
+  color: var(--rust-dark);
+}
+
+.mermaid-empty strong,
+.mermaid-error strong {
+  font-size: 12px;
+}
+
+.mermaid-empty span,
+.mermaid-error span {
+  color: var(--ink-soft);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.mermaid-error span {
+  color: var(--rust-dark);
+  font-family: var(--mono);
+}
+
+.mermaid-drop-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  pointer-events: none;
+  border: 1px dashed var(--ink);
+  background: rgba(245, 244, 239, 0.92);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mermaid-workspace.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: var(--paper);
+}
+
+.mermaid-workspace.fullscreen .mermaid-toolbar {
+  flex: 0 0 auto;
+}
+
+.mermaid-workspace.fullscreen .mermaid-editors {
+  min-height: 0;
+  flex: 1;
+}
+
+.mermaid-workspace.fullscreen .suite-editor textarea,
+.mermaid-workspace.fullscreen .mermaid-viewport {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.mermaid-workspace.fullscreen .tool-status {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 760px) {
+  .mermaid-editors {
+    grid-template-columns: 1fr;
+  }
+
+  .mermaid-editors .editor-resizer {
+    display: none;
+  }
+
+  .mermaid-editors .mermaid-viewer {
+    border-top: 1px solid var(--ink);
+  }
+
+  .mermaid-editors .suite-editor textarea,
+  .mermaid-viewport {
+    height: 260px;
+  }
+
+  .mermaid-workspace.fullscreen {
+    padding: 8px;
+  }
+
+  .mermaid-workspace.fullscreen .mermaid-editors {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .mermaid-viewer header > div {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }

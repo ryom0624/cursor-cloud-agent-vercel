@@ -17,6 +17,7 @@ import {
   RegexSuite,
   TextSuite,
 } from "@/components/suites/text-suites";
+import { MermaidViewerSuite } from "@/components/suites/mermaid-viewer";
 import { NumberSuite } from "@/components/suites/number-suites";
 import { CronSuite, DateTimeSuite } from "@/components/suites/time-suites";
 
@@ -26,6 +27,7 @@ export const suiteSlugs = [
   "csv-viewer-beta",
   "csv-viewer-legacy",
   "csv-viewer-legacy2",
+  "mermaid",
   "encoder",
   "jwt",
   "hash",
@@ -54,6 +56,8 @@ export function ToolSuite({ slug }: { slug: SuiteSlug }) {
       return <CsvViewerLegacySuite />;
     case "csv-viewer-legacy2":
       return <CsvViewerLegacy2Suite />;
+    case "mermaid":
+      return <MermaidViewerSuite />;
     case "encoder":
       return <EncoderSuite />;
     case "jwt":
