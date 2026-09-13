@@ -30,6 +30,7 @@ import {
   isLongIntegerRisk,
   isScientificRisk,
   describeExcelRisks,
+  excelRiskExplanation,
   locateReplacementCharacters,
   parseCsvTable,
   rowsToCsv,
@@ -262,7 +263,9 @@ describe("P0 Excel conversion risks", () => {
     expect(hits.filter((hit) => hit.kind === "longInteger")).toHaveLength(1);
     expect(hits.filter((hit) => hit.kind === "dateLike")).toHaveLength(1);
     expect(hits.filter((hit) => hit.kind === "scientific")).toHaveLength(1);
-    expect(describeExcelRisks(hits)).toBe("先頭ゼロ 1件 · 16桁以上の整数 1件 · 日付変換候補 1件 · 指数表記 1件");
+    expect(describeExcelRisks(hits)).toBe("先頭ゼロ（0落ち） 1件 · 指数表記 1件 · 16桁以上の整数 1件 · 日付変換候補 1件");
+    expect(excelRiskExplanation("leadingZero")).toMatchObject({ before: "00123", after: "123" });
+    expect(excelRiskExplanation("scientific").risk).toContain("数値として解釈");
   });
 });
 

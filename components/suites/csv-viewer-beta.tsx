@@ -32,7 +32,8 @@ import {
   describeExcelRisks,
   diagnoseExcelRisks,
   encodeCsvText,
-  excelRiskLabel,
+  excelRiskExplanation,
+  excelRiskKindOrder,
   encodingLabel,
   excelCellToText,
   excelOrientedCsvPreset,
@@ -137,29 +138,20 @@ function validationTone(items: ValidationItem[]) {
   return "all-ok";
 }
 
-const VALIDATION_DETAIL_LIMIT = 8;
-
 function CsvValidationSummary({
   items,
   warnings,
-  excelRisks,
-  columnLabels,
   showDetails,
   onToggleDetails,
   showHeading = true,
 }: {
   items: ValidationItem[];
   warnings: string[];
-  excelRisks: ExcelRiskHit[];
-  columnLabels: Record<string, string>;
   showDetails: boolean;
   onToggleDetails: () => void;
   showHeading?: boolean;
 }) {
-  const examples = excelRisks.slice(0, VALIDATION_DETAIL_LIMIT);
-  const hiddenCount = Math.max(0, excelRisks.length - examples.length);
-  const detailCount = warnings.length + excelRisks.length;
-  const hasDetails = detailCount > 0;
+  const hasDetails = warnings.length > 0;
 
   return (
     <div className={`csv-validation-summary ${validationTone(items)}`}>
@@ -175,32 +167,71 @@ function CsvValidationSummary({
       </ul>
       {hasDetails ? (
         <button type="button" onClick={onToggleDetails} aria-expanded={showDetails}>
-          {showDetails ? "内訳を閉じる" : `内訳を見る（${detailCount}件）`}
+          {showDetails ? "内訳を閉じる" : `内訳を見る（${warnings.length}件）`}
         </button>
       ) : null}
       {showDetails && hasDetails ? (
         <div className="csv-validation-details">
-          {warnings.length > 0 && (
-            <ul>
-              {warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          )}
-          {examples.length > 0 && (
-            <ul>
-              {examples.map((hit) => (
-                <li key={`${hit.kind}-${hit.row}-${hit.column}`}>
-                  {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}: {excelRiskLabel(hit.kind)}{" "}
-                  <code>{hit.value}</code>
-                </li>
-              ))}
-            </ul>
-          )}
-          {hiddenCount > 0 && <small>ほか{hiddenCount}件</small>}
+          <ul>
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </div>
+  );
+}
+
+const EXCEL_RISK_EXAMPLE_LIMIT = 3;
+
+function CsvExcelRiskNotice({
+  hits,
+  columnLabels,
+  onSaveXlsx,
+}: {
+  hits: ExcelRiskHit[];
+  columnLabels: Record<string, string>;
+  onSaveXlsx: () => void;
+}) {
+  const summary = summarizeExcelRisks(hits);
+  if (!summary.kinds) return null;
+  const kinds = excelRiskKindOrder.filter((kind) => summary[kind] > 0);
+
+  return (
+    <aside className="csv-excel-risk csv-excel-risk-output" role="status">
+      <strong>⚠ 表計算ソフトで値が変わる可能性があります</strong>
+      <p>
+        いまの表の値は壊れていません。CSV や Excel向けCSV で保存して Excel / Googleスプレッドシートで開くと、次の変換が起きることがあります。文字のまま残すなら XLSX を使ってください。
+      </p>
+      <div className="csv-excel-risk-kinds">
+        {kinds.map((kind) => {
+          const meta = excelRiskExplanation(kind);
+          const examples = hits.filter((hit) => hit.kind === kind).slice(0, EXCEL_RISK_EXAMPLE_LIMIT);
+          const hidden = summary[kind] - examples.length;
+          return (
+            <article key={kind}>
+              <h3>{meta.title} · {summary[kind]}件</h3>
+              <p>{meta.risk}</p>
+              <p className="csv-excel-risk-transform">
+                例: <code>{meta.before}</code> → <code>{meta.after}</code>
+              </p>
+              <ul>
+                {examples.map((hit) => (
+                  <li key={`${hit.kind}-${hit.row}-${hit.column}`}>
+                    {hit.row}行 / {columnLabels[hit.columnKey] || hit.columnKey}
+                    {" "}
+                    <code>{hit.value}</code>
+                  </li>
+                ))}
+              </ul>
+              {hidden > 0 && <small>ほか{hidden}件</small>}
+            </article>
+          );
+        })}
+      </div>
+      <button type="button" onClick={onSaveXlsx}>XLSXで保存（文字列として保持）</button>
+    </aside>
   );
 }
 
@@ -273,7 +304,6 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
     || outputEscapeMode !== "double";
   const looksMojibake = /[繧縺繝]/.test(input);
   const excelRisks = useMemo(() => diagnoseExcelRisks(records, columns), [columns, records]);
-  const excelRiskSummary = summarizeExcelRisks(excelRisks);
   const injectionCount = countCsvInjectionValues(records, columns);
   const replacementHits = useMemo(() => locateReplacementCharacters(records, columns), [columns, records]);
   const sjisUnmappable = useMemo(() => findSjisUnmappableInRecords(records, columns), [columns, records]);
@@ -639,7 +669,6 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
   const validationSummary = [
     { ok: structureIssues.length === 0, label: "CSV構造", detail: structureIssues.length ? `${structureIssues.length}件` : "" },
     { ok: encodingIssues.length === 0, label: "文字コード", detail: encodingIssues.length ? `${encodingIssues.length}件` : "" },
-    { ok: excelRiskSummary.kinds === 0, label: "Excel変換リスク", detail: describeExcelRisks(excelRisks), warn: excelRiskSummary.kinds > 0 },
     { ok: sjisUnmappable.length === 0, label: "Shift_JIS変換不可", detail: sjisUnmappable.length ? `${sjisUnmappable.length}セル` : "", warn: sjisUnmappable.length > 0 },
     { ok: injectionCount === 0, label: "CSV Injection", detail: injectionCount ? `${injectionCount}件` : "", warn: injectionCount > 0 },
   ];
@@ -870,8 +899,6 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             <CsvValidationSummary
               items={validationSummary}
               warnings={uniqueWarnings}
-              excelRisks={excelRisks}
-              columnLabels={columnLabels}
               showDetails={showValidationDetails}
               onToggleDetails={() => setShowValidationDetails((current) => !current)}
             />
@@ -908,16 +935,6 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
                 void downloadXlsxSafe(full.records, full.columns);
               }}>XLSX</button>
             </div>
-            {excelRiskSummary.kinds > 0 && (
-              <div className="csv-excel-risk">
-                <strong>⚠ Excelで値が変わる可能性があります</strong>
-                <p>{describeExcelRisks(excelRisks)}を検出しました。表計算ソフトが数値や日付として読むと、値が変わることがあります。</p>
-                <button type="button" onClick={() => {
-                  const full = recordsForFullExport();
-                  void downloadXlsxSafe(full.records, full.columns);
-                }}>XLSXで保存</button>
-              </div>
-            )}
           </section>
         ) : (
         <details open className="csv-settings-group">
@@ -1019,8 +1036,6 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
             <CsvValidationSummary
               items={validationSummary}
               warnings={uniqueWarnings}
-              excelRisks={excelRisks}
-              columnLabels={columnLabels}
               showDetails={showValidationDetails}
               onToggleDetails={() => setShowValidationDetails((current) => !current)}
             />
@@ -1213,22 +1228,37 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
       )}
 
       <section
-        className={`csv-validation ${validationTone(validationSummary)}`}
+        className={`csv-validation ${
+          validationTone(validationSummary) === "has-error"
+            ? "has-error"
+            : excelRisks.length || validationTone(validationSummary) === "has-warn"
+              ? "has-warn"
+              : "all-ok"
+        }`}
         aria-labelledby="csv-validation-title-beta"
       >
         <header>
           <span id="csv-validation-title-beta">
-            {validationTone(validationSummary) === "all-ok" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+            {validationTone(validationSummary) === "has-error" || excelRisks.length
+              ? <AlertTriangle size={16} />
+              : <CheckCircle2 size={16} />}
             CSV検証
           </span>
           <strong>
             {validationTone(validationSummary) === "has-error"
               ? "壊れている箇所があります"
-              : validationTone(validationSummary) === "has-warn"
-                ? describeExcelRisks(excelRisks) || `${uniqueWarnings.length}件の注意`
-                : "問題は見つかりませんでした"}
+              : describeExcelRisks(excelRisks)
+                || (uniqueWarnings.length ? `${uniqueWarnings.length}件の注意` : "問題は見つかりませんでした")}
           </strong>
         </header>
+        <CsvExcelRiskNotice
+          hits={excelRisks}
+          columnLabels={columnLabels}
+          onSaveXlsx={() => {
+            const full = recordsForFullExport();
+            void downloadXlsxSafe(full.records, full.columns);
+          }}
+        />
       </section>
 
       <section className="csv-guide" aria-labelledby="csv-guide-title-beta">
@@ -1256,7 +1286,7 @@ export function CsvViewerBetaSuite({ mode = "beta" }: { mode?: ViewerMode } = {}
           <article>
             <span>04</span>
             <h3>Excel向けCSVとXLSX</h3>
-            <p>Excel向けCSVはUTF-8 BOMあり・CRLFです。文字化け対策であり、先頭ゼロや日付変換は防げません。リスクがある場合はXLSX（文字列保持）を推奨します。XLSX入力は.xlsxのみ。複数シートは選択必須です。</p>
+            <p>Excel向けCSVはUTF-8 BOMあり・CRLFです。文字化け対策であり、先頭ゼロの0落ち・指数表記・長い整数の丸め・日付変換は防げません。OUTPUTに該当があれば、文字列のまま残す XLSX を推奨します。XLSX入力は.xlsxのみ。複数シートは選択必須です。</p>
           </article>
           <article>
             <span>05</span>
