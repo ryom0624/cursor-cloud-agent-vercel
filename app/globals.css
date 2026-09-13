@@ -5343,15 +5343,27 @@ small {
   }
 }
 
+
 .number-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 16px;
-  align-items: flex-end;
-  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 128px 128px auto;
+  gap: 10px 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.number-controls.unit-fields,
+.number-controls.float-fields {
+  grid-template-columns: minmax(160px, 1fr) 168px 168px;
+}
+
+.number-controls.percent-inputs {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 14px;
 }
 
 .number-controls .control-label {
+  display: flex;
   min-width: 0;
   flex-direction: column;
   align-items: stretch;
@@ -5360,7 +5372,7 @@ small {
 }
 
 .number-controls .control-label.grow {
-  flex: 1 1 240px;
+  flex: none;
 }
 
 .number-controls .control-label input,
@@ -5374,7 +5386,7 @@ small {
   align-items: center;
   gap: 8px;
   min-height: 34px;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   font-size: 12px;
   white-space: nowrap;
 }
@@ -5385,12 +5397,61 @@ small {
   height: 16px;
 }
 
+.number-result {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  color: var(--white);
+  border: 1px solid var(--ink);
+  background: var(--ink);
+}
+
+.number-result span {
+  color: #b7bdb9;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.number-result strong {
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.number-result button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--white);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.number-empty {
+  min-height: 72px;
+  margin-bottom: 12px;
+}
+
 .number-radix-results > div {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px 16px;
-  min-height: 58px;
+  min-height: 48px;
 }
 
 .number-radix-results > div button {
@@ -5416,7 +5477,6 @@ small {
 }
 
 .unit-conversion-grid {
-  margin-top: 18px;
   border: 1px solid var(--ink);
   background: var(--white);
   display: grid;
@@ -5424,14 +5484,18 @@ small {
 }
 
 .unit-conversion-grid > div {
-  min-height: 52px;
+  min-height: 44px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--line-dark);
   border-right: 1px solid var(--line-dark);
+}
+
+.unit-conversion-grid > div.is-target {
+  background: var(--paper-deep);
 }
 
 .unit-conversion-grid > div:nth-child(2n) {
@@ -5451,7 +5515,6 @@ small {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .unit-conversion-grid strong {
@@ -5465,7 +5528,7 @@ small {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 18px;
+  margin: 0 0 12px;
 }
 
 .expression-samples button {
@@ -5482,15 +5545,18 @@ small {
   border-color: var(--ink);
 }
 
-.percent-inputs {
-  margin-top: 14px;
-}
-
 .suite-content .segmented-control.wrap {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
+  .number-controls,
+  .number-controls.unit-fields,
+  .number-controls.float-fields,
+  .number-controls.percent-inputs {
+    grid-template-columns: 1fr;
+  }
+
   .unit-conversion-grid {
     grid-template-columns: 1fr;
   }
@@ -5503,13 +5569,15 @@ small {
     border-bottom: 1px solid var(--line-dark);
   }
 
-  .number-radix-results > div {
+  .number-radix-results > div,
+  .number-result {
     grid-template-columns: 1fr;
     padding-top: 10px;
     padding-bottom: 10px;
   }
 
-  .number-radix-results > div button {
+  .number-radix-results > div button,
+  .number-result button {
     justify-self: start;
   }
 }

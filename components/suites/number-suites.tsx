@@ -107,7 +107,7 @@ export function NumberSuite() {
     >
       {tab === "radix" ? (
         <>
-          <div className="number-controls">
+          <div className="number-controls radix-fields">
             <label className="control-label grow">
               入力（{fromBase}進）
               <input
@@ -150,7 +150,7 @@ export function NumberSuite() {
             </label>
           </div>
           {radixResult.error ? (
-            <div className="empty-result">{radixResult.error}</div>
+            <div className="empty-result number-empty">{radixResult.error}</div>
           ) : (
             <div className="date-results number-radix-results">
               {radixBases.map((base) => (
@@ -205,7 +205,7 @@ export function NumberSuite() {
               </button>
             ))}
           </div>
-          <div className="number-controls">
+          <div className="number-controls unit-fields">
             <label className="control-label grow">
               値
               <input
@@ -233,11 +233,10 @@ export function NumberSuite() {
             </label>
           </div>
           {unitResult.error ? (
-            <div className="empty-result">{unitResult.error}</div>
+            <div className="empty-result number-empty">{unitResult.error}</div>
           ) : (
-            <div className="timestamp-output">
+            <div className="number-result">
               <span>
-                {unitCategories[unitCategory].label} ·{" "}
                 {unitUnits.find((unit) => unit.id === unitTo)?.label}
               </span>
               <strong>{formatUnitNumber(unitResult.result ?? 0)}</strong>
@@ -253,7 +252,10 @@ export function NumberSuite() {
                 unitCategory,
               );
               return (
-                <div key={unit.id}>
+                <div
+                  key={unit.id}
+                  className={unit.id === unitTo ? "is-target" : undefined}
+                >
                   <span>{unit.label}</span>
                   <strong>{formatUnitNumber(converted.result ?? 0)}</strong>
                 </div>
@@ -287,17 +289,17 @@ export function NumberSuite() {
             ))}
           </div>
           {expressionResult.error ? (
-            <div className="empty-result">{expressionResult.error}</div>
+            <div className="empty-result number-empty">{expressionResult.error}</div>
           ) : expressionResult.value ? (
-            <div className="timestamp-output">
+            <div className="number-result">
               <span>
-                RESULT · {expressionResult.kind === "bigint" ? "BIGINT" : "NUMBER"}
+                {expressionResult.kind === "bigint" ? "BIGINT" : "RESULT"}
               </span>
               <strong>{expressionResult.value}</strong>
               <CopyButton value={expressionResult.value} />
             </div>
           ) : (
-            <div className="empty-result">式を入力してください</div>
+            <div className="empty-result number-empty">式を入力してください</div>
           )}
           <ToolStatus>
             + − × ÷ % ^、0x / 0b リテラル、sqrt / pow / min / max などに対応
@@ -307,7 +309,7 @@ export function NumberSuite() {
 
       {tab === "float" ? (
         <>
-          <div className="number-controls">
+          <div className="number-controls float-fields">
             <label className="control-label grow">
               10進数
               <input
@@ -328,10 +330,10 @@ export function NumberSuite() {
             </label>
           </div>
           {floatResult.error ? (
-            <div className="empty-result">{floatResult.error}</div>
+            <div className="empty-result number-empty">{floatResult.error}</div>
           ) : floatInput.trim() ? (
             <>
-              <div className="timestamp-output">
+              <div className="number-result">
                 <span>格納される値</span>
                 <strong>{String(floatResult.value)}</strong>
                 <CopyButton value={String(floatResult.value)} />
@@ -414,10 +416,10 @@ export function NumberSuite() {
             </label>
           </div>
           {percentResult.error ? (
-            <div className="empty-result">{percentResult.error}</div>
+            <div className="empty-result number-empty">{percentResult.error}</div>
           ) : (
             <>
-              <div className="timestamp-output">
+              <div className="number-result">
                 <span>RESULT</span>
                 <strong>{percentResult.primary}</strong>
                 <CopyButton value={percentResult.primary} />
