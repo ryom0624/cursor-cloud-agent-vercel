@@ -6,14 +6,16 @@ import {
   ArrowUpDown,
   Asterisk,
   Download,
+  Filter,
   GripVertical,
   KeyRound,
+  MoreHorizontal,
   Pencil,
   Pin,
   PinOff,
   Plus,
   RotateCcw,
-  ScanSearch,
+  SquareStack,
   TableProperties,
   Trash2,
 } from "lucide-react";
@@ -151,6 +153,8 @@ export function DataGrid({
   const [uniqueKey, setUniqueKey] = useState("");
   const [requiredColumns, setRequiredColumns] = useState<string[]>([]);
   const [duplicateColumns, setDuplicateColumns] = useState<string[]>([]);
+  const [duplicateFilterColumns, setDuplicateFilterColumns] = useState<string[]>([]);
+  const [openHeaderMenu, setOpenHeaderMenu] = useState<string | null>(null);
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
@@ -173,6 +177,24 @@ export function DataGrid({
     return () => window.removeEventListener("mouseup", stopSelecting);
   }, []);
 
+  useEffect(() => {
+    if (!openHeaderMenu) return;
+    const closeMenu = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-column-header-menu]")) return;
+      setOpenHeaderMenu(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenHeaderMenu(null);
+    };
+    window.addEventListener("mousedown", closeMenu);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("mousedown", closeMenu);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openHeaderMenu]);
+
   const sourceColumns = useMemo(() => {
     const fromRecords = Array.from(new Set(records.flatMap((record) => Object.keys(record))));
     if (fromRecords.length) {
@@ -184,15 +206,35 @@ export function DataGrid({
     ...columnOrder.filter((column) => sourceColumns.includes(column)),
     ...sourceColumns.filter((column) => !columnOrder.includes(column)),
   ], [columnOrder, sourceColumns]);
+  const checkedColumns = useMemo(() => Array.from(new Set([
+    ...(uniqueKey ? [uniqueKey] : []),
+    ...duplicateColumns,
+    ...duplicateFilterColumns,
+  ])).filter((column) => columns.includes(column)), [columns, duplicateColumns, duplicateFilterColumns, uniqueKey]);
+  const duplicateValues = useMemo(() => Object.fromEntries(
+    checkedColumns.map((column) => {
+      const counts = new Map<string, number>();
+      records.forEach((record) => {
+        const value = displayValue(record[column]);
+        counts.set(value, (counts.get(value) ?? 0) + 1);
+      });
+      return [column, new Set(Array.from(counts).filter(([, count]) => count > 1).map(([value]) => value))];
+    }),
+  ) as Record<string, Set<string>>, [checkedColumns, records]);
   const indexedRows = useMemo(() => {
     const filtered = records
       .map((record, originalIndex) => ({ record, originalIndex }))
-      .filter(({ record }) =>
-        sourceColumns.every((column) => {
+      .filter(({ record }) => {
+        const matchesTextFilters = sourceColumns.every((column) => {
           const query = (filters[column] ?? "").trim().toLocaleLowerCase();
           return !query || displayValue(record[column]).toLocaleLowerCase().includes(query);
-        }),
-      );
+        });
+        if (!matchesTextFilters) return false;
+        if (!duplicateFilterColumns.length) return true;
+        return duplicateFilterColumns.some((column) =>
+          duplicateValues[column]?.has(displayValue(record[column])),
+        );
+      });
     if (!sort) return filtered;
     return [...filtered].sort((left, right) => {
       const compared = sort.column === "__row"
@@ -206,7 +248,7 @@ export function DataGrid({
           })();
       return sort.direction === "asc" ? compared : -compared;
     });
-  }, [filters, records, sort, sourceColumns]);
+  }, [duplicateFilterColumns, duplicateValues, filters, records, sort, sourceColumns]);
   const visibleRecords = indexedRows.map(({ record }) => record);
   const rowCount = indexedRows.length;
   const columnCount = columns.length;
@@ -464,20 +506,6 @@ export function DataGrid({
   const customTableWidth = hasCustomWidths
     ? rowNumberWidth + columns.reduce((total, column) => total + (columnWidths[column] ?? 160), 0)
     : undefined;
-  const checkedColumns = useMemo(() => Array.from(new Set([
-    ...(uniqueKey ? [uniqueKey] : []),
-    ...duplicateColumns,
-  ])).filter((column) => columns.includes(column)), [columns, duplicateColumns, uniqueKey]);
-  const duplicateValues = useMemo(() => Object.fromEntries(
-    checkedColumns.map((column) => {
-      const counts = new Map<string, number>();
-      records.forEach((record) => {
-        const value = displayValue(record[column]);
-        counts.set(value, (counts.get(value) ?? 0) + 1);
-      });
-      return [column, new Set(Array.from(counts).filter(([, count]) => count > 1).map(([value]) => value))];
-    }),
-  ) as Record<string, Set<string>>, [checkedColumns, records]);
   const uniqueDuplicateRows = uniqueKey
     ? records.filter((record) => duplicateValues[uniqueKey]?.has(displayValue(record[uniqueKey]))).length
     : 0;
@@ -489,7 +517,27 @@ export function DataGrid({
   const duplicateSummary = duplicateColumns
     .filter((column) => columns.includes(column))
     .map((column) => `${labelFor(column)}: ${duplicateValues[column]?.size ?? 0}値`);
-  const validationHasError = uniqueBlankRows > 0 || uniqueDuplicateRows > 0 || requiredBlankTotal > 0;
+  const duplicateFilterSummary = duplicateFilterColumns
+    .filter((column) => columns.includes(column))
+    .map((column) => `${labelFor(column)}の重複行`);
+  const duplicateValueTotal = duplicateColumns
+    .filter((column) => columns.includes(column))
+    .reduce((total, column) => total + (duplicateValues[column]?.size ?? 0), 0);
+  const validationHasError =
+    uniqueBlankRows > 0
+    || uniqueDuplicateRows > 0
+    || requiredBlankTotal > 0
+    || duplicateValueTotal > 0;
+  const toggleDuplicateColumn = (column: string) => {
+    setDuplicateColumns((current) =>
+      current.includes(column) ? current.filter((item) => item !== column) : [...current, column],
+    );
+  };
+  const toggleDuplicateFilter = (column: string) => {
+    setDuplicateFilterColumns((current) =>
+      current.includes(column) ? current.filter((item) => item !== column) : [...current, column],
+    );
+  };
   const isRequiredColumn = (column: string) => requiredColumns.includes(column) || column === uniqueKey;
   const isBlankValidatedCell = (column: string, value: unknown) =>
     isRequiredColumn(column) && isBlankGridValue(value);
@@ -846,11 +894,22 @@ export function DataGrid({
                   <span>#</span>
                 </button>
               </th>
-              {columns.map((column) => (
+              {columns.map((column) => {
+                const isPinned = pinnedColumns.includes(column);
+                const isRequired = requiredColumns.includes(column);
+                const isDuplicateCheck = duplicateColumns.includes(column);
+                const isDuplicateFilter = duplicateFilterColumns.includes(column);
+                const menuOpen = openHeaderMenu === column;
+                const hiddenActionActive = isPinned || isRequired || isDuplicateCheck || isDuplicateFilter;
+                return (
                 <th
                   key={column}
                   data-grid-column={column}
-                  className={`${draggedColumn === column ? "dragging" : ""} ${pinnedOffsets[column] !== undefined ? "pinned" : ""}`.trim()}
+                  className={[
+                    draggedColumn === column ? "dragging" : "",
+                    pinnedOffsets[column] !== undefined ? "pinned" : "",
+                    menuOpen ? "menu-open" : "",
+                  ].filter(Boolean).join(" ")}
                   style={columnStyle(column)}
                 >
                   <div className="data-grid-column-heading">
@@ -897,6 +956,7 @@ export function DataGrid({
                     </span>
                     <span
                       className="data-grid-column-actions"
+                      data-column-header-menu={column}
                       onPointerDown={stopHeaderGesture}
                       onMouseDown={stopHeaderGesture}
                     >
@@ -905,19 +965,6 @@ export function DataGrid({
                         label={`${labelFor(column)}列をコピー`}
                         iconOnly
                       />
-                      {enableColumnRename && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRenamingColumn(column);
-                            setRenameDraft(labelFor(column));
-                          }}
-                          aria-label={`${labelFor(column)}列名を編集`}
-                          title="列名を編集"
-                        >
-                          <Pencil size={12} />
-                        </button>
-                      )}
                       <button type="button" onClick={() => toggleSort(column)} aria-label={`${labelFor(column)}列をソート`}>
                         {sort?.column === column
                           ? sort.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
@@ -925,55 +972,102 @@ export function DataGrid({
                       </button>
                       <button
                         type="button"
-                        className={pinnedColumns.includes(column) ? "active" : ""}
-                        onClick={(event) => togglePinned(column, event.currentTarget.closest("table"))}
-                        aria-label={`${labelFor(column)}列を${pinnedColumns.includes(column) ? "固定解除" : "左に固定"}`}
-                        title={pinnedColumns.includes(column) ? "列の固定を解除" : "横スクロール時に左へ固定"}
+                        className={[
+                          "data-grid-more-button",
+                          hiddenActionActive ? "has-active" : "",
+                          isDuplicateCheck || isDuplicateFilter ? "dup-active" : "",
+                          hiddenActionActive && !isDuplicateCheck && !isDuplicateFilter ? "active" : "",
+                        ].filter(Boolean).join(" ")}
+                        aria-label={`${labelFor(column)}列のその他の操作`}
+                        aria-expanded={menuOpen}
+                        title="その他の列操作"
+                        onClick={() => setOpenHeaderMenu((current) => current === column ? null : column)}
                       >
-                        {pinnedColumns.includes(column) ? <PinOff size={12} /> : <Pin size={12} />}
+                        <MoreHorizontal size={12} />
                       </button>
-                      {enableDuplicateValidation && (
-                        <>
+                      {menuOpen && (
+                        <div className="data-grid-column-menu" role="menu" data-column-header-menu={column}>
+                          {enableColumnRename && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setRenamingColumn(column);
+                                setRenameDraft(labelFor(column));
+                                setOpenHeaderMenu(null);
+                              }}
+                            >
+                              <Pencil size={12} />
+                              列名を編集
+                            </button>
+                          )}
                           <button
                             type="button"
-                            className={requiredColumns.includes(column) ? "active" : ""}
-                            onClick={() => toggleRequiredColumn(column)}
-                            aria-label={`${labelFor(column)}列を${requiredColumns.includes(column) ? "必須解除" : "必須にする"}`}
-                            title={requiredColumns.includes(column) ? "必須列を解除" : "空欄チェックする必須列"}
+                            role="menuitem"
+                            className={isPinned ? "is-active" : ""}
+                            onClick={(event) => {
+                              togglePinned(column, event.currentTarget.closest("table"));
+                              setOpenHeaderMenu(null);
+                            }}
                           >
-                            <Asterisk size={12} />
+                            {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                            {isPinned ? "列の固定を解除" : "列を左に固定"}
                           </button>
-                          <button
-                            type="button"
-                            className={duplicateColumns.includes(column) ? "active" : ""}
-                            onClick={() => setDuplicateColumns((current) =>
-                              current.includes(column)
-                                ? current.filter((item) => item !== column)
-                                : [...current, column]
-                            )}
-                            aria-label={`${labelFor(column)}列の重複チェック`}
-                            title="この列の重複を色付け"
-                          >
-                            <ScanSearch size={12} />
-                          </button>
-                        </>
-                      )}
-                      {editable && (
-                        <button
-                          type="button"
-                          className="data-grid-delete-column"
-                          onPointerDown={stopHeaderGesture}
-                          onMouseDown={stopHeaderGesture}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            deleteColumn(column);
-                          }}
-                          aria-label={`${labelFor(column)}列を削除`}
-                          title={`${labelFor(column)}列を削除`}
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                          {enableDuplicateValidation && (
+                            <>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className={isRequired ? "is-active" : ""}
+                                onClick={() => {
+                                  toggleRequiredColumn(column);
+                                  setOpenHeaderMenu(null);
+                                }}
+                              >
+                                <Asterisk size={12} />
+                                {isRequired ? "必須を解除" : "必須列にする"}
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className={isDuplicateCheck ? "is-dup-active" : ""}
+                                onClick={() => {
+                                  toggleDuplicateColumn(column);
+                                  setOpenHeaderMenu(null);
+                                }}
+                              >
+                                <SquareStack size={12} />
+                                {isDuplicateCheck ? "重複ハイライトをオフ" : "重複をハイライト"}
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className={isDuplicateFilter ? "is-dup-active" : ""}
+                                onClick={() => {
+                                  toggleDuplicateFilter(column);
+                                  setOpenHeaderMenu(null);
+                                }}
+                              >
+                                <Filter size={12} />
+                                {isDuplicateFilter ? "重複絞り込みを解除" : "この列の重複行だけ表示"}
+                              </button>
+                            </>
+                          )}
+                          {editable && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="is-danger"
+                              onClick={() => {
+                                deleteColumn(column);
+                                setOpenHeaderMenu(null);
+                              }}
+                            >
+                              <Trash2 size={12} />
+                              列を削除
+                            </button>
+                          )}
+                        </div>
                       )}
                     </span>
                   </div>
@@ -1001,7 +1095,8 @@ export function DataGrid({
                     }
                   />
                 </th>
-              ))}
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -1138,9 +1233,9 @@ export function DataGrid({
             ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · 矢印で移動 · Deleteで空 · Enterで下へ · Tabで右へ`
             : "ダブルクリックで編集 · 矢印で移動 · Deleteで空にする · Enterで下へ · Tabで右へ · Shift+Enterで改行"}
         </span>
-        <span>グリップ=列移動 · ゴミ箱=列削除 · ピン=固定 · ＊=必須列 · 虫眼鏡=重複チェック</span>
+        <span>グリップ=列移動 · コピーとソート以外は⋯メニュー · 重なり=重複ハイライト · フィルタ=重複行だけ表示</span>
       </div>
-      {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0) && (
+      {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0 || duplicateFilterColumns.length > 0) && (
         <div className={`data-grid-duplicate-status ${validationHasError ? "error" : "ok"}`} role="status">
           <strong>
             {uniqueKey ? `UNIQUE ${labelFor(uniqueKey)}` : requiredColumns.length ? "REQUIRED" : "DUPLICATE CHECK"}
@@ -1155,10 +1250,16 @@ export function DataGrid({
                 })))
                 : "",
               !uniqueKey && !requiredColumnStats.length ? duplicateSummary.join(" · ") : "",
+              duplicateFilterSummary.length ? `絞り込み ${duplicateFilterSummary.join(" · ")}` : "",
             ].filter(Boolean).join(" · ")}
           </span>
-          {(uniqueKey || requiredColumnStats.length > 0) && duplicateSummary.length > 0 && (
-            <small>{duplicateSummary.join(" · ")}</small>
+          {(uniqueKey || requiredColumnStats.length > 0) && (duplicateSummary.length > 0 || duplicateFilterSummary.length > 0) && (
+            <small>
+              {[
+                duplicateSummary.join(" · "),
+                duplicateFilterSummary.length ? `絞り込み ${duplicateFilterSummary.join(" · ")}` : "",
+              ].filter(Boolean).join(" · ")}
+            </small>
           )}
         </div>
       )}
