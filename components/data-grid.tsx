@@ -18,6 +18,7 @@ import {
   SquareStack,
   TableProperties,
   Trash2,
+  WrapText,
 } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -156,6 +157,7 @@ export function DataGrid({
   const [duplicateFilterColumns, setDuplicateFilterColumns] = useState<string[]>([]);
   const [openHeaderMenu, setOpenHeaderMenu] = useState<string | null>(null);
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
+  const [wrappedColumns, setWrappedColumns] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -538,6 +540,11 @@ export function DataGrid({
       current.includes(column) ? current.filter((item) => item !== column) : [...current, column],
     );
   };
+  const toggleWrappedColumn = (column: string) => {
+    setWrappedColumns((current) =>
+      current.includes(column) ? current.filter((item) => item !== column) : [...current, column],
+    );
+  };
   const isRequiredColumn = (column: string) => requiredColumns.includes(column) || column === uniqueKey;
   const isBlankValidatedCell = (column: string, value: unknown) =>
     isRequiredColumn(column) && isBlankGridValue(value);
@@ -899,8 +906,9 @@ export function DataGrid({
                 const isRequired = requiredColumns.includes(column);
                 const isDuplicateCheck = duplicateColumns.includes(column);
                 const isDuplicateFilter = duplicateFilterColumns.includes(column);
+                const isWrapped = wrappedColumns.includes(column);
                 const menuOpen = openHeaderMenu === column;
-                const hiddenActionActive = isPinned || isRequired || isDuplicateCheck || isDuplicateFilter;
+                const hiddenActionActive = isPinned || isRequired || isDuplicateCheck || isDuplicateFilter || isWrapped;
                 return (
                 <th
                   key={column}
@@ -1012,6 +1020,18 @@ export function DataGrid({
                           >
                             {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
                             {isPinned ? "列の固定を解除" : "列を左に固定"}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className={isWrapped ? "is-active" : ""}
+                            onClick={() => {
+                              toggleWrappedColumn(column);
+                              setOpenHeaderMenu(null);
+                            }}
+                          >
+                            <WrapText size={12} />
+                            {isWrapped ? "折り返しを解除" : "長い文字を折り返して表示"}
                           </button>
                           {enableDuplicateValidation && (
                             <>
@@ -1131,7 +1151,8 @@ export function DataGrid({
                     data-grid-col={columnIndex}
                     className={[
                       isSelected(rowIndex, columnIndex) ? "selected" : "",
-                      displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") ? "multiline" : "",
+                      displayValue(record[column]).includes("\n") || displayValue(record[column]).includes("\r") || wrappedColumns.includes(column) ? "multiline" : "",
+                      wrappedColumns.includes(column) ? "wrap-text" : "",
                       duplicateValues[column]?.has(displayValue(record[column])) ? "duplicate-value" : "",
                       isBlankValidatedCell(column, record[column]) ? "blank-value" : "",
                       pinnedOffsets[column] !== undefined ? "pinned" : "",
@@ -1233,7 +1254,7 @@ export function DataGrid({
             ? `${bounds.rowEnd - bounds.rowStart + 1}行 × ${bounds.columnEnd - bounds.columnStart + 1}列を選択 · 矢印で移動 · Deleteで空 · Enterで下へ · Tabで右へ`
             : "ダブルクリックで編集 · 矢印で移動 · Deleteで空にする · Enterで下へ · Tabで右へ · Shift+Enterで改行"}
         </span>
-        <span>グリップ=列移動 · コピーとソート以外は⋯メニュー · 重なり=重複ハイライト · フィルタ=重複行だけ表示</span>
+        <span>グリップ=列移動 · コピーとソート以外は⋯メニュー · 折り返し=長い文字を表示 · 重なり=重複ハイライト · フィルタ=重複行だけ表示</span>
       </div>
       {enableDuplicateValidation && (uniqueKey || requiredColumns.length > 0 || duplicateColumns.length > 0 || duplicateFilterColumns.length > 0) && (
         <div className={`data-grid-duplicate-status ${validationHasError ? "error" : "ok"}`} role="status">
