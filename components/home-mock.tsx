@@ -18,11 +18,13 @@ import {
   categories,
   functionCount,
   pasteAnythingStorageKeys,
+  searchTools,
   toolCount,
   tools,
 } from "@/lib/tools";
+import { useRecentlyUsedTools } from "@/lib/recently-used";
 
-type PasteType = "json" | "csv" | "tsv" | "jwt" | "url" | "timestamp" | "base64" | "text";
+type PasteType = "json" | "csv" | "tsv" | "jwt" | "url" | "timestamp" | "base64" | "text" | "curl" | "openapi" | "har";
 
 type PasteDetection = {
   type: PasteType;
@@ -37,10 +39,13 @@ const detections: Record<PasteType, Omit<PasteDetection, "type" | "reason">> = {
   csv: { label: "CSV", tool: "CSV Viewer", href: "/tools/csv-viewer" },
   tsv: { label: "TSV", tool: "CSV Viewer", href: "/tools/csv-viewer" },
   jwt: { label: "JWT", tool: "JWT Decoder", href: "/tools/jwt" },
-  url: { label: "URL", tool: "Encoder / Decoder", href: "/tools/encoder" },
+  url: { label: "URL", tool: "URL Tools", href: "/tools/url" },
   timestamp: { label: "UNIX TIMESTAMP", tool: "Date & Time", href: "/tools/date-time" },
   base64: { label: "BASE64", tool: "Encoder / Decoder", href: "/tools/encoder" },
   text: { label: "TEXT", tool: "Text Tools", href: "/tools/text" },
+  curl: { label: "cURL", tool: "HTTP Tools", href: "/tools/http" },
+  openapi: { label: "OPENAPI", tool: "OpenAPI Tools", href: "/tools/openapi" },
+  har: { label: "HAR", tool: "HAR Analyzer", href: "/tools/har" },
 };
 
 function result(type: PasteType, reason: string): PasteDetection {
@@ -73,6 +78,14 @@ function detectPaste(value: string): PasteDetection | null {
     return result("jwt", "Base64URL形式の3セグメントを検出しました。");
   }
 
+  if (/^\s*curl[\s\n]/i.test(input)) {
+    return result("curl", "curlコマンドとして解析できます。");
+  }
+
+  if (/^openapi:\s*['"]?3/m.test(input)) {
+    return result("openapi", "OpenAPI 3.x のYAMLを検出しました。");
+  }
+
   try {
     const url = new URL(input);
     if (url.protocol && url.hostname) {
@@ -90,7 +103,17 @@ function detectPaste(value: string): PasteDetection | null {
   }
 
   try {
-    JSON.parse(input);
+    const parsed: unknown = JSON.parse(input);
+    if (parsed && typeof parsed === "object") {
+      const record = parsed as Record<string, unknown>;
+      if (typeof record.openapi === "string" && record.openapi.startsWith("3.")) {
+        return result("openapi", "OpenAPI 3.x のJSONを検出しました。");
+      }
+      const log = record.log && typeof record.log === "object" ? (record.log as Record<string, unknown>) : record;
+      if (Array.isArray(log.entries)) {
+        return result("har", "HARのentries配列を検出しました。");
+      }
+    }
     return result("json", "JSON.parseで構文を正しく解析できました。");
   } catch {
     // Continue with the remaining local checks.
@@ -134,6 +157,8 @@ export function HomeMock() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("すべて");
   const [pasteValue, setPasteValue] = useState("");
+  const recent = useRecentlyUsedTools();
+
   const pasteDetection = useMemo(() => detectPaste(pasteValue), [pasteValue]);
   const quickStartTools = useMemo(
     () => tools.filter((tool) => tool.featured).slice(0, 4),
@@ -141,17 +166,9 @@ export function HomeMock() {
   );
 
   const filteredTools = useMemo(() => {
-    const normalized = query.toLowerCase().trim();
-    return tools.filter((tool) => {
-      const categoryMatches =
-        category === "すべて" || tool.category === category;
-      const queryMatches =
-        !normalized ||
-        `${tool.name} ${tool.description} ${tool.category}`
-          .toLowerCase()
-          .includes(normalized);
-      return categoryMatches && queryMatches;
-    });
+    return searchTools(query).filter(
+      (tool) => category === "すべて" || tool.category === category,
+    );
   }, [category, query]);
 
   const openDetectedTool = () => {
@@ -270,6 +287,14 @@ export function HomeMock() {
           </div>
           <div className="function-count"><strong>{functionCount}</strong><span>FUNCTIONS<br />AVAILABLE</span></div>
         </div>
+        {recent.length > 0 && (
+          <div className="recent-tools" aria-label="最近使った道具">
+            <span>RECENTLY USED</span>
+            {recent.slice(0, 6).map((tool) => (
+              <Link href={tool.href} key={`recent-${tool.slug}`}>{tool.name}</Link>
+            ))}
+          </div>
+        )}
 
         <div className="tool-browser">
           <aside className="category-nav" aria-label="カテゴリ">

@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:extended": "JTC_EXTENDED=1 vitest run tests/jtc-hell-csv.extended.test.ts"
+    "test:extended": "JTC_EXTENDED=1 vitest run tests/jtc-hell-csv.extended.test.ts",
+    "postinstall": "node scripts/copy-duckdb-assets.mjs"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.33.1-dev57.0",
     "cron-parser": "^5.10.0",
     "encoding-japanese": "^2.3.0",
     "exceljs": "^4.4.0",

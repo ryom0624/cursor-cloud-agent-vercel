@@ -14,6 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BoundedNumberInput } from "@/components/bounded-number-input";
@@ -68,6 +69,7 @@ import {
   csvViewerJapaneseSample,
   csvViewerSample,
 } from "@/lib/csv-viewer-samples";
+import { setHandoff } from "@/lib/workspace-handoff";
 
 const VALIDATION_DETAIL_LIMIT = 8;
 
@@ -113,6 +115,7 @@ export function CsvViewerWorkspaceBeta({
   variant?: "official" | "beta";
 } = {}) {
   const official = variant === "official";
+  const router = useRouter();
   const [input, setInput] = useState("");
   const [hasSource, setHasSource] = useState(false);
   const [sourceName, setSourceName] = useState("貼り付けデータ");
@@ -691,6 +694,16 @@ export function CsvViewerWorkspaceBeta({
                     </button>
                   </div>
                   <div className="csv-ws-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = sourceName.toLowerCase().endsWith(".csv") ? sourceName : `${sourceName}.csv`;
+                        setHandoff("devsmith:handoff:sql-tables", [{ name, csv: workingRaw }]);
+                        router.push("/tools/sql");
+                      }}
+                    >
+                      SQL Playgroundで開く
+                    </button>
                     <button type="button" onClick={() => setDialog("reinterpret")}>再解釈</button>
                     <button type="button" onClick={() => fileInputRef.current?.click()}>別ファイルを開く</button>
                     <div className="csv-ws-download">
