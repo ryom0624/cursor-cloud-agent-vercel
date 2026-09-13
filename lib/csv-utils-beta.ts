@@ -879,11 +879,52 @@ const leadingZeroDecimal = /^[+-]?0\d+\.\d+$/;
 const longIntegerPattern = /^-?\d{16,}$/;
 const scientificPattern = /^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/;
 const excelRiskLabels: Record<ExcelRiskKind, string> = {
-  leadingZero: "先頭ゼロ",
+  leadingZero: "先頭ゼロ（0落ち）",
   longInteger: "16桁以上の整数",
   dateLike: "日付変換候補",
   scientific: "指数表記",
 };
+
+export type ExcelRiskExplanation = {
+  title: string;
+  risk: string;
+  before: string;
+  after: string;
+};
+
+const excelRiskExplanations: Record<ExcelRiskKind, ExcelRiskExplanation> = {
+  leadingZero: {
+    title: "先頭ゼロ（0落ち）",
+    risk: "表計算ソフトが数値として読むと、先頭の0が消えます。郵便番号・電話番号・社員IDが別の値になります。この画面の表では元のままです。",
+    before: "00123",
+    after: "123",
+  },
+  scientific: {
+    title: "指数表記",
+    risk: "1E10 のような値は巨大な数値として解釈されます。元の文字が消えるか、1.00E+10 のような指数表示に変わります。",
+    before: "1E10",
+    after: "10000000000",
+  },
+  longInteger: {
+    title: "16桁以上の整数",
+    risk: "Excelは15桁を超える整数の下位桁を丸めます。長いIDや番号の末尾が0になり、別の数字になります。",
+    before: "1234567890123456",
+    after: "1234567890123450",
+  },
+  dateLike: {
+    title: "日付変換",
+    risk: "日付らしい数字列は日付シリアル値に変わり、並び替えや再保存で別の表記になります。",
+    before: "2026-09-11",
+    after: "2026/09/11",
+  },
+};
+
+export const excelRiskKindOrder: ExcelRiskKind[] = [
+  "leadingZero",
+  "scientific",
+  "longInteger",
+  "dateLike",
+];
 const dateLikePatterns = [
   /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/,
   /^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/,
@@ -896,6 +937,10 @@ export function isLeadingZeroRisk(value: string) {
 
 export function excelRiskLabel(kind: ExcelRiskKind) {
   return excelRiskLabels[kind];
+}
+
+export function excelRiskExplanation(kind: ExcelRiskKind) {
+  return excelRiskExplanations[kind];
 }
 
 export function isLongIntegerRisk(value: string) {
@@ -954,7 +999,7 @@ export function summarizeExcelRisks(hits: ExcelRiskHit[]) {
 
 export function describeExcelRisks(hits: ExcelRiskHit[]) {
   const summary = summarizeExcelRisks(hits);
-  return (Object.keys(excelRiskLabels) as ExcelRiskKind[])
+  return excelRiskKindOrder
     .filter((kind) => summary[kind] > 0)
     .map((kind) => `${excelRiskLabels[kind]} ${summary[kind]}件`)
     .join(" · ");

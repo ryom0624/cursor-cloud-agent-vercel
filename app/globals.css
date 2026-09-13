@@ -3657,6 +3657,61 @@ kbd {
   background: #f7f1e4;
 }
 
+.csv-viewer-output .csv-excel-risk-output {
+  margin: 0 12px 12px;
+  padding: 12px 14px;
+  border: 1px solid #c9a15b;
+}
+
+.csv-excel-risk-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.csv-excel-risk-kinds article {
+  padding: 10px 12px;
+  border: 1px solid #c9a15b;
+  background: #fff8e8;
+}
+
+.csv-excel-risk-kinds h3 {
+  margin: 0 0 6px;
+  color: #6b4f12;
+  font-size: 12px;
+}
+
+.csv-excel-risk-kinds p,
+.csv-excel-risk-kinds small {
+  margin: 0;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.csv-excel-risk-transform {
+  margin: 6px 0 !important;
+  font-size: 10px !important;
+}
+
+.csv-excel-risk-kinds ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.csv-excel-risk-kinds code,
+.csv-excel-risk-transform code {
+  padding: 0 5px;
+  border: 1px solid #c9a15b;
+  background: #fffdf6;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
 .csv-io-compare {
   grid-column: 1 / -1;
   display: grid;
