@@ -13,11 +13,12 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   categories,
   functionCount,
-  pasteAnythingStorageKeys,
+  storePasteAnythingHandoff,
+  resetPasteAnythingHandoff,
   toolCount,
   tools,
 } from "@/lib/tools";
@@ -135,16 +136,21 @@ function detectPaste(value: string): PasteDetection | null {
   return result("text", "構造化データのパターンには一致しませんでした。");
 }
 
+function isEditableTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 export function HomeMock() {
   const router = useRouter();
+  const pasteRef = useRef<HTMLTextAreaElement>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("すべて");
   const [pasteValue, setPasteValue] = useState("");
   const pasteDetection = useMemo(() => detectPaste(pasteValue), [pasteValue]);
-  const quickStartTools = useMemo(
-    () => tools.filter((tool) => tool.featured).slice(0, 4),
-    [],
-  );
 
   const filteredTools = useMemo(() => {
     const normalized = query.toLowerCase().trim();
@@ -162,102 +168,94 @@ export function HomeMock() {
 
   const openDetectedTool = () => {
     if (!pasteDetection) return;
-    sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValue);
-    sessionStorage.setItem(pasteAnythingStorageKeys.type, pasteDetection.type);
+    storePasteAnythingHandoff(pasteValue, pasteDetection.type);
     router.push(pasteDetection.href);
   };
 
+  useEffect(() => {
+    resetPasteAnythingHandoff();
+    pasteRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+      const text = event.clipboardData?.getData("text");
+      if (!text) return;
+      event.preventDefault();
+      setPasteValue(text);
+      pasteRef.current?.focus();
+    };
+
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
+      if (!pasteDetection) return;
+      event.preventDefault();
+      storePasteAnythingHandoff(pasteValue, pasteDetection.type);
+      router.push(pasteDetection.href);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pasteDetection, pasteValue, router]);
+
   return (
     <main>
-      <section className="hero">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <Asterisk size={15} />
-            PRIVATE BROWSER UTILITIES / DEFINED BY USE
-          </div>
-          <h1>
-            小さな作業を、
-            <br />
-            <span>素早く片づける。</span>
-          </h1>
-          <p>
-            JSONを整える。文字列を変換する。IDを生成する。
-            <br className="desktop-only" />
-            エンジニアが毎日使う道具だけを、ひとつの場所に。
-          </p>
-          <div className="hero-search-wrap">
-            <Search size={19} />
-            <input
-              id="hero-tool-search"
-              name="hero-tool-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="何をしたいですか？  例：JSONを整形"
-              aria-label="ツールを検索"
-            />
-            <kbd>/</kbd>
-          </div>
-          <div className="quick-links">
-            <span>QUICK COMMAND</span>
-            <Link href="/tools/json">JSON整形</Link>
-            <Link href="/tools/encoder">Base64</Link>
-            <Link href="/tools/id-generator">UUID生成</Link>
-          </div>
-        </div>
-
-        <div className="quick-start" aria-label="よく使う道具">
-          <div className="quick-start-head">
-            <span>QUICK START</span>
-            <small>{String(quickStartTools.length).padStart(2, "0")} / MOST USED</small>
-          </div>
-          <div className="quick-start-list">
-            {quickStartTools.map((tool) => (
-              <Link href={tool.href} key={tool.index}>
-                <span>{tool.index}</span>
-                <strong>{tool.name}</strong>
-                <small>{tool.description}</small>
-                <ArrowRight size={16} />
-              </Link>
-            ))}
-          </div>
-          <div className="quick-start-foot">
-            <span><LockKeyhole size={13} /> 処理はこのブラウザ内だけで完結</span>
-            <strong>{functionCount} FUNCTIONS</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="paste-anything" aria-labelledby="paste-anything-title">
-        <div className="paste-anything-heading">
+      <section className="paste-hero" aria-labelledby="paste-anything-title">
+        <header className="paste-hero-heading">
           <div>
-            <span>LOCAL AUTO DETECTION</span>
-            <h2 id="paste-anything-title">PASTE ANYTHING</h2>
+            <div className="eyebrow">
+              <Asterisk size={15} />
+              LOCAL AUTO DETECTION / PRIVATE
+            </div>
+            <h1 id="paste-anything-title">
+              PASTE
+              <br />
+              <span>ANYTHING</span>
+            </h1>
           </div>
-          <small>入力内容は外部へ送信されません</small>
-        </div>
-        <textarea
-          value={pasteValue}
-          onChange={(event) => setPasteValue(event.target.value)}
-          placeholder="JSON、CSV / TSV、Mermaid、JWT、URL、Unix timestamp、Base64、テキストを貼り付け"
-          aria-label="判定するデータを貼り付け"
-          spellCheck={false}
-        />
-        <div className="paste-anything-result" aria-live="polite">
-          {pasteDetection ? (
-            <>
-              <div>
-                <span>DETECTED</span>
-                <strong>{pasteDetection.label}</strong>
-              </div>
-              <p><span>根拠</span>{pasteDetection.reason}</p>
-              <p><span>推奨ツール</span><strong>{pasteDetection.tool}</strong></p>
-              <button type="button" onClick={openDetectedTool}>
-                このツールで開く <ArrowRight size={15} />
-              </button>
-            </>
-          ) : (
-            <p className="paste-anything-empty">貼り付けると、この端末内ですぐに判定します。</p>
-          )}
+          <p className="paste-hero-note">
+            <LockKeyhole size={13} />
+            入力内容は外部へ送信されません
+          </p>
+        </header>
+        <p className="paste-hero-lead">
+          貼るだけで、この端末内ですぐに判定します。
+        </p>
+
+        <div className="paste-stage">
+          <textarea
+            ref={pasteRef}
+            value={pasteValue}
+            onChange={(event) => setPasteValue(event.target.value)}
+            placeholder="JSON、CSV / TSV、Mermaid、JWT、URL、Unix timestamp、Base64、テキストを貼り付け"
+            aria-label="判定するデータを貼り付け"
+            spellCheck={false}
+          />
+          <div className="paste-anything-result" aria-live="polite">
+            {pasteDetection ? (
+              <>
+                <div>
+                  <span>DETECTED</span>
+                  <strong>{pasteDetection.label}</strong>
+                </div>
+                <p><span>根拠</span>{pasteDetection.reason}</p>
+                <p><span>推奨ツール</span><strong>{pasteDetection.tool}</strong></p>
+                <button type="button" onClick={openDetectedTool} title="⌘ Enter">
+                  このツールで開く <ArrowRight size={15} />
+                </button>
+              </>
+            ) : (
+              <p className="paste-anything-empty">
+                どこでも貼り付けできます。判定できたら ⌘ Enter で開きます。
+              </p>
+            )}
+          </div>
         </div>
       </section>
 

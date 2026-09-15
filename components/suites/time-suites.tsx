@@ -2,10 +2,11 @@
 
 import { CronExpressionParser } from "cron-parser";
 import { Clock3 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ToolShell, ToolStatus } from "@/components/tool-shell";
 import { describeCron } from "@/lib/tool-utils";
+import { readPasteAnythingHandoff } from "@/lib/tools";
 
 type DateMode = "timestamp" | "timezone";
 type TimestampDirection = "to-date" | "to-timestamp";
@@ -29,6 +30,18 @@ export function DateTimeSuite() {
   const [zone, setZone] = useState("Asia/Tokyo");
   const [timestampDirection, setTimestampDirection] = useState<TimestampDirection>("to-date");
   const [timestampUnit, setTimestampUnit] = useState<TimestampUnit>("seconds");
+
+  useEffect(() => {
+    const handoff = readPasteAnythingHandoff("timestamp");
+    if (!handoff) return;
+    const timer = window.setTimeout(() => {
+      setTimestamp(handoff.value.trim());
+      setTimestampUnit(handoff.value.trim().length === 13 ? "milliseconds" : "seconds");
+      setTimestampDirection("to-date");
+      setMode("timestamp");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const timestampResult = useMemo(() => {
     const numeric = Number(timestamp);

@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CopyButton, copyText } from "@/components/copy-button";
 import { ToolBreadcrumb } from "@/components/tool-breadcrumb";
 import { JsonGrid } from "@/components/json-grid";
-import { pasteAnythingStorageKeys, tools } from "@/lib/tools";
+import { readPasteAnythingHandoff, tools } from "@/lib/tools";
 
 const sample = `[
   {
@@ -112,12 +112,9 @@ export function JsonWorkbench() {
   const [splitPercent, setSplitPercent] = useState(42);
 
   useEffect(() => {
-    if (sessionStorage.getItem(pasteAnythingStorageKeys.type) !== "json") return;
-    const storedInput = sessionStorage.getItem(pasteAnythingStorageKeys.value);
-    sessionStorage.removeItem(pasteAnythingStorageKeys.value);
-    sessionStorage.removeItem(pasteAnythingStorageKeys.type);
-    if (storedInput === null) return;
-    const timer = window.setTimeout(() => setInput(storedInput), 0);
+    const handoff = readPasteAnythingHandoff("json");
+    if (!handoff) return;
+    const timer = window.setTimeout(() => setInput(handoff.value), 0);
     return () => window.clearTimeout(timer);
   }, []);
 

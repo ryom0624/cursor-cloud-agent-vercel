@@ -63,6 +63,7 @@ import {
   type ViewerSettings,
 } from "@/lib/csv-utils-beta";
 import { spreadsheetOpenError } from "@/lib/csv-workspace-open";
+import { readPasteAnythingHandoff } from "@/lib/tools";
 import {
   csvViewerComplexSample,
   csvViewerJapaneseSample,
@@ -421,17 +422,13 @@ export function CsvViewerWorkspaceBeta({
   };
 
   useEffect(() => {
-    const storedValue = sessionStorage.getItem("devsmith:paste-anything:value");
-    const storedType = sessionStorage.getItem("devsmith:paste-anything:type");
-    if (storedValue && (storedType === "csv" || storedType === "tsv")) {
-      sessionStorage.removeItem("devsmith:paste-anything:value");
-      sessionStorage.removeItem("devsmith:paste-anything:type");
-      const timer = window.setTimeout(() => {
-        updateInput(storedValue, "paste");
-        if (storedType === "tsv") setSettings((current) => ({ ...current, delimiter: "\t" }));
-      }, 0);
-      return () => window.clearTimeout(timer);
-    }
+    const handoff = readPasteAnythingHandoff(["csv", "tsv"]);
+    if (!handoff) return;
+    const timer = window.setTimeout(() => {
+      updateInput(handoff.value, "paste");
+      if (handoff.type === "tsv") setSettings((current) => ({ ...current, delimiter: "\t" }));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
