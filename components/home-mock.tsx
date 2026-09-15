@@ -218,23 +218,22 @@ export function HomeMock() {
               <br />
               <span>ANYTHING</span>
             </h1>
-            <p className="paste-hero-lead">
-              JSON、CSV / TSV、Mermaid、JWT、URL、Unix timestamp、Base64、テキストを貼ると、
-              この端末内ですぐに判定します。
-            </p>
           </div>
           <p className="paste-hero-note">
             <LockKeyhole size={13} />
             入力内容は外部へ送信されません
           </p>
         </header>
+        <p className="paste-hero-lead">
+          貼るだけで、この端末内ですぐに判定します。
+        </p>
 
         <div className="paste-stage">
           <textarea
             ref={pasteRef}
             value={pasteValue}
             onChange={(event) => setPasteValue(event.target.value)}
-            placeholder="ここに貼り付けてください"
+            placeholder="JSON、CSV / TSV、Mermaid、JWT、URL、Unix timestamp、Base64、テキストを貼り付け"
             aria-label="判定するデータを貼り付け"
             spellCheck={false}
           />
