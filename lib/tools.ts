@@ -191,3 +191,38 @@ export const pasteAnythingStorageKeys = {
   value: "devsmith:paste-anything:value",
   type: "devsmith:paste-anything:type",
 } as const;
+
+type PasteAnythingHandoff = {
+  type: string;
+  value: string;
+};
+
+let pasteAnythingHandoffMemory: PasteAnythingHandoff | null | undefined;
+
+export function storePasteAnythingHandoff(value: string, type: string) {
+  pasteAnythingHandoffMemory = undefined;
+  sessionStorage.setItem(pasteAnythingStorageKeys.value, value);
+  sessionStorage.setItem(pasteAnythingStorageKeys.type, type);
+}
+
+export function resetPasteAnythingHandoff() {
+  pasteAnythingHandoffMemory = undefined;
+}
+
+export function readPasteAnythingHandoff(
+  expectedTypes: string | readonly string[],
+): PasteAnythingHandoff | null {
+  if (typeof window === "undefined") return null;
+  if (pasteAnythingHandoffMemory === undefined) {
+    const type = sessionStorage.getItem(pasteAnythingStorageKeys.type);
+    const value = sessionStorage.getItem(pasteAnythingStorageKeys.value);
+    sessionStorage.removeItem(pasteAnythingStorageKeys.value);
+    sessionStorage.removeItem(pasteAnythingStorageKeys.type);
+    pasteAnythingHandoffMemory = type && value !== null ? { type, value } : null;
+  }
+  const expected = typeof expectedTypes === "string" ? [expectedTypes] : expectedTypes;
+  if (!pasteAnythingHandoffMemory || !expected.includes(pasteAnythingHandoffMemory.type)) {
+    return null;
+  }
+  return pasteAnythingHandoffMemory;
+}

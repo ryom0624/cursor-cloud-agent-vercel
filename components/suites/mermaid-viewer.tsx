@@ -19,7 +19,7 @@ import {
   mermaidViewerDefaultSample,
   mermaidViewerSamples,
 } from "@/lib/mermaid-samples";
-import { pasteAnythingStorageKeys } from "@/lib/tools";
+import { readPasteAnythingHandoff } from "@/lib/tools";
 import {
   detectDiagramType,
   diagramTypeLabel,
@@ -209,13 +209,10 @@ export function MermaidViewerSuite() {
   }, [zoom]);
 
   useEffect(() => {
-    if (sessionStorage.getItem(pasteAnythingStorageKeys.type) !== "mermaid") return;
-    const storedInput = sessionStorage.getItem(pasteAnythingStorageKeys.value);
-    sessionStorage.removeItem(pasteAnythingStorageKeys.value);
-    sessionStorage.removeItem(pasteAnythingStorageKeys.type);
-    if (storedInput === null) return;
+    const handoff = readPasteAnythingHandoff("mermaid");
+    if (!handoff) return;
     const timer = window.setTimeout(() => {
-      setInput(storedInput);
+      setInput(handoff.value);
       setActiveSampleId("");
       fitOnRenderRef.current = true;
     }, 0);

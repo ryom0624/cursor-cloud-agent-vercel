@@ -18,6 +18,7 @@ import {
   encodeHtml,
   generateUlid,
 } from "@/lib/tool-utils";
+import { readPasteAnythingHandoff } from "@/lib/tools";
 
 type EncoderMode = "base64" | "url" | "html";
 
@@ -25,6 +26,17 @@ export function EncoderSuite() {
   const [mode, setMode] = useState<EncoderMode>("base64");
   const [decode, setDecode] = useState(false);
   const [input, setInput] = useState("DevSmithで文字列を変換");
+
+  useEffect(() => {
+    const handoff = readPasteAnythingHandoff(["url", "base64"]);
+    if (!handoff) return;
+    const timer = window.setTimeout(() => {
+      setMode(handoff.type === "url" ? "url" : "base64");
+      setDecode(true);
+      setInput(handoff.value);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const result = useMemo(() => {
     try {
@@ -112,6 +124,12 @@ const jwtSample =
 
 export function JwtSuite() {
   const [input, setInput] = useState(jwtSample);
+  useEffect(() => {
+    const handoff = readPasteAnythingHandoff("jwt");
+    if (!handoff) return;
+    const timer = window.setTimeout(() => setInput(handoff.value), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const decoded = useMemo(() => {
     try {
       const [header, payload] = input.trim().split(".");

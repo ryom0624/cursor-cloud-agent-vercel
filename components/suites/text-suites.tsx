@@ -10,6 +10,7 @@ import {
   TextWorkspace,
 } from "@/components/tool-shell";
 import { convertCase, diffLines, type TextCase } from "@/lib/tool-utils";
+import { readPasteAnythingHandoff } from "@/lib/tools";
 
 const lower = "abcdefghijklmnopqrstuvwxyz";
 const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -670,6 +671,12 @@ export function TextSuite() {
   const [mode, setMode] = useState<TextMode>("count");
   const [input, setInput] = useState("DevSmithは、開発者の小さな作業を素早く片づけます。");
   const [targetCase, setTargetCase] = useState<TextCase>("camel");
+  useEffect(() => {
+    const handoff = readPasteAnythingHandoff("text");
+    if (!handoff) return;
+    const timer = window.setTimeout(() => setInput(handoff.value), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const metrics = useMemo(
     () => ({
       characters: input.length,

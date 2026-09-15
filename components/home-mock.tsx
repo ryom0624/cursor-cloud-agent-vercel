@@ -17,7 +17,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   categories,
   functionCount,
-  pasteAnythingStorageKeys,
+  storePasteAnythingHandoff,
+  resetPasteAnythingHandoff,
   toolCount,
   tools,
 } from "@/lib/tools";
@@ -167,12 +168,12 @@ export function HomeMock() {
 
   const openDetectedTool = () => {
     if (!pasteDetection) return;
-    sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValue);
-    sessionStorage.setItem(pasteAnythingStorageKeys.type, pasteDetection.type);
+    storePasteAnythingHandoff(pasteValue, pasteDetection.type);
     router.push(pasteDetection.href);
   };
 
   useEffect(() => {
+    resetPasteAnythingHandoff();
     pasteRef.current?.focus();
   }, []);
 
@@ -195,8 +196,7 @@ export function HomeMock() {
       if (!(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
       if (!pasteDetection) return;
       event.preventDefault();
-      sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValue);
-      sessionStorage.setItem(pasteAnythingStorageKeys.type, pasteDetection.type);
+      storePasteAnythingHandoff(pasteValue, pasteDetection.type);
       router.push(pasteDetection.href);
     };
 
