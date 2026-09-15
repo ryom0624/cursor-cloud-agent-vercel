@@ -146,12 +146,10 @@ function isEditableTarget(target: EventTarget | null) {
 export function HomeMock() {
   const router = useRouter();
   const pasteRef = useRef<HTMLTextAreaElement>(null);
-  const pasteValueRef = useRef("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("すべて");
   const [pasteValue, setPasteValue] = useState("");
   const pasteDetection = useMemo(() => detectPaste(pasteValue), [pasteValue]);
-  pasteValueRef.current = pasteValue;
 
   const filteredTools = useMemo(() => {
     const normalized = query.toLowerCase().trim();
@@ -168,11 +166,10 @@ export function HomeMock() {
   }, [category, query]);
 
   const openDetectedTool = () => {
-    const detection = detectPaste(pasteValueRef.current);
-    if (!detection) return;
-    sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValueRef.current);
-    sessionStorage.setItem(pasteAnythingStorageKeys.type, detection.type);
-    router.push(detection.href);
+    if (!pasteDetection) return;
+    sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValue);
+    sessionStorage.setItem(pasteAnythingStorageKeys.type, pasteDetection.type);
+    router.push(pasteDetection.href);
   };
 
   useEffect(() => {
@@ -189,21 +186,23 @@ export function HomeMock() {
       pasteRef.current?.focus();
     };
 
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-        if (!detectPaste(pasteValueRef.current)) return;
-        event.preventDefault();
-        openDetectedTool();
-      }
+      if (!(event.metaKey || event.ctrlKey) || event.key !== "Enter") return;
+      if (!pasteDetection) return;
+      event.preventDefault();
+      sessionStorage.setItem(pasteAnythingStorageKeys.value, pasteValue);
+      sessionStorage.setItem(pasteAnythingStorageKeys.type, pasteDetection.type);
+      router.push(pasteDetection.href);
     };
 
-    window.addEventListener("paste", onPaste);
     window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("paste", onPaste);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [router]);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pasteDetection, pasteValue, router]);
 
   return (
     <main>
