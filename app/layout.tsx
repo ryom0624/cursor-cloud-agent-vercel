@@ -6,9 +6,9 @@ import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DevSmith — 開発に必要な道具を、ひとつの場所に。",
+  title: "DevSmith — Paste Anything",
   description:
-    "JSON整形、Base64変換、UUID生成など、エンジニアの日常作業を軽くするブラウザツール集。",
+    "JSON、CSV、Mermaid、JWTなどを貼るだけで、適切なブラウザツールを開きます。処理はこの端末内だけで完結します。",
 };
 
 export default function RootLayout({
